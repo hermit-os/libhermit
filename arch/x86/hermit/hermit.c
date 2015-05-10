@@ -34,7 +34,7 @@ static struct kobject *hermit_kobj = NULL;
 static struct kobject *cpu_kobj[NR_CPUS] = {[0 ... NR_CPUS-1] = NULL};
 static int cpu_online[NR_CPUS] = {[0 ... NR_CPUS-1] = 0};
 
-static ssize_t is_online(struct kobject *kobj, struct kobj_attribute *attr,
+static ssize_t hermit_is_online(struct kobject *kobj, struct kobj_attribute *attr,
 				char *buf)
 {
 	int i;
@@ -50,7 +50,7 @@ static ssize_t is_online(struct kobject *kobj, struct kobj_attribute *attr,
 	return sprintf(buf, "%d\n", cpu_online[i]);
 }
 
-static ssize_t set_online(struct kobject *kobj, struct kobj_attribute *attr,
+static ssize_t hermit_set_online(struct kobject *kobj, struct kobj_attribute *attr,
  				const char *buf, size_t count)
 {
 	int i;
@@ -68,7 +68,7 @@ static ssize_t set_online(struct kobject *kobj, struct kobj_attribute *attr,
 }
 
 static struct kobj_attribute cpu_attribute =
-	__ATTR(online, 0600, is_online, set_online);
+	__ATTR(online, 0600, hermit_is_online, hermit_set_online);
   
 static struct attribute * hermit_attrs[] = {
 	NULL
