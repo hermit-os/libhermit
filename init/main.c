@@ -920,6 +920,7 @@ static int try_to_run_init_process(const char *init_filename)
 }
 
 static noinline void __init kernel_init_freeable(void);
+int hermit_init(void);
 
 static int __ref kernel_init(void *unused)
 {
@@ -934,6 +935,9 @@ static int __ref kernel_init(void *unused)
 	numa_default_policy();
 
 	flush_delayed_fput();
+
+	/* initialize HermitCore */
+	hermit_init();
 
 	if (ramdisk_execute_command) {
 		ret = run_init_process(ramdisk_execute_command);
