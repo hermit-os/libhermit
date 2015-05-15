@@ -27,6 +27,8 @@
 #include <linux/ctype.h>
 #include <linux/init.h>
 #include <linux/err.h>
+#include <linux/smp.h>
+#include <asm/cpu.h>
 
 #define NAME_SIZE	128
 
@@ -53,7 +55,7 @@ static ssize_t hermit_is_online(struct kobject *kobj, struct kobj_attribute *att
 static ssize_t hermit_set_online(struct kobject *kobj, struct kobj_attribute *attr,
  				const char *buf, size_t count)
 {
-	int i;
+	int i, new_state;
 
 	for_each_possible_cpu(i) {
 		if (cpu_kobj[i] == kobj)
@@ -63,14 +65,35 @@ static ssize_t hermit_set_online(struct kobject *kobj, struct kobj_attribute *at
 	if (i>= NR_CPUS)
 		return -EINVAL;
 
-	sscanf(buf, "%du", &cpu_online[i]);
+	sscanf(buf, "%du", &new_state);
+
+	if (!new_state) {
+		pr_notice("Currently, HermitCore isn't able to set its CPUs offline\n");
+	} else {
+		if (cpu_online(i)) {
+			pr_notice("HermitCore isn't able to use CPU %d, because it is already used by the Linux kernel.\n", i);
+		} else {
+			cpu_online[i] = 1;
+		}
+	}
+
 	return count;
+}
+
+static ssize_t hermit_get_log(struct kobject *kobj, struct kobj_attribute *attr,
+                                char *buf)
+{
+	return sprintf(buf, "Hello from HermitCore\n");
 }
 
 static struct kobj_attribute cpu_attribute =
 	__ATTR(online, 0600, hermit_is_online, hermit_set_online);
+
+static struct kobj_attribute log_attribute =
+	__ATTR(log, 0600, hermit_get_log, NULL);
   
 static struct attribute * hermit_attrs[] = {
+	&log_attribute.attr,
 	NULL
 };
 
