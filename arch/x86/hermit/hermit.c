@@ -36,11 +36,28 @@ static struct kobject *hermit_kobj = NULL;
 static struct kobject *cpu_kobj[NR_CPUS] = {[0 ... NR_CPUS-1] = NULL};
 static int cpu_online[NR_CPUS] = {[0 ... NR_CPUS-1] = 0};
 
+/*
+ * Wake up a core and boot HermitCore on it
+ */
+static int boot_hermit_core(int cpu)
+{
+	//char* boot_code = NULL;
+	//struct page * boot_page = NULL;
+
+	pr_notice("Try boot HermitCore on CPU %d\n", cpu);
+
+	return 0;
+}
+
+/*
+ * shows if HermitCore is running on a specific CPU
+ */
 static ssize_t hermit_is_online(struct kobject *kobj, struct kobj_attribute *attr,
 				char *buf)
 {
 	int i;
 
+	/* search for the CPU, which is addressed by kobj */
 	for_each_possible_cpu(i) {
 		if (cpu_kobj[i] == kobj)
 			break;
@@ -52,11 +69,15 @@ static ssize_t hermit_is_online(struct kobject *kobj, struct kobj_attribute *att
 	return sprintf(buf, "%d\n", cpu_online[i]);
 }
 
+/*
+ * boot or shut down a CPU with HermitCore
+ */
 static ssize_t hermit_set_online(struct kobject *kobj, struct kobj_attribute *attr,
  				const char *buf, size_t count)
 {
 	int i, new_state;
 
+	/* search for the CPU, which is addressed by kobj */
 	for_each_possible_cpu(i) {
 		if (cpu_kobj[i] == kobj)
 			break;
@@ -68,23 +89,42 @@ static ssize_t hermit_set_online(struct kobject *kobj, struct kobj_attribute *at
 	sscanf(buf, "%du", &new_state);
 
 	if (!new_state) {
+		/* TODO: add feature to shut down a core */
 		pr_notice("Currently, HermitCore isn't able to set its CPUs offline\n");
 	} else {
+		/* 
+		 * only CPU, which are not maintained by Linux, could be used
+		 * for HermitCore
+		 */ 
 		if (cpu_online(i)) {
 			pr_notice("HermitCore isn't able to use CPU %d, because it is already used by the Linux kernel.\n", i);
 		} else {
-			cpu_online[i] = 1;
+			if (!boot_hermit_core(i))
+				cpu_online[i] = 1;
 		}
 	}
 
 	return count;
 }
 
+/*
+ * Interface to display log messages from HermitCore
+ */
 static ssize_t hermit_get_log(struct kobject *kobj, struct kobj_attribute *attr,
                                 char *buf)
 {
 	return sprintf(buf, "Hello from HermitCore\n");
 }
+
+/*
+ * Create sysfs entries as communication interface between Linux user
+ * and the HermitCore kernel
+ *
+ * Usage:
+ * Boot CPUX         : echo 1 > /sys/hermit/cpuX/online 
+ * Shut down CPUX    : echo 0 > /sys/hermit/cpuX/online
+ * Show log messages : cat /sys/hermit/log 
+ */
 
 static struct kobj_attribute cpu_attribute =
 	__ATTR(online, 0600, hermit_is_online, hermit_set_online);
@@ -117,6 +157,10 @@ int hermit_init(void)
 
 	pr_notice("Initialize HermitCore\n");
 
+	/*
+	 * Create a kobject for HermitCore and located
+	 * under the sysfs directory (/sys)
+ 	 */
 	hermit_kobj = kobject_create_and_add("hermit", NULL);
 	if (!hermit_kobj) {
 		error = -ENOMEM;
@@ -127,6 +171,9 @@ int hermit_init(void)
 	if (error)
 		goto _exit;
 
+	/*
+	 * Create for each possible CPU an entry and located under /sys/hermit
+	 */
 	for_each_possible_cpu(i) {
 		/* CPU0 is always maintained by the Linux kernel */
 		if (i) {
