@@ -36,14 +36,14 @@ static struct kobject *hermit_kobj = NULL;
 static struct kobject *cpu_kobj[NR_CPUS] = {[0 ... NR_CPUS-1] = NULL};
 static int cpu_online[NR_CPUS] = {[0 ... NR_CPUS-1] = 0};
 
+/* tramploline to boot a CPU */
+extern unsigned char* hermit_trampoline;
+
 /*
  * Wake up a core and boot HermitCore on it
  */
 static int boot_hermit_core(int cpu)
 {
-	//char* boot_code = NULL;
-	//struct page * boot_page = NULL;
-
 	pr_notice("Try boot HermitCore on CPU %d\n", cpu);
 
 	return 0;
@@ -156,6 +156,7 @@ int hermit_init(void)
 	char name[NAME_SIZE];
 
 	pr_notice("Initialize HermitCore\n");
+	pr_notice("HermitCore trampoline at 0x%p (0x%p)\n", hermit_trampoline, (char*) virt_to_phys(hermit_trampoline));
 
 	/*
 	 * Create a kobject for HermitCore and located

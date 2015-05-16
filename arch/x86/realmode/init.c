@@ -8,6 +8,10 @@
 struct real_mode_header *real_mode_header;
 u32 *trampoline_cr4_features;
 
+#ifdef CONFIG_HERMIT_CORE
+unsigned char* hermit_trampoline;
+#endif
+
 void __init reserve_real_mode(void)
 {
 	phys_addr_t mem;
@@ -24,6 +28,22 @@ void __init reserve_real_mode(void)
 	real_mode_header = (struct real_mode_header *) base;
 	printk(KERN_DEBUG "Base memory trampoline at [%p] %llx size %zu\n",
 	       base, (unsigned long long)mem, size);
+
+#ifdef CONFIG_HERMIT_CORE
+	size = PAGE_SIZE;
+
+	/* Has to be under 1M so we can execute real-mode AP code. */
+	mem = memblock_find_in_range(0, 1<<20, size, PAGE_SIZE);
+	if (!mem) {
+		printk(KERN_DEBUG "Cannot allocate HermitCore trampoline\n");
+		return;
+	}
+
+	base = __va(mem);
+	memblock_reserve(mem, size);
+	hermit_trampoline = base;
+	printk(KERN_DEBUG "Base memory HermitCore trampoline at [%p] %llx size %zu\n", base, (unsigned long long)mem, size);
+#endif
 }
 
 void __init setup_real_mode(void)
