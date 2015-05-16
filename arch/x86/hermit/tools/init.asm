@@ -67,4 +67,4 @@ datasel equ $-gdt
 gdt_end:
 status:
 	db 0x30			; status field (0x30 = acsii code for 0)
-	db 0x00			; end of code
+	db "EOC", 0		; end of code
