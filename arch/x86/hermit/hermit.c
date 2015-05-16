@@ -46,6 +46,9 @@ static int boot_hermit_core(int cpu)
 {
 	pr_notice("Try boot HermitCore on CPU %d\n", cpu);
 
+	if (!hermit_trampoline)
+		return -EINVAL;
+
 	return 0;
 }
 
@@ -99,8 +102,12 @@ static ssize_t hermit_set_online(struct kobject *kobj, struct kobj_attribute *at
 		if (cpu_online(i)) {
 			pr_notice("HermitCore isn't able to use CPU %d, because it is already used by the Linux kernel.\n", i);
 		} else {
-			if (!boot_hermit_core(i))
+			if (!boot_hermit_core(i)) {
+				// to avoid problems with Linux, we disable the hotplug feature
+				cpu_hotplug_disable();
+
 				cpu_online[i] = 1;
+			}
 		}
 	}
 
