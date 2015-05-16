@@ -11,24 +11,22 @@
 [BITS 16]
 SECTION .text
 GLOBAL _start
-;ORG 0x7000
+ORG 0x00
 _start:
 	cli
 	lgdt [gdtr]
-	mov [status], BYTE 1+0x30 ; set marker
 
 	; switch to protected mode by setting PE bit
 	mov eax, cr0
 	or al, 0x1
 	mov cr0, eax
-	mov [status], BYTE 2+0x30 ; set marker
 
 	; far jump to the 32bit code
 	jmp dword codesel : _pmstart
 
 [BITS 32]
+ALIGN 4
 _pmstart:
-	mov [status], BYTE 3+0x30 ; set marker
 	xor eax, eax
 	mov ax, datasel
 	mov ds, ax
@@ -37,7 +35,6 @@ _pmstart:
 	mov gs, ax
 	mov ss, ax
 
-	mov [status], BYTE 4+0x30 ; set marker
 	jmp $
 	mov esp, 0xDEADBEEF
 	push DWORD 0xDEADDEAD
@@ -45,6 +42,7 @@ _pmstart:
 	jmp codesel : 0xDEADC0DE
 	jmp $
 
+ALIGN 4
 gdtr:                           ; descritor table
         dw gdt_end-gdt-1        ; limit
         dd gdt                  ; base adresse
@@ -65,6 +63,4 @@ datasel equ $-gdt
         db 0xCF                 ; additional informationen and degment size 16...19
         db 0x00                 ; segment address 24..31
 gdt_end:
-status:
-	db 0x30			; status field (0x30 = acsii code for 0)
-	db "EOC", 0		; end of code
+

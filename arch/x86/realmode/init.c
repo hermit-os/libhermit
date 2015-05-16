@@ -33,7 +33,7 @@ void __init reserve_real_mode(void)
 	size = PAGE_SIZE;
 
 	/* Has to be under 1M so we can execute real-mode AP code. */
-	mem = memblock_find_in_range(0, 1<<20, size, PAGE_SIZE);
+	mem = memblock_find_in_range(0, 1<<16, size, PAGE_SIZE);
 	if (!mem) {
 		printk(KERN_DEBUG "Cannot allocate HermitCore trampoline\n");
 		return;
