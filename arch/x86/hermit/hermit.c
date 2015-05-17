@@ -42,6 +42,7 @@ static const uint8_t boot_code[] = {0xFA, 0x0F, 0x01, 0x16, 0x40, 0x00, 0x0F, 0x
 static struct kobject *hermit_kobj = NULL;
 static struct kobject *cpu_kobj[NR_CPUS] = {[0 ... NR_CPUS-1] = NULL};
 static int cpu_online[NR_CPUS] = {[0 ... NR_CPUS-1] = 0};
+static size_t memsize = (1 << 23);  /* default 8 MiB */
 
 /* tramploline to boot a CPU */
 extern uint8_t* hermit_trampoline;
@@ -167,7 +168,7 @@ static ssize_t hermit_set_online(struct kobject *kobj, struct kobj_attribute *at
 		/* 
 		 * only CPU, which are not maintained by Linux, could be used
 		 * for HermitCore
-		 */ 
+		 */ 	
 		if (cpu_online(i)) {
 			pr_notice("HermitCore isn't able to use CPU %d, because it is already used by the Linux kernel.\n", i);
 		} else {
@@ -197,6 +198,26 @@ static ssize_t hermit_get_log(struct kobject *kobj, struct kobj_attribute *attr,
 }
 
 /*
+ * get default memory size
+ */
+static ssize_t hermit_get_memsize(struct kobject *kobj, struct kobj_attribute *attr,
+                                char *buf)
+{
+	return sprintf(buf, "%ld\n", memsize);
+}
+
+/*
+ * set default memory size
+ */
+static ssize_t hermit_set_memsize(struct kobject *kobj, struct kobj_attribute *attr,
+                                   const char *buf, size_t count)
+{
+	sscanf(buf, "%ld", &memsize);
+
+	return count;
+}
+
+/*
  * Create sysfs entries as communication interface between Linux user
  * and the HermitCore kernel
  *
@@ -211,9 +232,13 @@ static struct kobj_attribute cpu_attribute =
 
 static struct kobj_attribute log_attribute =
 	__ATTR(log, 0600, hermit_get_log, NULL);
-  
+
+static struct kobj_attribute memsize_attribute = 
+	__ATTR(memsize, 0600, hermit_get_memsize, hermit_set_memsize);
+
 static struct attribute * hermit_attrs[] = {
 	&log_attribute.attr,
+	&memsize_attribute.attr,
 	NULL
 };
 
