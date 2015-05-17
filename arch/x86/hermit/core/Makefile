@@ -1,7 +1,6 @@
 TERM = xterm
 TOPDIR = $(shell pwd)
 ARCH = x86
-#BIT = 64
 NAME = hermit
 KERNDIRS = kernel mm libkern arch/$(ARCH)/kernel arch/$(ARCH)/mm
 SUBDIRS = $(KERNDIRS)
