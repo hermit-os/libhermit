@@ -30,7 +30,7 @@
  * @file arch/x86/include/asm/multiboot.h
  * @brief Structures related to the Multiboot interface
  *
- * eduOS is able to use Multiboot (http://www.gnu.org/software/grub/manual/multiboot/),
+ * HermitCore is able to use Multiboot (http://www.gnu.org/software/grub/manual/multiboot/),
  * which specifies an interface between a boot loader and a operating system.\n
  * \n
  * This file contains several structures needed to match the interface.

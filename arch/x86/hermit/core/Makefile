@@ -75,7 +75,7 @@ clean:
 	@echo Cleaned.
 
 veryclean: clean
-	$Q$(RM) qemu-vlan0.pcap include/eduos/config.inc
+	$Q$(RM) qemu-vlan0.pcap include/hermit/config.inc
 	@echo Very cleaned
 
 qemu: all
