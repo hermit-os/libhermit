@@ -59,7 +59,6 @@ mboot:
     dd MULTIBOOT_CHECKSUM
     dd 0, 0, 0, 0, 0 ; address fields
 
-%ifdef CONFIG_X86_64
 ALIGN 4
 ; we need already a valid GDT to switch in the 64bit modus
 GDT64:                           ; Global Descriptor Table (64-bit).
@@ -87,7 +86,6 @@ GDT64:                           ; Global Descriptor Table (64-bit).
     .Pointer:                    ; The GDT-pointer.
     dw $ - GDT64 - 1             ; Limit.
     dq GDT64                     ; Base.
-%endif
 
 SECTION .text
 ALIGN 4
@@ -102,13 +100,9 @@ stublet:
     ; Initialize CPU features
     call cpu_init
 
-	%ifdef CONFIG_X86_32
-		jmp start32
-	%elifdef CONFIG_X86_64
-		pop ebx ; restore pointer to multiboot structure
-		lgdt [GDT64.Pointer] ; Load the 64-bit global descriptor table.
-		jmp GDT64.Code:start64 ; Set the code segment and enter 64-bit long mode.
-	%endif
+    pop ebx ; restore pointer to multiboot structure
+    lgdt [GDT64.Pointer] ; Load the 64-bit global descriptor table.
+    jmp GDT64.Code:start64 ; Set the code segment and enter 64-bit long mode.
 
 start32:
 	; Jump to the boot processors's C code
@@ -128,19 +122,15 @@ cpu_init:
 
 ; map vga 1:1
 %ifdef CONFIG_VGA
-	push edi
-	mov eax, VIDEO_MEM_ADDR   ; map vga
-	and eax, 0xFFFFF000       ; page align lower half
-	mov edi, eax
-%ifdef CONFIG_X86_64
+    push edi
+    mov eax, VIDEO_MEM_ADDR   ; map vga
+    and eax, 0xFFFFF000       ; page align lower half
+    mov edi, eax
     shr edi, 9                ; (edi >> 12) * 8 (index for boot_pgt)
-%else
-	shr edi, 10               ; (edi >> 12) * 4 (index for boot_pgt)
-%endif
-	add edi, boot_pgt
-	or eax, 0x113             ; set present, global, writable and cache disable bits
-	mov DWORD [edi], eax
-	pop edi
+    add edi, boot_pgt
+    or eax, 0x113             ; set present, global, writable and cache disable bits
+    mov DWORD [edi], eax
+    pop edi
 %endif
 
     ; map multiboot info 1:1
@@ -148,11 +138,7 @@ cpu_init:
     mov eax, DWORD [mb_info]  ; map multiboot info
     and eax, 0xFFFFF000       ; page align lower half
     mov edi, eax
-%ifdef CONFIG_X86_64
     shr edi, 9                ; (edi >> 12) * 8 (index for boot_pgt)
-%else
-	shr edi, 10               ; (edi >> 12) * 4 (index for boot_pgt)
-%endif
     add edi, boot_pgt
     or eax, 0x101             ; set present and global bits
     mov DWORD [edi], eax
@@ -166,26 +152,21 @@ cpu_init:
     mov ebx, kernel_end
     add ebx, 0x1000
 L0: cmp ecx, ebx
-	jae L1
-	mov eax, ecx
-	and eax, 0xFFFFF000       ; page align lower half
+    jae L1
+    mov eax, ecx
+    and eax, 0xFFFFF000       ; page align lower half
     mov edi, eax
-%ifdef CONFIG_X86_64
     shr edi, 9                ; (edi >> 12) * 8 (index for boot_pgt)
-%else
-	shr edi, 10               ; (edi >> 12) * 4 (index for boot_pgt)
-%endif
-	add edi, boot_pgt
-	or eax, 0x103             ; set present, global and writable bits
-	mov DWORD [edi], eax
-	add ecx, 0x1000
+    add edi, boot_pgt
+    or eax, 0x103             ; set present, global and writable bits
+    mov DWORD [edi], eax
+    add ecx, 0x1000
     jmp L0
 L1:
 	pop ecx
 	pop ebx
     pop edi
 
-	%ifdef CONFIG_X86_64
 		; check for long mode
 
 		; do we have the instruction cpuid?
@@ -225,14 +206,9 @@ L1:
 		rdmsr
 		or eax, 1 << 8
 		wrmsr
-	%endif
 
 	; Set CR3
-	%ifdef CONFIG_X86_32
-	    mov eax, boot_pgd
-	%elifdef CONFIG_X86_64
 		mov eax, boot_pml4
-	%endif
 	    mov cr3, eax
 
 	; Set CR4
@@ -246,9 +222,7 @@ L1:
 	and eax, ~(1 << 30)     ; enable caching
 	and eax, ~(1 << 16)	; allow kernel write access to read-only pages
 	or eax, (1 << 31)       ; enable paging
-	%ifdef CONFIG_X86_64
-		or eax, (1 << 0)    ; long mode also needs PM-bit set
-	%endif
+	or eax, (1 << 0)    ; long mode also needs PM-bit set
 	mov cr0, eax
 
 	ret
@@ -256,9 +230,6 @@ L1:
 ; there is no long mode
 Linvalid:
 	jmp $
-
-
-%ifdef CONFIG_X86_64
 
 [BITS 64]
 start64:
@@ -283,39 +254,14 @@ start64:
     call main
     jmp $
 
-%endif
-
 global gdt_flush
 extern gp
-
-%ifdef CONFIG_X86_32
-
-; This will set up our new segment registers. We need to do
-; something special in order to set CS. We do what is called a
-; far jump. A jump that includes a segment as well as an offset.
-; This is declared in C as 'extern void gdt_flush();'
-gdt_flush:
-	lgdt [gp]
-	mov ax, 0x10
-	mov ds, ax
-	mov es, ax
-	mov ss, ax
-	mov ax, 0x00
-	mov fs, ax
-	mov gs, ax
-	jmp 0x08:flush2
-flush2:
-	ret
-
-%elifdef CONFIG_X86_64
 
 ; This will set up our new segment registers and is declared in
 ; C as 'extern void gdt_flush();'
 gdt_flush:
 	lgdt [gp]
 	ret
-
-%endif
 
 ; The first 32 interrupt service routines (ISR) entries correspond to exceptions.
 ; Some exceptions will push an error code onto the stack which is specific to
@@ -438,112 +384,6 @@ apic_svr:
 extern irq_handler
 extern get_current_stack
 extern finish_task_switch
-
-%ifdef CONFIG_X86_32
-; Used to realize system calls.
-; By entering the handler, the interrupt flag is not cleared.
-global isrsyscall
-isrsyscall:
-    cli
-    push es
-    push ds
-    push ebp
-    push edi
-    push esi
-    push edx
-    push ecx
-    push ebx
-    push eax
-
-; Set kernel data segmenets
-    mov ax, 0x10
-    mov ds, ax
-    mov es, ax
-    mov eax, [esp]
-    sti
-
-    extern syscall_handler
-    call syscall_handler
-
-    cli
-    add esp, 4 ; eax contains the return value
-               ; => we did not restore eax
-
-    pop ebx
-    pop ecx
-    pop edx
-    pop esi
-    pop edi
-    pop ebp
-    pop ds
-    pop es
-    sti
-    iret
-
-; Create a pseudo interrupt on top of the stack.
-; Afterwards, we switch to the task with iret.
-; We already are in kernel space => no pushing of SS required.
-global switch_context
-ALIGN 4
-switch_context:
-    mov eax, [esp+4]            ; on the stack is already the address to store the old esp
-    pushf                       ; push controll register
-    push DWORD 0x8              ; CS
-    push DWORD rollback         ; EIP
-    push DWORD 0x0              ; Interrupt number
-    push DWORD 0x00edbabe       ; Error code
-    pusha                       ; push all general purpose registers...
-    push 0x10                   ; kernel data segment (for ES)
-    push 0x10                   ; kernel data segment (for DS)
-
-    jmp common_switch
-
-ALIGN 4
-rollback:
-    ret
-
-ALIGN 4
-common_stub:
-    pusha
-    push es
-    push ds
-    mov ax, 0x10
-    mov es, ax
-    mov ds, ax
-
-; Use the same handler for interrupts and exceptions
-    push esp
-    call irq_handler
-    add esp, 4
-
-    cmp eax, 0
-    je no_context_switch
-
-common_switch:
-    mov [eax], esp             ; store old esp
-    call get_current_stack     ; get new esp
-    xchg eax, esp
-
-; Set task switched flag
-    mov eax, cr0
-    or eax, 8
-    mov cr0, eax
-
-; Set esp0 in the task state segment
-    extern set_kernel_stack
-    call set_kernel_stack
-
-; Call cleanup code
-    call finish_task_switch
-
-no_context_switch:
-    pop ds
-    pop es
-    popa
-    add esp, 8
-    iret
-
-%else
 
 global isrsyscall
 ; used to realize system calls
@@ -685,7 +525,6 @@ no_context_switch:
 
     add rsp, 16
     iretq
-%endif
 
 SECTION .data
 
@@ -701,15 +540,6 @@ boot_stack:
 
 ; Bootstrap page tables are used during the initialization.
 ALIGN 4096
-%ifdef CONFIG_X86_32
-boot_pgd:
-
-	DD boot_pgt + 0x107	; PG_PRESENT | PG_GLOBAL | PG_RW | PG_USER
-	times 1022 DD 0		; PAGE_MAP_ENTRIES - 2
-	DD boot_pgd + 0x303 ; PG_PRESENT | PG_GLOBAL | PG_RW | PG_SELF (self-reference)
-boot_pgt:
-	times 1024 DD 0
-%else
 boot_pml4:
 	DQ boot_pdpt + 0x107 ; PG_PRESENT | PG_GLOBAL | PG_RW | PG_USER
 	times 510 DQ 0       ; PAGE_MAP_ENTRIES - 2
@@ -724,7 +554,6 @@ boot_pgd:
 	DQ boot_pml4 + 0x303 ; PG_PRESENT | PG_GLOBAL | PG_RW | PG_SELF (self-reference)
 boot_pgt:
 	times 512 DQ 0
-%endif
 
 ; add some hints to the ELF file
 SECTION .note.GNU-stack noalloc noexec nowrite progbits

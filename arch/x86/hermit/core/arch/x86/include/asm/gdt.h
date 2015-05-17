@@ -110,16 +110,12 @@ typedef struct {
 	size_t base;
 } __attribute__ ((packed)) gdt_ptr_t;
 
-#ifdef CONFIG_X86_32
-#define GDT_ENTRIES	(5+1)
-#else
 // a TSS descriptor is twice larger than a code/data descriptor
 #define GDT_ENTRIES	(6+1*2)
-#endif
 
 #if GDT_ENTRIES > 8192
 #error Too many GDT entries!
-#endif
+#endif 
 
 /** @brief Installs the global descriptor table
  *

@@ -40,15 +40,6 @@ inline static void *memcpy(void* dest, const void *src, size_t count)
 	if (BUILTIN_EXPECT(!dest || !src, 0))
 		return dest;
 
-#ifdef CONFIG_X86_32
-	asm volatile (
-		"cld; rep movsl\n\t"
-		"movl %4, %%ecx\n\t" 
-		"andl $3, %%ecx\n\t"
-		"rep movsb\n\t" 
-		: "=&c"(i), "=&D"(j), "=&S"(k) 
-		: "0"(count/4), "g"(count), "1"(dest), "2"(src) : "memory","cc");
-#elif defined(CONFIG_X86_64)
 	asm volatile (
 		"cld; rep movsq\n\t"
 		"movq %4, %%rcx\n\t"
@@ -56,7 +47,6 @@ inline static void *memcpy(void* dest, const void *src, size_t count)
 		"rep movsb\n\t"
 		: "=&c"(i), "=&D"(j), "=&S"(k)
 		: "0"(count/8), "g"(count), "1"(dest), "2"(src) : "memory","cc");
-#endif
 
 	return dest;
 }
@@ -102,17 +92,10 @@ inline static size_t strlen(const char* str)
 	if (BUILTIN_EXPECT(!str, 0))
 		return len;
 
-#ifdef CONFIG_X86_32
-	asm volatile("not %%ecx; cld; repne scasb; not %%ecx; dec %%ecx"
-		: "=&c"(len), "=&D"(i), "=&a"(j)
-		: "2"(0), "1"(str), "0"(len)
-		: "memory","cc");
-#elif defined(CONFIG_X86_64)
 	asm volatile("not %%rcx; cld; repne scasb; not %%rcx; dec %%rcx"
 		: "=&c"(len), "=&D"(i), "=&a"(j)
 		: "2"(0), "1"(str), "0"(len)
 		: "memory","cc");
-#endif
 
 	return len;
 }

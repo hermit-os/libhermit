@@ -45,13 +45,13 @@
 /// The size of a single page in bytes
 #define PAGE_SIZE		( 1L << PAGE_BITS)
 /// Mask the page address without page map flags and XD flag
-#ifdef CONFIG_X86_32
+#if 0
 #define PAGE_MASK		(-1L << PAGE_BITS)
-#elif defined(CONFIG_X86_64)
+#else
 #define PAGE_MASK		((-1L << PAGE_BITS) & ~PG_XD)
 #endif
 
-#ifdef CONFIG_X86_32
+#if 0
 /// Total operand width in bits
 #define BITS			32
 /// Physical address width (we dont support PAE)
@@ -62,7 +62,7 @@
 #define PAGE_MAP_BITS	10
 /// Number of page map indirections
 #define PAGE_LEVELS		2
-#elif defined(CONFIG_X86_64)
+#else
 /// Total operand width in bits
 #define BITS			64
 /// Physical address width (maximum value)
@@ -88,9 +88,9 @@ static inline size_t sign_extend(ssize_t addr, int bits)
 #endif
 
 /// Make address canonical
-#ifdef CONFIG_X86_32
+#if 0
 #define CANONICAL(addr)		(addr) // only for 32 bit paging
-#elif defined(CONFIG_X86_64)
+#else
 #define CANONICAL(addr)		sign_extend(addr, VIRT_BITS)
 #endif
 
@@ -125,10 +125,8 @@ static inline size_t sign_extend(ssize_t addr, int bits)
 /// This table is a self-reference and should skipped by page_map_copy()
 #define PG_SELF			(1 << 9)
 
-#ifdef CONFIG_X86_64
 /// Disable execution for this page
 #define PG_XD			(1L << 63)
-#endif
 
 /** @brief Converts a virtual address to a physical
  *

@@ -42,7 +42,6 @@ extern "C" {
 
 #if __SIZEOF_POINTER__ == 4
 
-#define CONFIG_X86_32
 #define KERNEL_SPACE	(1UL << 30) /*  1 GiB */
 
 /// This type is used to represent the size of an object.
@@ -55,7 +54,6 @@ typedef long ssize_t;
 typedef long off_t;
 #elif __SIZEOF_POINTER__ == 8
 
-#define CONFIG_X86_64
 #define KERNEL_SPACE (1ULL << 30)
 
 // A popular type for addresses
@@ -91,39 +89,6 @@ typedef unsigned short wchar_t;
 
 /// This defines what the stack looks like after the task context is saved.
 struct state {
-#ifdef CONFIG_X86_32
-	/// ds register
-	uint32_t ds;
-	/// es register
-	uint32_t es;
-	/// EDI register
-	uint32_t edi;
-	/// ESI register
-	uint32_t esi;
-	/// EBP register
-	uint32_t ebp;
-	/// ESP register
-	uint32_t esp;
-	/// EBX register 
-	uint32_t ebx;
-	/// EDX register
-	uint32_t edx;
-	/// ECX register
-	uint32_t ecx;
-	/// EAX register
-	uint32_t eax;		/* pushed by 'pusha' */
-
-	/// Interrupt number
-	uint32_t int_no;
-
-	// pushed by the processor automatically
-	uint32_t error;
-	uint32_t eip;
-	uint32_t cs;
-	uint32_t eflags;
-	uint32_t useresp;
-	uint32_t ss;
-#elif defined(CONFIG_X86_64)
 	/// R15 register
 	uint64_t r15;
 	/// R14 register
@@ -167,7 +132,6 @@ struct state {
 	uint64_t rflags;
 	uint64_t userrsp;
 	uint64_t ss;
-#endif
 };
 
 #ifdef __cplusplus

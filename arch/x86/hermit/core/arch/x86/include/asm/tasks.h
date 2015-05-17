@@ -68,11 +68,7 @@ int create_default_frame(task_t* task, entry_point_t ep, void* arg);
  */
 static inline int register_task(void)
 {
-#ifdef CONFIG_X86_32
 	uint16_t sel = 5 << 3;
-#else
-	uint16_t sel = 6 << 3;
-#endif
 
 	asm volatile ("ltr %%ax" : : "a"(sel));
 
@@ -89,15 +85,6 @@ static inline int register_task(void)
 static inline int jump_to_user_code(size_t ep, size_t stack)
 {
 	// Create a pseudo interrupt on the stack and return to user function
-#ifdef CONFIG_X86_32
-	size_t ds = 0x23, cs = 0x1b;
-
-	asm volatile ("mov %0, %%ds; mov %0, %%es" :: "r"(ds));
-	asm volatile ("push %0; push %1; pushf; push %2; push %3" :: "r"(ds), "r"(stack), "r"(cs), "r"(ep));
-	asm volatile ("iret");
-
-	return 0;
-#else
 	size_t ds = 0x23, cs = 0x2b;
 
 	// x86_64 doesn't longer use segment registers
@@ -106,7 +93,6 @@ static inline int jump_to_user_code(size_t ep, size_t stack)
 	asm volatile ("iretq");
 
 	return 0;
-#endif
 }
 
 #ifdef __cplusplus

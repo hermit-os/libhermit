@@ -233,15 +233,9 @@ inline static uint32_t has_nx(void)
  */
 inline static uint64_t rdtsc(void)
 {
-#ifdef CONFIG_X86_32
-	uint64_t x;
-	asm volatile ("rdtsc" : "=A" (x));
-	return x;
-#elif defined(CONFIG_X86_64)
 	uint64_t lo, hi;
 	asm volatile ("rdtsc" : "=a"(lo), "=d"(hi) );
 	return (hi << 32 | lo);
-#endif
 }
 
 /** @brief Read MSR

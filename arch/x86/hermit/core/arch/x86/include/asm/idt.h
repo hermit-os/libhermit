@@ -88,12 +88,10 @@ typedef struct {
 	uint8_t flags;
 	/// Higher 16 bits of handler function's base address
 	uint16_t base_hi;
-#ifdef CONFIG_X86_64
 	/// In 64 bit mode, the "highest" 32 bits of the handler function's base address
 	uint32_t base_hi64;
 	/// resvered entries
 	uint32_t reserved;
-#endif
 } __attribute__ ((packed)) idt_entry_t;
 
 /** @brief Defines the idt pointer structure.

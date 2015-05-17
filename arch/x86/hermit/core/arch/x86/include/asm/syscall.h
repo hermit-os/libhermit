@@ -59,21 +59,6 @@ extern "C" {
  * @param arg4 Argument 4
  * @return The return value of the system call
  */
-#ifdef CONFIG_X86_32
-inline static long
-syscall(int nr, unsigned long arg0, unsigned long arg1, unsigned long arg2,
-	unsigned long arg3, unsigned long arg4)
-{
-	long res;
-
-	asm volatile (_SYSCALLSTR(INT_SYSCALL)
-			: "=a" (res)
-			: "0" (nr), "b" (arg0), "c" (arg1), "d" (arg2), "S" (arg3), "D" (arg4)
-			: "memory", "cc");
-
-	return res;
-}
-#else
 inline static long
 syscall(int nr, unsigned long arg0, unsigned long arg1, unsigned long arg2,
 	unsigned long arg3, unsigned long arg4)
@@ -87,7 +72,6 @@ syscall(int nr, unsigned long arg0, unsigned long arg1, unsigned long arg2,
 
 	return res;
 }
-#endif
 
 /// System call macro with one single argument; the syscall number
 #define SYSCALL0(NR) \

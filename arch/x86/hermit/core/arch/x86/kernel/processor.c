@@ -168,7 +168,6 @@ int cpu_detection(void) {
 		cr4 |= CR4_PGE;
 	write_cr4(cr4);
 
-#ifdef CONFIG_X86_64
 	if (cpu_info.feature3 & CPU_FEATURE_SYSCALL) {
 		wrmsr(MSR_EFER, rdmsr(MSR_EFER) | EFER_LMA | EFER_SCE);
 		wrmsr(MSR_STAR, (0x1BULL << 48) | (0x08ULL << 32));
@@ -178,7 +177,6 @@ int cpu_detection(void) {
 
 	if (has_nx())
 		wrmsr(MSR_EFER, rdmsr(MSR_EFER) | EFER_NXE);
-#endif
 
 	if (first_time && has_sse())
 		wmb = sfence;

@@ -1,7 +1,7 @@
 TERM = xterm
 TOPDIR = $(shell pwd)
 ARCH = x86
-BIT = 64
+#BIT = 64
 NAME = hermit
 KERNDIRS = kernel mm libkern arch/$(ARCH)/kernel arch/$(ARCH)/mm
 SUBDIRS = $(KERNDIRS)
@@ -47,7 +47,7 @@ debug debug-eclipse : CFLAGS = -g -O0 -m64 -Wall -fno-builtin -DWITH_FRAME_POINT
 AR = ar
 ARFLAGS = rsv
 RM = rm -rf
-LDFLAGS = -T link$(BIT).ld -z max-page-size=4096 --defsym __BUILD_DATE=$(shell date +'%Y%m%d') --defsym __BUILD_TIME=$(shell date +'%H%M%S')
+LDFLAGS = -T link.ld -z max-page-size=4096 --defsym __BUILD_DATE=$(shell date +'%Y%m%d') --defsym __BUILD_TIME=$(shell date +'%H%M%S')
 STRIP_DEBUG = --strip-debug
 KEEP_DEBUG = --only-keep-debug
 OUTPUT_FORMAT = -O elf32-i386
@@ -101,7 +101,6 @@ include/hermit/config.inc: include/hermit/config.h
 	@awk '/^#define KERNEL_STACK_SIZE/{ print "%define KERNEL_STACK_SIZE", $$3 }' include/hermit/config.h >> include/hermit/config.inc
 	@awk '/^#define VIDEO_MEM_ADDR/{ print "%define VIDEO_MEM_ADDR", $$3 }' include/hermit/config.h >> include/hermit/config.inc
 	@awk '/^#define CONFIG_VGA/{ print "%define CONFIG_VGA" }' include/hermit/config.h >> include/hermit/config.inc
-	@echo "%define CONFIG_X86_$(BIT)" >> include/hermit/config.inc
 
 %.o : %.asm include/hermit/config.inc
 	@echo [ASM] $@

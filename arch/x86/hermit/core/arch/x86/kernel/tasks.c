@@ -69,10 +69,6 @@ int create_default_frame(task_t* task, entry_point_t ep, void* arg)
 
 	/* Only marker for debugging purposes, ... */
 	*stack-- = 0xDEADBEEF;
-#ifdef CONFIG_X86_32
-	/* the first-function-to-be-called's arguments, ... */
-	*stack-- = (size_t) arg;
-#endif
 
 	/* and the "caller" we shall return to.
 	 * This procedure cleans the task after exit. */
@@ -81,43 +77,24 @@ int create_default_frame(task_t* task, entry_point_t ep, void* arg)
 	/* Next bunch on the stack is the initial register state. 
 	 * The stack must look like the stack of a task which was
 	 * scheduled away previously. */
-#ifdef CONFIG_X86_32
-	state_size = sizeof(struct state) - 2*sizeof(size_t);
-#else
 	state_size = sizeof(struct state);
-#endif
 	stack = (size_t*) ((size_t) stack - state_size);
 
 	stptr = (struct state *) stack;
 	memset(stptr, 0x00, state_size);
-#ifdef CONFIG_X86_32
-	stptr->esp = (size_t)stack + state_size;
-#else
 	stptr->rsp = (size_t)stack + state_size;
 	/* the first-function-to-be-called's arguments, ... */
 	stptr->rdi = (size_t) arg;
-#endif
 	stptr->int_no = 0xB16B00B5;
 	stptr->error =  0xC03DB4B3;
 
 	/* The instruction pointer shall be set on the first function to be called
 	   after IRETing */
-#ifdef CONFIG_X86_32
-	stptr->eip = (size_t)ep;
-#else
 	stptr->rip = (size_t)ep;
-#endif
 	stptr->cs = 0x08;
-#ifdef CONFIG_X86_32
-	stptr->ds = stptr->es = 0x10;
-	stptr->eflags = 0x1202;
-	// the creation of a kernel tasks didn't change the IOPL level
-	// => useresp & ss is not required
-#else
 	stptr->ss = 0x10;
 	stptr->rflags = 0x1202;
 	stptr->userrsp = stptr->rsp;
-#endif
 
 	/* Set the task's stack pointer entry to the stack we have crafted right now. */
 	task->last_stack_pointer = (size_t*)stack;

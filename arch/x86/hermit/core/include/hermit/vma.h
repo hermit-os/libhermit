@@ -64,11 +64,7 @@ extern "C" {
 #define VMA_USER_MIN	KERNEL_SPACE
 
 // last three top level entries are reserved
-#ifdef CONFIG_X86_32
- #define VMA_USER_MAX	0xFF400000
-#elif defined (CONFIG_X86_64)
- #define VMA_USER_MAX	0xFFFFFE8000000000
-#endif
+#define VMA_USER_MAX	0xFFFFFE8000000000
 
 struct vma;
 

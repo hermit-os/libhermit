@@ -47,11 +47,7 @@
  * for which the 'presence' bit is cleared (0) will generate an
  * "Unhandled Interrupt" exception 
  */
-#ifdef CONFIG_X86_64
 static idt_entry_t idt[256] = {[0 ... 255] = {0, 0, 0, 0, 0, 0, 0}};
-#else
-static idt_entry_t idt[256] = {[0 ... 255] = {0, 0, 0, 0, 0}};
-#endif
 static idt_ptr_t idtp;
 
 void configure_idt_entry(idt_entry_t *dest_entry, size_t base, 
@@ -92,7 +88,7 @@ void idt_install(void)
 		idtp.limit = (sizeof(idt_entry_t) * 256) - 1;
 		idtp.base = (size_t)&idt;
 
-#ifdef CONFIG_X86_32
+#if 0
 		/* Add any new ISRs to the IDT here using idt_set_gate */
 		idt_set_gate(INT_SYSCALL, (size_t)isrsyscall, KERNEL_CODE_SELECTOR,
 			IDT_FLAG_PRESENT|IDT_FLAG_RING3|IDT_FLAG_32BIT|IDT_FLAG_TRAPGATE);

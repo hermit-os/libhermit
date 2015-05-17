@@ -58,7 +58,7 @@ static spinlock_t kslock = SPINLOCK_INIT;
 /** This PGD table is initialized in entry.asm */
 extern size_t* boot_map;
 
-#ifdef CONFIG_X86_32
+#if 0
 /** A self-reference enables direct access to all page tables */
 static size_t * const self[PAGE_LEVELS] = {
 	(size_t *) 0xFFC00000,
@@ -70,7 +70,7 @@ static size_t * const other[PAGE_LEVELS] = {
 	(size_t *) 0xFF800000,
 	(size_t *) 0xFFFFE000
 };
-#elif defined(CONFIG_X86_64)
+#else
 /** A self-reference enables direct access to all page tables */
 static size_t* const self[PAGE_LEVELS] = {
 	(size_t *) 0xFFFFFF8000000000,
@@ -138,9 +138,9 @@ int page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits)
 						atomic_int32_inc(&current_task->user_usage);
 
 					/* Reference the new table within its parent */
-#ifdef CONFIG_X86_32
+#if 0
 					self[lvl][vpn] = phyaddr | bits | PG_PRESENT | PG_USER | PG_RW;
-#elif defined(CONFIG_X86_64)
+#else
 					self[lvl][vpn] = (phyaddr | bits | PG_PRESENT | PG_USER | PG_RW) & ~PG_XD;
 #endif
 
@@ -293,7 +293,7 @@ void page_fault_handler(struct state *s)
 	}
 
 default_handler:
-#ifdef CONFIG_X86_32
+#if 0
 	kprintf("Page Fault Exception (%d) at cs:ip = %#x:%#lx, task = %u, addr = %#lx, error = %#x [ %s %s %s %s %s ]\n",
 		s->int_no, s->cs, s->eip, current_task->id, viraddr, s->error,
 		(s->error & 0x4) ? "user" : "supervisor",
@@ -301,7 +301,7 @@ default_handler:
 		(s->error & 0x2) ? "write" : ((s->error & 0x10) ? "fetch" : "read"),
 		(s->error & 0x1) ? "protection" : "not present",
 		(s->error & 0x8) ? "reserved bit" : "\b");
-#elif defined(CONFIG_X86_64)
+#else
 	kprintf("Page Fault Exception (%d) at cs:ip = %#x:%#lx, task = %u, addr = %#lx, error = %#x [ %s %s %s %s %s ]\n",
 		s->int_no, s->cs, s->rip, current_task->id, viraddr, s->error,
 		(s->error & 0x4) ? "user" : "supervisor",

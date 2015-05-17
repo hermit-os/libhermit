@@ -216,13 +216,8 @@ static void fault_handler(struct state *s)
 {
 	if (s->int_no < 32) {
 		kputs(exception_messages[s->int_no]);
-#ifdef CONFIG_X86_32
-		kprintf(" Exception (%d) at 0x%x:0x%x, error code 0x%x, eflags 0x%x\n",
-			s->int_no, s->cs, s->eip, s->error, s->eflags);
-#elif defined(CONFIG_X86_64)
 		kprintf(" Exception (%d) at 0x%llx:0x%llx, error code 0x%llx, rflags 0x%llx\n",
 			s->int_no, s->cs, s->rip, s->error, s->rflags);
-#endif
 		outportb(0x20, 0x20);
 
 		irq_enable();
