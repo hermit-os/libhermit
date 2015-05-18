@@ -69,8 +69,12 @@ $(NAME).elf:
 	@echo [OBJCOPY] $(NAME).elf
 	$Q$(OBJCOPY_FOR_TARGET) $(STRIP_DEBUG) $(OUTPUT_FORMAT) $(NAME).elf
 
+$(NAME).bin: $(NAME).elf
+	@echo [OBJCOPY] $(NAME).bin
+	$Q$(OBJCOPY_FOR_TARGET) -j .mboot -j .kmsg -j .text -j .data -j .rodata -j .bss -O binary $< $@
+
 clean:
-	$Q$(RM) $(NAME).elf $(NAME).sym *~
+	$Q$(RM) $(NAME).elf $(NAME).sym $(NAME).bin *~
 	@echo Cleaned.
 
 veryclean: clean
