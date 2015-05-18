@@ -68,7 +68,7 @@ int create_default_frame(task_t* task, entry_point_t ep, void* arg);
  */
 static inline int register_task(void)
 {
-	uint16_t sel = 5 << 3;
+	uint16_t sel = 6 << 3;
 
 	asm volatile ("ltr %%ax" : : "a"(sel));
 
