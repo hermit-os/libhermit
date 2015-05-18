@@ -90,11 +90,11 @@ GDT64:                           ; Global Descriptor Table (64-bit).
 SECTION .text
 ALIGN 4
 stublet:
-	; Initialize stack pointer
+    ; Initialize stack pointer
     mov esp, boot_stack
     add esp, KERNEL_STACK_SIZE - 16
 
-	; Interpret multiboot information
+    ; Interpret multiboot information
     mov DWORD [mb_info], ebx
 
     ; Initialize CPU features
@@ -105,7 +105,7 @@ stublet:
     jmp GDT64.Code:start64 ; Set the code segment and enter 64-bit long mode.
 
 start32:
-	; Jump to the boot processors's C code
+    ; Jump to the boot processors's C code
     extern main
     call main
     jmp $
@@ -163,93 +163,93 @@ L0: cmp ecx, ebx
     add ecx, 0x1000
     jmp L0
 L1:
-	pop ecx
-	pop ebx
+    pop ecx
+    pop ebx
     pop edi
 
-		; check for long mode
+    ; check for long mode
 
-		; do we have the instruction cpuid?
-		pushfd
-		pop eax
-		mov ecx, eax
-		xor eax, 1 << 21
-		push eax
-		popfd
-		pushfd
-		pop eax
-		push ecx
-		popfd
-		xor eax, ecx
-		jz Linvalid
+    ; do we have the instruction cpuid?
+    pushfd
+    pop eax
+    mov ecx, eax
+    xor eax, 1 << 21
+    push eax
+    popfd
+    pushfd
+    pop eax
+    push ecx
+    popfd
+    xor eax, ecx
+    jz Linvalid
 
-		; cpuid > 0x80000000?
-		mov eax, 0x80000000
-		cpuid
-		cmp eax, 0x80000001
-		jb Linvalid ; It is less, there is no long mode.
+    ; cpuid > 0x80000000?
+    mov eax, 0x80000000
+    cpuid
+    cmp eax, 0x80000001
+    jb Linvalid ; It is less, there is no long mode.
 
-		; do we have a long mode?
-		mov eax, 0x80000001
-		cpuid
-		test edx, 1 << 29 ; Test if the LM-bit, which is bit 29, is set in the D-register.
-		jz Linvalid ; They aren't, there is no long mode.
+    ; do we have a long mode?
+    mov eax, 0x80000001
+    cpuid
+    test edx, 1 << 29 ; Test if the LM-bit, which is bit 29, is set in the D-register.
+    jz Linvalid ; They aren't, there is no long mode.
 
 
-		; we need to enable PAE modus
-		mov eax, cr4
-		or eax, 1 << 5
-		mov cr4, eax
+    ; we need to enable PAE modus
+    mov eax, cr4
+    or eax, 1 << 5
+    mov cr4, eax
 
-		; switch to the compatibility mode (which is part of long mode)
-		mov ecx, 0xC0000080
-		rdmsr
-		or eax, 1 << 8
-		wrmsr
+    ; switch to the compatibility mode (which is part of long mode)
+    mov ecx, 0xC0000080
+    rdmsr
+    or eax, 1 << 8
+    wrmsr
 
-	; Set CR3
-		mov eax, boot_pml4
-	    mov cr3, eax
+    ; Set CR3
+    mov eax, boot_pml4
+    mov cr3, eax
 
-	; Set CR4
-	mov eax, cr4
-	and eax, 0xfffbf9ff     ; disable SSE
-	or eax, (1 << 4)        ; enable PSE
-	mov cr4, eax
+    ; Set CR4
+    mov eax, cr4
+    and eax, 0xfffbf9ff     ; disable SSE
+    or eax, (1 << 4)        ; enable PSE
+    mov cr4, eax
 
-	; Set CR0
-	mov eax, cr0
-	and eax, ~(1 << 30)     ; enable caching
-	and eax, ~(1 << 16)	; allow kernel write access to read-only pages
-	or eax, (1 << 31)       ; enable paging
-	or eax, (1 << 0)    ; long mode also needs PM-bit set
-	mov cr0, eax
+    ; Set CR0
+    mov eax, cr0
+    and eax, ~(1 << 30)     ; enable caching
+    and eax, ~(1 << 16)	; allow kernel write access to read-only pages
+    or eax, (1 << 31)       ; enable paging
+    or eax, (1 << 0)    ; long mode also needs PM-bit set
+    mov cr0, eax
 
-	ret
+    ret
 
 ; there is no long mode
 Linvalid:
-	jmp $
+    jmp $
 
 [BITS 64]
 start64:
-	; initialize segment registers
-	mov ax, GDT64.Data
-	mov ds, ax
-	mov es, ax
-	mov ss, ax
-	mov ax, 0x00
-	mov fs, ax
-	mov gs, ax
-	; set default stack pointer
-	mov rsp, boot_stack
-	add rsp, KERNEL_STACK_SIZE-16
-	; interpret multiboot information
-	; extern multiboot_init
-	; mov rdi, rbx
-	; call multiboot_init
+    ; initialize segment registers
+    mov ax, GDT64.Data
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+    mov ax, 0x00
+    mov fs, ax
+    mov gs, ax
+    ; set default stack pointer
+    mov rsp, boot_stack
+    add rsp, KERNEL_STACK_SIZE-16
+    ; interpret multiboot information
+    ; extern multiboot_init
+    ; mov rdi, rbx
+    ; call multiboot_init
 
-	; jump to the boot processors's C code
+    ; jump to the boot processors's C code
     extern main
     call main
     jmp $
@@ -260,8 +260,8 @@ extern gp
 ; This will set up our new segment registers and is declared in
 ; C as 'extern void gdt_flush();'
 gdt_flush:
-	lgdt [gp]
-	ret
+    lgdt [gp]
+    ret
 
 ; The first 32 interrupt service routines (ISR) entries correspond to exceptions.
 ; Some exceptions will push an error code onto the stack which is specific to
@@ -353,33 +353,33 @@ isrstub_pseudo_error 9
 
 global apic_timer
 apic_timer:
-	push byte 0 ; pseudo error code
-	push byte 123
-	jmp common_stub
+    push byte 0 ; pseudo error code
+    push byte 123
+    jmp common_stub
 
 global apic_lint0
 apic_lint0:
-	push byte 0 ; pseudo error code
-	push byte 124
-	jmp common_stub
+    push byte 0 ; pseudo error code
+    push byte 124
+    jmp common_stub
 
 global apic_lint1
 apic_lint1:
-	push byte 0 ; pseudo error code
-	push byte 125
-	jmp common_stub
+    push byte 0 ; pseudo error code
+    push byte 125
+    jmp common_stub
 
 global apic_error
 apic_error:
-	push byte 0 ; pseudo error code
-	push byte 126
-	jmp common_stub
+    push byte 0 ; pseudo error code
+    push byte 126
+    jmp common_stub
 
 global apic_svr
 apic_svr:
-	push byte 0 ; pseudo error code
-	push byte 127
-	jmp common_stub
+    push byte 0 ; pseudo error code
+    push byte 127
+    jmp common_stub
 
 extern irq_handler
 extern get_current_stack
@@ -388,11 +388,11 @@ extern finish_task_switch
 global isrsyscall
 ; used to realize system calls
 isrsyscall:
-	cli
-	; set kernel stack
-	extern get_kernel_stack
-	call get_kernel_stack
-	xchg rsp, rax ; => rax contains original rsp
+    cli
+    ; set kernel stack
+    extern get_kernel_stack
+    call get_kernel_stack
+    xchg rsp, rax ; => rax contains original rsp
 
     push rax ; contains original rsp
     push r15
@@ -406,12 +406,12 @@ isrsyscall:
     push rbx
     push rdi
     push rsi
-	sti
+    sti
 
     extern syscall_handler
     call syscall_handler
 
-	cli
+    cli
     pop rsi
     pop rdi
     pop rbx
@@ -531,29 +531,29 @@ SECTION .data
 global mb_info:
 ALIGN 8
 mb_info:
-	DQ 0
+    DQ 0
 
 ALIGN 4096
 global boot_stack
 boot_stack:
-	TIMES (KERNEL_STACK_SIZE) DB 0xcd
+    TIMES (KERNEL_STACK_SIZE) DB 0xcd
 
 ; Bootstrap page tables are used during the initialization.
 ALIGN 4096
 boot_pml4:
-	DQ boot_pdpt + 0x107 ; PG_PRESENT | PG_GLOBAL | PG_RW | PG_USER
-	times 510 DQ 0       ; PAGE_MAP_ENTRIES - 2
-	DQ boot_pml4 + 0x303 ; PG_PRESENT | PG_GLOBAL | PG_RW | PG_SELF (self-reference)
+    DQ boot_pdpt + 0x107 ; PG_PRESENT | PG_GLOBAL | PG_RW | PG_USER
+    times 510 DQ 0       ; PAGE_MAP_ENTRIES - 2
+    DQ boot_pml4 + 0x303 ; PG_PRESENT | PG_GLOBAL | PG_RW | PG_SELF (self-reference)
 boot_pdpt:
-	DQ boot_pgd + 0x107  ; PG_PRESENT | PG_GLOBAL | PG_RW | PG_USER
-	times 510 DQ 0       ; PAGE_MAP_ENTRIES - 2
-	DQ boot_pml4 + 0x303 ; PG_PRESENT | PG_GLOBAL | PG_RW | PG_SELF (self-reference)
+    DQ boot_pgd + 0x107  ; PG_PRESENT | PG_GLOBAL | PG_RW | PG_USER
+    times 510 DQ 0       ; PAGE_MAP_ENTRIES - 2
+    DQ boot_pml4 + 0x303 ; PG_PRESENT | PG_GLOBAL | PG_RW | PG_SELF (self-reference)
 boot_pgd:
-	DQ boot_pgt + 0x107  ; PG_PRESENT | PG_GLOBAL | PG_RW | PG_USER
-	times 510 DQ 0       ; PAGE_MAP_ENTRIES - 2
-	DQ boot_pml4 + 0x303 ; PG_PRESENT | PG_GLOBAL | PG_RW | PG_SELF (self-reference)
+    DQ boot_pgt + 0x107  ; PG_PRESENT | PG_GLOBAL | PG_RW | PG_USER
+    times 510 DQ 0       ; PAGE_MAP_ENTRIES - 2
+    DQ boot_pml4 + 0x303 ; PG_PRESENT | PG_GLOBAL | PG_RW | PG_SELF (self-reference)
 boot_pgt:
-	times 512 DQ 0
+    times 512 DQ 0
 
 ; add some hints to the ELF file
 SECTION .note.GNU-stack noalloc noexec nowrite progbits
