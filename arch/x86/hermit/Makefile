@@ -1,1 +1,1 @@
-obj-y		:= hermit.o
+obj-y		:= hermit.o piggypack.o

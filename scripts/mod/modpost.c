@@ -824,6 +824,7 @@ static const char *const section_white_list[] =
 	".arcextmap*",			/* arc */
 	".gnu.linkonce.arcext*",	/* arc : modules */
 	".gnu.lto*",
+	".hermit",
 	NULL
 };
 
