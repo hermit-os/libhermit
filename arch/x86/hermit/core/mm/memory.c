@@ -251,8 +251,7 @@ int memory_init(void)
 
 			atomic_int32_add(&total_pages, pages_lower + pages_upper);
 			atomic_int32_add(&total_available_pages, pages_lower + pages_upper);
-		}
-		else {
+		} else {
 			kputs("Unable to initialize the memory management subsystem\n");
 			while (1) HALT;
 		}
@@ -279,6 +278,15 @@ int memory_init(void)
 					atomic_int32_inc(&total_allocated_pages);
 					atomic_int32_dec(&total_available_pages);
 				}
+			}
+		}
+	} else {
+		// mark available memory as free
+		for(addr=HERMIT_START; addr < HERMIT_START+HERMIT_SIZE; addr+=PAGE_SIZE) {
+			if (page_marked(addr >> PAGE_BITS)) {
+				page_clear_mark(addr >> PAGE_BITS);
+				atomic_int32_inc(&total_pages);
+				atomic_int32_inc(&total_available_pages);
 			}
 		}
 	}
