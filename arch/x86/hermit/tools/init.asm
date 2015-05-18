@@ -12,6 +12,7 @@
 SECTION .text
 GLOBAL _start
 ORG 0x00
+codeaddr equ 0x100000 ; address of the 32bit kernel
 _start:
 	cli
 	lgdt [gdtr]
@@ -35,11 +36,11 @@ _pmstart:
 	mov gs, ax
 	mov ss, ax
 
-	jmp $
-	mov esp, 0xDEADBEEF
-	push DWORD 0xDEADDEAD
+	mov ebx, 0x00 ; invalid multiboot address
+	mov esp, 0x00 ; invalid stack address
 	push DWORD 0x00 ; dummy value
-	jmp codesel : 0xDEADC0DE
+	push DWORD 0x00 ; dummy value
+	jmp codesel : codeaddr
 	jmp $
 
 ALIGN 4
