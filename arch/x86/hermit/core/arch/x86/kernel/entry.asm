@@ -58,6 +58,11 @@ mboot:
     dd MULTIBOOT_HEADER_FLAGS
     dd MULTIBOOT_CHECKSUM
     dd 0, 0, 0, 0, 0 ; address fields
+    dd 0, 0, 0, 0,
+    global base
+    global limit
+    base dq 0
+    limit dq 0
 
 ALIGN 4
 ; we need already a valid GDT to switch in the 64bit modus
@@ -100,16 +105,8 @@ stublet:
     ; Initialize CPU features
     call cpu_init
 
-    pop ebx ; restore pointer to multiboot structure
     lgdt [GDT64.Pointer] ; Load the 64-bit global descriptor table.
     jmp GDT64.Code:start64 ; Set the code segment and enter 64-bit long mode.
-
-start32:
-    ; Jump to the boot processors's C code
-    extern main
-    call main
-    jmp $
-
 
 ; This will set up the x86 control registers:
 ; Caching and the floating point unit are enabled
@@ -136,35 +133,26 @@ cpu_init:
     ; map multiboot info 1:1
     push edi
     mov eax, DWORD [mb_info]  ; map multiboot info
+    cmp eax, 0
+    je Lno_mbinfo
     and eax, 0xFFFFF000       ; page align lower half
     mov edi, eax
     shr edi, 9                ; (edi >> 12) * 8 (index for boot_pgt)
     add edi, boot_pgt
     or eax, 0x101             ; set present and global bits
     mov DWORD [edi], eax
+Lno_mbinfo:
     pop edi
 
-    ; map kernel 1:1
+    ; map kernel 1:1, use a page size of 2MB
     push edi
-    push ebx
-    push ecx
-    mov ecx, kernel_start
-    mov ebx, kernel_end
-    add ebx, 0x1000
-L0: cmp ecx, ebx
-    jae L1
-    mov eax, ecx
-    and eax, 0xFFFFF000       ; page align lower half
+    mov eax, kernel_start
+    and eax, 0xFFE00000
     mov edi, eax
-    shr edi, 9                ; (edi >> 12) * 8 (index for boot_pgt)
-    add edi, boot_pgt
-    or eax, 0x103             ; set present, global and writable bits
+    shr edi, 18               ; (edi >> 21) * 8 (index for boot_pgd)
+    add edi, boot_pgd
+    or eax, 0x183
     mov DWORD [edi], eax
-    add ecx, 0x1000
-    jmp L0
-L1:
-    pop ecx
-    pop ebx
     pop edi
 
     ; check for long mode
@@ -220,9 +208,9 @@ L1:
     ; Set CR0
     mov eax, cr0
     and eax, ~(1 << 30)     ; enable caching
-    and eax, ~(1 << 16)	; allow kernel write access to read-only pages
+    and eax, ~(1 << 16)	    ; allow kernel write access to read-only pages
     or eax, (1 << 31)       ; enable paging
-    or eax, (1 << 0)    ; long mode also needs PM-bit set
+    or eax, (1 << 0)        ; long mode also needs PM-bit set
     mov cr0, eax
 
     ret
@@ -241,13 +229,10 @@ start64:
     mov ax, 0x00
     mov fs, ax
     mov gs, ax
+
     ; set default stack pointer
     mov rsp, boot_stack
     add rsp, KERNEL_STACK_SIZE-16
-    ; interpret multiboot information
-    ; extern multiboot_init
-    ; mov rdi, rbx
-    ; call multiboot_init
 
     ; jump to the boot processors's C code
     extern main

@@ -33,8 +33,6 @@ extern "C" {
 #endif
 
 #define HERMIT_VERSION		"0.1"
-#define HERMIT_START		0x100000
-#define HERMIT_SIZE		0xA00000
 #define MAX_TASKS		16
 #define MAX_FNAME		128
 #define TIMER_FREQ		100 /* in HZ */
@@ -50,7 +48,7 @@ extern "C" {
 
 #define BYTE_ORDER		LITTLE_ENDIAN
 
-#define CONFIG_VGA
+//#define CONFIG_VGA
 
 #define BUILTIN_EXPECT(exp, b) 	__builtin_expect((exp), (b))
 //#define BUILTIN_EXPECT(exp, b)	(exp)
