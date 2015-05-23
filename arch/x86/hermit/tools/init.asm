@@ -12,7 +12,6 @@
 SECTION .text
 GLOBAL _start
 ORG 0x00
-codeaddr equ 0x100000 ; address of the 32bit kernel
 _start:
 	cli
 	lgdt [gdtr]
@@ -36,8 +35,8 @@ _pmstart:
 	mov gs, ax
 	mov ss, ax
 
-	mov ebx, 0x00 ; invalid multiboot address
-	mov esp, 0x00 ; invalid stack address
+	xor ebx, ebx ; invalid multiboot address
+	mov esp, -16
 	push DWORD 0x00 ; dummy value
 	push DWORD 0x00 ; dummy value
 	jmp codesel : codeaddr
@@ -65,3 +64,4 @@ datasel equ $-gdt
         db 0x00                 ; segment address 24..31
 gdt_end:
 
+codeaddr equ 0x1400000		; address of the 32bit kernel
