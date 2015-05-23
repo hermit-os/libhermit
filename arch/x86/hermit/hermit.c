@@ -27,22 +27,29 @@
 #include <linux/ctype.h>
 #include <linux/init.h>
 #include <linux/err.h>
-#include <linux/smp.h>
+#include <linux/mm.h>
+#include <linux/sched.h>
+#include <linux/memblock.h>
+#include <linux/file.h>
+#include <linux/fs.h>
+#include <asm/page.h>
+#include <asm/pgtable.h>
 #include <asm/delay.h>
 #include <asm/cpu.h>
 #include <asm/apic.h>
 
-#define NAME_SIZE	128
+#define NAME_SIZE	256
 #define CMOS_PORT	0x70
 #define CMOS_PORT_DATA	0x71
 
 /* code to switch from real mode in protected mode */
-static const uint8_t boot_code[] = {0xFA, 0x0F, 0x01, 0x16, 0x40, 0x00, 0x0F, 0x20, 0xC0, 0x0C, 0x01, 0x0F, 0x22, 0xC0, 0x66, 0xEA, 0x18, 0x00, 0x00, 0x00, 0x08, 0x00, 0x90, 0x90, 0x31, 0xC0, 0x66, 0xB8, 0x10, 0x00, 0x8E, 0xD8, 0x8E, 0xC0, 0x8E, 0xE0, 0x8E, 0xE8, 0x8E, 0xD0, 0xEB, 0xFE, 0xBC, 0xEF, 0xBE, 0xAD, 0xDE, 0x68, 0xAD, 0xDE, 0xAD, 0xDE, 0x6A, 0x00, 0xEA, 0xDE, 0xC0, 0xAD, 0xDE, 0x08, 0x00, 0xEB, 0xFE, 0x90, 0x17, 0x00, 0x46, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x9A, 0xCF, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x92, 0xCF, 0x00};
+static const uint8_t boot_code[] = {0xFA, 0x0F, 0x01, 0x16, 0x3C, 0x00, 0x0F, 0x20, 0xC0, 0x0C, 0x01, 0x0F, 0x22, 0xC0, 0x66, 0xEA, 0x18, 0x00, 0x00, 0x00, 0x08, 0x00, 0x90, 0x90, 0x31, 0xC0, 0x66, 0xB8, 0x10, 0x00, 0x8E, 0xD8, 0x8E, 0xC0, 0x8E, 0xE0, 0x8E, 0xE8, 0x8E, 0xD0, 0x31, 0xDB, 0xBC, 0xF0, 0xFF, 0xFF, 0xFF, 0x6A, 0x00, 0x6A, 0x00, 0xEA, 0x00, 0x00, 0x40, 0x01, 0x08, 0x00, 0xEB, 0xFE, 0x17, 0x00, 0x42, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x9A, 0xCF, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x92, 0xCF, 0x00};
 
 static struct kobject *hermit_kobj = NULL;
 static struct kobject *cpu_kobj[NR_CPUS] = {[0 ... NR_CPUS-1] = NULL};
 static int cpu_online[NR_CPUS] = {[0 ... NR_CPUS-1] = 0};
-static size_t memsize = (1 << 23);  /* default 8 MiB */
+static char path2hermit[NAME_SIZE] = "/hermit.bin";
+static char* hermit_base = NULL;
 
 /* tramploline to boot a CPU */
 extern uint8_t* hermit_trampoline;
@@ -62,6 +69,7 @@ static inline void set_ipi_dest(uint32_t cpu_id)
  */
 static int boot_hermit_core(int cpu)
 {
+	static uint8_t init_kernel = 0;
 	int i;
 	unsigned int start_eip;
 
@@ -70,18 +78,56 @@ static int boot_hermit_core(int cpu)
 	if (!hermit_trampoline)
 		return -EINVAL;
 
-	memcpy(hermit_trampoline, boot_code, sizeof(boot_code));
-
-	/* relocate init code */
-	start_eip = (unsigned int) virt_to_phys(hermit_trampoline);
-	*((unsigned short*) (hermit_trampoline+0x04)) += (unsigned short) start_eip;
-	*((unsigned int*) (hermit_trampoline+0x10)) += start_eip;
-	*((unsigned int*) (hermit_trampoline+0x42)) += start_eip;
-
 	if (apic_read(APIC_ICR) & APIC_ICR_BUSY) {
 		pr_notice("ERROR: previous send not complete");
 		return -EIO;
- 	}
+	}
+
+	if (!init_kernel && hermit_base) {
+		struct file * file;
+		ssize_t sz, pos;
+		ssize_t bytes;
+
+		memcpy(hermit_trampoline, boot_code, sizeof(boot_code));
+
+		/* relocate init code */
+		start_eip = (unsigned int) virt_to_phys(hermit_trampoline);
+		*((unsigned short*) (hermit_trampoline+0x04)) += (unsigned short) start_eip;
+		*((unsigned int*) (hermit_trampoline+0x10)) += start_eip;
+		*((unsigned int*) (hermit_trampoline+0x2B)) += start_eip + 0x1000;
+		*((unsigned int*) (hermit_trampoline+0x3E)) += start_eip;
+
+		file = filp_open(path2hermit, O_RDONLY, 0);
+		if (IS_ERR(file)) {
+			int rc = PTR_ERR(file);
+			pr_err("Unable to open file: %s (%d)\n", path2hermit, rc);
+			return rc;
+		}
+
+		sz = i_size_read(file_inode(file));
+		if (sz <= 0)
+			return -EIO;
+		pr_notice("Loading HermitCore's kernel image with a size of %d KiB\n", (int) sz >> 10);
+
+		pos = 0;
+		while (pos < sz) {
+			bytes = kernel_read(file, pos, hermit_base + pos, sz - pos);
+			if (bytes < 0) {
+				pr_notice("Unable to load HermitCore's kernel\n");
+				filp_close(file, NULL);
+				return -EIO;
+                	}
+			if (bytes == 0)
+				break;
+			pos += bytes;
+		}
+
+		filp_close(file, NULL);
+
+		init_kernel = 1;
+	}
+
+	return 0;
 
 	local_irq_disable();
 
@@ -190,31 +236,43 @@ static ssize_t hermit_set_online(struct kobject *kobj, struct kobj_attribute *at
 static ssize_t hermit_get_log(struct kobject *kobj, struct kobj_attribute *attr,
                                 char *buf)
 {
-	ssize_t ret;
-
-	ret = sprintf(buf, "Hello from HermitCore\n");
-
-	return ret;
+	return snprintf(buf, PAGE_SIZE, "Hello Wordl!"); //"%s\n", (char*) virt_to_phys((volatile void *) &__hermit_base)+PAGE_SIZE);
 }
 
 /*
- * get default memory size
+ * Get path to the kernel
+ */
+static ssize_t hermit_get_path(struct kobject *kobj, struct kobj_attribute *attr,
+                                char *buf)
+{
+	return sprintf(buf, "%s\n", path2hermit);
+}
+
+/*
+ * Set path to the kernel
+ */
+static ssize_t hermit_set_path(struct kobject *kobj, struct kobj_attribute *attr,
+                                const char *buf, size_t count)
+{
+	return snprintf(path2hermit, NAME_SIZE, "%s", buf);
+}
+
+/*
+ * Get default size of HermitCore's memory
  */
 static ssize_t hermit_get_memsize(struct kobject *kobj, struct kobj_attribute *attr,
                                 char *buf)
 {
-	return sprintf(buf, "%ld\n", memsize);
+	return sprintf(buf, "0x%x\n", CONFIG_HERMIT_SIZE);
 }
 
 /*
- * set default memory size
+ * Determine base address of HermitCore's kernel
  */
-static ssize_t hermit_set_memsize(struct kobject *kobj, struct kobj_attribute *attr,
-                                   const char *buf, size_t count)
+static ssize_t hermit_get_base(struct kobject *kobj, struct kobj_attribute *attr,
+                                char *buf)
 {
-	sscanf(buf, "%ld", &memsize);
-
-	return count;
+	return sprintf(buf, "0x%lx\n", (size_t) hermit_base);
 }
 
 /*
@@ -222,9 +280,13 @@ static ssize_t hermit_set_memsize(struct kobject *kobj, struct kobj_attribute *a
  * and the HermitCore kernel
  *
  * Usage:
- * Boot CPUX         : echo 1 > /sys/hermit/cpuX/online 
- * Shut down CPUX    : echo 0 > /sys/hermit/cpuX/online
- * Show log messages : cat /sys/hermit/log 
+ * Boot CPUX             : echo 1 > /sys/hermit/cpuX/online 
+ * Shut down CPUX        : echo 0 > /sys/hermit/cpuX/online
+ * Show log messages     : cat /sys/hermit/log 
+ * Start address         : cat /sys/hermit/base
+ * Memory size           : cat /sys/hermit/memsize
+ * Set path to HermitCore: echo "/hermit.bin" > /sys/hermit/path
+ * Get path to HermitCore: cat /sys/hermit/path 
  */
 
 static struct kobj_attribute cpu_attribute =
@@ -233,12 +295,20 @@ static struct kobj_attribute cpu_attribute =
 static struct kobj_attribute log_attribute =
 	__ATTR(log, 0600, hermit_get_log, NULL);
 
-static struct kobj_attribute memsize_attribute = 
-	__ATTR(memsize, 0600, hermit_get_memsize, hermit_set_memsize);
+static struct kobj_attribute path_attribute =
+	__ATTR(path, 0600, hermit_get_path, hermit_set_path);
+
+static struct kobj_attribute memsize_attribute =
+	__ATTR(memsize, 0600, hermit_get_memsize, NULL);
+
+static struct kobj_attribute base_attribute =
+	__ATTR(base, 0600, hermit_get_base, NULL);
 
 static struct attribute * hermit_attrs[] = {
 	&log_attribute.attr,
+	&path_attribute.attr,
 	&memsize_attribute.attr,
+	&base_attribute.attr,
 	NULL
 };
 
@@ -255,13 +325,36 @@ static struct attribute_group cpu_attr_group = {
 	.attrs = cpu_attrs,
 };
 
-int hermit_init(void)
+int __init hermit_init(void)
 {
-	int i, error;
+	int i, ret;
 	char name[NAME_SIZE];
+	phys_addr_t mem;
 
 	pr_notice("Initialize HermitCore\n");
 	pr_notice("HermitCore trampoline at 0x%p (0x%p)\n", hermit_trampoline, (char*) virt_to_phys(hermit_trampoline));
+
+	/*
+	 * set base and limit in the HermitCore's kernel
+	 */
+	//*((size_t*) ((char *) &__hermit_base + 0x38)) = (size_t) virt_to_phys((void*)&__hermit_base);
+	//*((size_t*) ((char *) &__hermit_base + 0x40)) = (size_t) virt_to_phys((void*)&__hermit_limit); 
+
+	/* Has to be under 1M so we can execute real-mode AP code. */
+        mem = memblock_find_in_range(0, 100<<20, CONFIG_HERMIT_SIZE, PAGE_SIZE);
+	if (!mem) {
+		ret = -ENOMEM;
+		goto _exit;
+	}
+
+	ret = memblock_reserve(mem, CONFIG_HERMIT_SIZE);
+	if (ret) {
+		ret = -ENOMEM;
+		goto _exit;
+	}
+
+	hermit_base = (char*) phys_to_virt(mem);
+	pr_notice("HermitCore will be mapped at 0x%p\n", hermit_base);
 
 	/*
 	 * Create a kobject for HermitCore and located
@@ -269,12 +362,12 @@ int hermit_init(void)
  	 */
 	hermit_kobj = kobject_create_and_add("hermit", NULL);
 	if (!hermit_kobj) {
-		error = -ENOMEM;
+		ret = -ENOMEM;
 		goto _exit;
 	}
 
-	error = sysfs_create_group(hermit_kobj, &hermit_attr_group);
-	if (error)
+	ret = sysfs_create_group(hermit_kobj, &hermit_attr_group);
+	if (ret)
 		goto _exit;
 
 	/*
@@ -290,12 +383,12 @@ int hermit_init(void)
 
 			cpu_kobj[i] = kobject_create_and_add(name, hermit_kobj);
 			if (!cpu_kobj[i]) {
-				error = -ENOMEM;
+				ret = -ENOMEM;
 				goto _exit;
 			}
 
-			error = sysfs_create_group(cpu_kobj[i], &cpu_attr_group);
-			if (error)
+			ret = sysfs_create_group(cpu_kobj[i], &cpu_attr_group);
+			if (ret)
 				goto _exit;
 		}
 	}
@@ -310,5 +403,5 @@ _exit:
 			kobject_put(cpu_kobj[i]);
 	}
 
-	return error;
+	return ret;
 }
