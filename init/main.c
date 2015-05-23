@@ -926,6 +926,11 @@ static int __ref kernel_init(void *unused)
 {
 	int ret;
 
+#ifdef CONFIG_HERMIT_CORE
+	/* initialize HermitCore */
+	hermit_init();
+#endif
+
 	kernel_init_freeable();
 	/* need to finish all async __init code before freeing the memory */
 	async_synchronize_full();
@@ -935,9 +940,6 @@ static int __ref kernel_init(void *unused)
 	numa_default_policy();
 
 	flush_delayed_fput();
-
-	/* initialize HermitCore */
-	hermit_init();
 
 	if (ramdisk_execute_command) {
 		ret = run_init_process(ramdisk_execute_command);
