@@ -64,14 +64,12 @@ all: $(NAME).elf
 
 $(NAME).elf:
 	$Q$(LD_FOR_TARGET) $(LDFLAGS) -o $(NAME).elf $^
-	@echo [OBJCOPY] $(NAME).sym
-	$Q$(OBJCOPY_FOR_TARGET) $(KEEP_DEBUG) $(NAME).elf $(NAME).sym
-	@echo [OBJCOPY] $(NAME).elf
-	$Q$(OBJCOPY_FOR_TARGET) $(STRIP_DEBUG) $(OUTPUT_FORMAT) $(NAME).elf
-
-$(NAME).bin: $(NAME).elf
 	@echo [OBJCOPY] $(NAME).bin
-	$Q$(OBJCOPY_FOR_TARGET) -j .mboot -j .kmsg -j .text -j .data -j .rodata -j .bss -O binary $< $@
+	$Q$(OBJCOPY_FOR_TARGET) -j .mboot -j .kmsg -j .text -j .data -j .rodata -j .bss -O binary $(NAME).elf $(NAME).bin
+	#@echo [OBJCOPY] $(NAME).sym
+	#$Q$(OBJCOPY_FOR_TARGET) $(KEEP_DEBUG) $(NAME).elf $(NAME).sym
+	#@echo [OBJCOPY] $(NAME).elf
+	#$Q$(OBJCOPY_FOR_TARGET) $(STRIP_DEBUG) $(OUTPUT_FORMAT) $(NAME).elf
 
 clean:
 	$Q$(RM) $(NAME).elf $(NAME).sym $(NAME).bin *~
