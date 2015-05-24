@@ -8,7 +8,7 @@ config HERMIT_CORE
 	  cores from Linux and use it for bare-metal computation.
 
 config HERMIT_SIZE
-	hex "Memory size of HermitCore"
+	hex "Size of HermitCore's memory"
 	default "0xA00000"
 	depends on HERMIT_CORE
 	---help---
