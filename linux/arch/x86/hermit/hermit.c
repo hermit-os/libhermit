@@ -37,13 +37,14 @@
 #include <asm/delay.h>
 #include <asm/cpu.h>
 #include <asm/apic.h>
+#include <asm/tsc.h>
 
 #define NAME_SIZE	256
 #define CMOS_PORT	0x70
 #define CMOS_PORT_DATA	0x71
 
 /* code to switch from real mode in protected mode */
-static const uint8_t boot_code[] = {0xFA, 0x0F, 0x01, 0x16, 0x3C, 0x00, 0x0F, 0x20, 0xC0, 0x0C, 0x01, 0x0F, 0x22, 0xC0, 0x66, 0xEA, 0x18, 0x00, 0x00, 0x00, 0x08, 0x00, 0x90, 0x90, 0x31, 0xC0, 0x66, 0xB8, 0x10, 0x00, 0x8E, 0xD8, 0x8E, 0xC0, 0x8E, 0xE0, 0x8E, 0xE8, 0x8E, 0xD0, 0x31, 0xDB, 0xBC, 0xF0, 0xFF, 0xFF, 0xFF, 0x6A, 0x00, 0x6A, 0x00, 0xEA, 0x00, 0x00, 0x40, 0x01, 0x08, 0x00, 0xEB, 0xFE, 0x17, 0x00, 0x42, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x9A, 0xCF, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x92, 0xCF, 0x00};
+static const uint8_t boot_code[] = {0xFA, 0x0F, 0x01, 0x16, 0x44, 0x00, 0x0F, 0x20, 0xC0, 0x0C, 0x01, 0x0F, 0x22, 0xC0, 0x66, 0xEA, 0x18, 0x00, 0x00, 0x00, 0x08, 0x00, 0x90, 0x90, 0x31, 0xC0, 0x66, 0xB8, 0x10, 0x00, 0x8E, 0xD8, 0x8E, 0xC0, 0x8E, 0xE0, 0x8E, 0xE8, 0x8E, 0xD0, 0x31, 0xDB, 0xBC, 0xF0, 0xFF, 0xFF, 0xFF, 0xBD, 0x00, 0x00, 0x00, 0x00, 0x6A, 0x00, 0x6A, 0x00, 0xEA, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0xEB, 0xFE, 0x90, 0x90, 0x90, 0x17, 0x00, 0x4A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x9A, 0xCF, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x92, 0xCF, 0x00};
 
 static struct kobject *hermit_kobj = NULL;
 static struct kobject *cpu_kobj[NR_CPUS] = {[0 ... NR_CPUS-1] = NULL};
@@ -77,6 +78,7 @@ static int boot_hermit_core(int cpu)
 
 	if (!hermit_trampoline)
 		return -EINVAL;
+	start_eip = (unsigned int) virt_to_phys(hermit_trampoline);
 
 	if (apic_read(APIC_ICR) & APIC_ICR_BUSY) {
 		pr_notice("ERROR: previous send not complete");
@@ -91,11 +93,12 @@ static int boot_hermit_core(int cpu)
 		memcpy(hermit_trampoline, boot_code, sizeof(boot_code));
 
 		/* relocate init code */
-		start_eip = (unsigned int) virt_to_phys(hermit_trampoline);
 		*((unsigned short*) (hermit_trampoline+0x04)) += (unsigned short) start_eip;
 		*((unsigned int*) (hermit_trampoline+0x10)) += start_eip;
 		*((unsigned int*) (hermit_trampoline+0x2B)) += start_eip + 0x1000;
-		*((unsigned int*) (hermit_trampoline+0x3E)) += start_eip;
+		*((unsigned int*) (hermit_trampoline+0x30)) += virt_to_phys(hermit_base);
+		*((unsigned int*) (hermit_trampoline+0x39)) += virt_to_phys(hermit_base);
+		*((unsigned int*) (hermit_trampoline+0x46)) += start_eip;
 
 		file = filp_open(path2hermit, O_RDONLY, 0);
 		if (IS_ERR(file)) {
@@ -124,10 +127,14 @@ static int boot_hermit_core(int cpu)
 
 		filp_close(file, NULL);
 
+		/*
+		 * set base, limit and cpu frequency in HermitCore's kernel
+		 */
+		*((uint32_t*) (hermit_base + 0x48)) = (uint32_t) virt_to_phys(hermit_base);
+		*((uint32_t*) (hermit_base + 0x4C)) = (uint32_t) virt_to_phys(hermit_base+CONFIG_HERMIT_SIZE); 
+		*((uint32_t*) (hermit_base + 0x50)) = cpu_khz / 1000;
 		init_kernel = 1;
 	}
-
-	return 0;
 
 	local_irq_disable();
 
@@ -236,7 +243,7 @@ static ssize_t hermit_set_online(struct kobject *kobj, struct kobj_attribute *at
 static ssize_t hermit_get_log(struct kobject *kobj, struct kobj_attribute *attr,
                                 char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "Hello Wordl!"); //"%s\n", (char*) virt_to_phys((volatile void *) &__hermit_base)+PAGE_SIZE);
+	return snprintf(buf, PAGE_SIZE, "%s\n", hermit_base+PAGE_SIZE);
 }
 
 /*
@@ -334,14 +341,8 @@ int __init hermit_init(void)
 	pr_notice("Initialize HermitCore\n");
 	pr_notice("HermitCore trampoline at 0x%p (0x%p)\n", hermit_trampoline, (char*) virt_to_phys(hermit_trampoline));
 
-	/*
-	 * set base and limit in the HermitCore's kernel
-	 */
-	//*((size_t*) ((char *) &__hermit_base + 0x38)) = (size_t) virt_to_phys((void*)&__hermit_base);
-	//*((size_t*) ((char *) &__hermit_base + 0x40)) = (size_t) virt_to_phys((void*)&__hermit_limit); 
-
 	/* Has to be under 1M so we can execute real-mode AP code. */
-        mem = memblock_find_in_range(0, 100<<20, CONFIG_HERMIT_SIZE, PAGE_SIZE);
+        mem = memblock_find_in_range(4 << 20, 100<<20, CONFIG_HERMIT_SIZE, 2 << 20);
 	if (!mem) {
 		ret = -ENOMEM;
 		goto _exit;
