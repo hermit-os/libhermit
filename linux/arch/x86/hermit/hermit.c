@@ -133,6 +133,8 @@ static int boot_hermit_core(int cpu)
 		*((uint32_t*) (hermit_base + 0x48)) = (uint32_t) virt_to_phys(hermit_base);
 		*((uint32_t*) (hermit_base + 0x4C)) = (uint32_t) virt_to_phys(hermit_base+CONFIG_HERMIT_SIZE); 
 		*((uint32_t*) (hermit_base + 0x50)) = cpu_khz / 1000;
+		*((uint32_t*) (hermit_base + 0x54)) = cpu;
+
 		init_kernel = 1;
 	}
 
