@@ -32,6 +32,7 @@
 #include <linux/memblock.h>
 #include <linux/file.h>
 #include <linux/fs.h>
+#include <linux/spinlock.h>
 #include <asm/page.h>
 #include <asm/pgtable.h>
 #include <asm/delay.h>
@@ -51,6 +52,7 @@ static struct kobject *cpu_kobj[NR_CPUS] = {[0 ... NR_CPUS-1] = NULL};
 static int cpu_online[NR_CPUS] = {[0 ... NR_CPUS-1] = 0};
 static char path2hermit[NAME_SIZE] = "/hermit.bin";
 static char* hermit_base = NULL;
+static arch_spinlock_t boot_lock = __ARCH_SPIN_LOCK_UNLOCKED;
 
 /* tramploline to boot a CPU */
 extern uint8_t* hermit_trampoline;
@@ -70,7 +72,7 @@ static inline void set_ipi_dest(uint32_t cpu_id)
  */
 static int boot_hermit_core(int cpu)
 {
-	static uint8_t init_kernel = 0;
+	static uint32_t cpu_counter = 0;
 	int i;
 	unsigned int start_eip;
 
@@ -85,7 +87,9 @@ static int boot_hermit_core(int cpu)
 		return -EIO;
 	}
 
-	if (!init_kernel && hermit_base) {
+	arch_spin_lock(&boot_lock);
+
+	if (!cpu_counter && hermit_base) {
 		struct file * file;
 		ssize_t sz, pos;
 		ssize_t bytes;
@@ -134,8 +138,6 @@ static int boot_hermit_core(int cpu)
 		*((uint32_t*) (hermit_base + 0x4C)) = (uint32_t) virt_to_phys(hermit_base+CONFIG_HERMIT_SIZE); 
 		*((uint32_t*) (hermit_base + 0x50)) = cpu_khz / 1000;
 		*((uint32_t*) (hermit_base + 0x54)) = cpu;
-
-		init_kernel = 1;
 	}
 
 	local_irq_disable();
@@ -173,6 +175,11 @@ static int boot_hermit_core(int cpu)
 		i++; /* wait for it to finish, give up eventualy tho */
 
 	local_irq_enable();
+
+	cpu_counter++;
+	while(*((volatile uint32_t*) (hermit_base + 0x58)) < cpu_counter) { cpu_relax(); }
+
+	arch_spin_unlock(&boot_lock);
 
 	return ((apic_read(APIC_ICR) & APIC_ICR_BUSY) ? -EIO : 0); // did it fail (still delivering) or succeed ?
 }
