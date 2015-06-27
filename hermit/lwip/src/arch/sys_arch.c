@@ -98,7 +98,7 @@ sys_thread_t sys_thread_new(const char *name, lwip_thread_fn thread, void *arg,
 	LWIP_UNUSED_ARG(stacksize);
 
 	err = create_kernel_task(&id, (entry_point_t)thread, arg, prio);
-	LWIP_DEBUGF(SYS_DEBUG, ("sys_thread_new: create_kernel_task %d, id = %u\n", err, id));
+	LWIP_DEBUGF(SYS_DEBUG, ("sys_thread_new: create_kernel_task %d, id = %u, prio = %d\n", err, id, prio));
 
 	return id;
 }
