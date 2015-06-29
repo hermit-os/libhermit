@@ -61,7 +61,7 @@ typedef size_t mem_ptr_t;
 #define U32_F "u"
 #define S32_F "d"
 #define X32_F "x"
-#define SZT_F "uz"
+#define SZT_F "zu"
 
 /* Compiler hints for packing structures */
 //#define PACK_STRUCT_FIELD(x) x __attribute__((packed))
