@@ -121,7 +121,7 @@
 /**
  * LWIP_HAVE_LOOPIF==1: Support loop interface (127.0.0.1) and loopif.c
  */
-#define LWIP_HAVE_LOOPIF	0
+#define LWIP_HAVE_LOOPIF	1
 
 /**
  * LWIP_NETIF_LOOPBACK==1: Support sending packets with a destination IP
