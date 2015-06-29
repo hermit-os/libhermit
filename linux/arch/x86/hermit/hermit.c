@@ -252,7 +252,7 @@ static ssize_t hermit_set_online(struct kobject *kobj, struct kobj_attribute *at
 static ssize_t hermit_get_log(struct kobject *kobj, struct kobj_attribute *attr,
                                 char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%s\n", hermit_base+PAGE_SIZE);
+	return snprintf(buf, 2*PAGE_SIZE, "%s\n", hermit_base+PAGE_SIZE);
 }
 
 /*
