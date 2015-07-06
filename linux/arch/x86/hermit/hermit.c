@@ -39,6 +39,7 @@
 #include <asm/cpu.h>
 #include <asm/apic.h>
 #include <asm/tsc.h>
+#include <asm/msr.h>
 
 #define NAME_SIZE	256
 #define CMOS_PORT	0x70
@@ -150,7 +151,21 @@ static int boot_hermit_core(int cpu)
 	 * use the universal startup algorithm of Intel's MultiProcessor Specification
 	 */
 	if (x2apic_enabled()) {
+		uint64_t dest = ((uint64_t)cpu << 32);
+
 		pr_notice("X2APIC is enabled\n");
+
+		wrmsrl(0x800 + (APIC_ICR >> 4), dest|APIC_INT_LEVELTRIG|APIC_INT_ASSERT|APIC_DM_INIT);
+		udelay(200);
+		/* reset INIT */
+		wrmsrl(0x800 + (APIC_ICR >> 4), APIC_INT_LEVELTRIG|APIC_DM_INIT);
+		udelay(10000);
+		/* send out the startup */
+		wrmsrl(0x800 + (APIC_ICR >> 4), dest|APIC_DM_STARTUP|(start_eip >> 12));
+		udelay(200);
+		/* do it again */
+		wrmsrl(0x800 + (APIC_ICR >> 4), dest|APIC_DM_STARTUP|(start_eip >> 12));
+		udelay(200);
 	} else {
 		pr_notice("X2APIC is disabled\n");
 
