@@ -1,7 +1,8 @@
 HOMEDIR := $(shell pwd)
 INITRAMFS=../busybox-1.23.2/initramfs/
-#QEMU = qemu-system-x86_64
-QEMU = qemu-kvm -cpu host
+QEMU = qemu-system-x86_64
+#QEMU = qemu-kvm -cpu host
+NJOBS = -j4
 
 default:
 	make -C hermit default
@@ -17,7 +18,7 @@ veryclean:
 
 ramfs:
 	touch myinitrd.cpio
-	make -C linux
+	make -C linux $(NJOBS)
 	make -C hermit
 	cp hermit/hermit.bin $(INITRAMFS)
 	cd $(INITRAMFS); \
