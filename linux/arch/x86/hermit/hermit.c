@@ -379,7 +379,7 @@ int __init hermit_init(void)
 	}
 
 	hermit_base = (char*) phys_to_virt(mem);
-	pr_notice("HermitCore will be mapped at 0x%p\n", hermit_base);
+	pr_notice("HermitCore will be mapped at 0x%p (physical address 0x%zx)\n", hermit_base, (size_t) mem);
 
 	/*
 	 * Create a kobject for HermitCore and located
