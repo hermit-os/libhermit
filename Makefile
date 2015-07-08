@@ -1,7 +1,7 @@
 HOMEDIR := $(shell pwd)
 INITRAMFS=../busybox-1.23.2/initramfs/
-QEMU = qemu-system-x86_64
-#QEMU = qemu-kvm -cpu host
+#QEMU = qemu-system-x86_64
+QEMU = qemu-kvm -cpu host
 NJOBS = -j4
 
 default:
