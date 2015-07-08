@@ -363,7 +363,7 @@ int __init hermit_init(void)
 	phys_addr_t mem;
 
 	pr_notice("Initialize HermitCore\n");
-	pr_notice("HermitCore trampoline at 0x%p (0x%p)\n", hermit_trampoline, (char*) virt_to_phys(hermit_trampoline));
+	pr_notice("HermitCore trampoline at 0x%p (0x%zx)\n", hermit_trampoline, (size_t) virt_to_phys(hermit_trampoline));
 
 	/* Has to be under 1M so we can execute real-mode AP code. */
         mem = memblock_find_in_range(4 << 20, 100<<20, CONFIG_HERMIT_SIZE, 2 << 20);
@@ -379,7 +379,7 @@ int __init hermit_init(void)
 	}
 
 	hermit_base = (char*) phys_to_virt(mem);
-	pr_notice("HermitCore will be mapped at 0x%p (physical address 0x%zx)\n", hermit_base, (size_t) mem);
+	pr_notice("HermitCore at 0x%p (0x%zx)\n", hermit_base, (size_t) mem);
 
 	/*
 	 * Create a kobject for HermitCore and located
