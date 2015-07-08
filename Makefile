@@ -19,7 +19,7 @@ veryclean:
 ramfs:
 	touch myinitrd.cpio
 	make -C linux $(NJOBS)
-	make -C hermit
+	make -C hermit $(NJOBS)
 	cp hermit/hermit.bin $(INITRAMFS)
 	cd $(INITRAMFS); \
 	find . -print0 | cpio --null -ov --format=newc > $(HOMEDIR)/myinitrd.cpio
