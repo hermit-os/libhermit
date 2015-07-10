@@ -7,7 +7,7 @@
  * Sean Eric Fagan, sef@Kithrup.COM
  */
 
-#include "../../../../../include/eduos/config.h"
+#include "../../../../../include/hermit/config.h"
 
 typedef struct _dirdesc {
 	int	dd_fd;

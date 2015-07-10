@@ -369,7 +369,7 @@ esac
 # THIS TABLE IS ALPHA SORTED.  KEEP IT THAT WAY.
 
 case "${host}" in
-  *-eduos-elf*)
+  *-hermit-elf*)
 	newlib_cflags="${newlib_cflags} -DREENTRANT_SYSCALLS_PROVIDED"
 	sys_dir=
 	;;
