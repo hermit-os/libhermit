@@ -86,7 +86,7 @@ void sys_msleep(u32_t ms)
 }
 
 /* sys_thread_new(): Spawns a new thread with given attributes as supported
- * Note: In MetalSVM this is realized as kernel tasks
+ * Note: In HermitCore this is realized as kernel tasks
  */
 sys_thread_t sys_thread_new(const char *name, lwip_thread_fn thread, void *arg,
 		int stacksize, int prio)
@@ -278,8 +278,9 @@ void sys_mbox_post(sys_mbox_t* mbox, void* msg)
 }
 
 /* sys_mutex_lock(): lock the given mutex
- * Note: There is no specific mutex in MetalSVM
- * so we use a semaphore with 1 element
+ * Note: There is no specific mutex in 
+ * HermitCore so we use a semaphore with
+ * 1 element
  */
 void sys_mutex_lock(sys_mutex_t* mutex)
 {
