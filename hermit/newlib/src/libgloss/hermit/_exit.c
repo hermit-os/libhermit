@@ -39,7 +39,7 @@ _DEFUN (_exit, (rc),
 	int ret;
 
 	/* task exit */
-	ret = INT_SYSCALL1(__NR_exit, rc); 
+	ret = SYSCALL1(__NR_exit, rc); 
 	if (ret < 0)
 		errno = -ret;
 
