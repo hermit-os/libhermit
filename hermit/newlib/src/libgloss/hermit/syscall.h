@@ -71,10 +71,10 @@ syscall(int nr, unsigned long arg0, unsigned long arg1, unsigned long arg2)
 	long res;
 
 	// note: syscall stores the return address in rcx
-	asm volatile ("mov %4, %%r10; syscall"
+	asm volatile ("mov %4, %%r12; syscall"
 		: "=a" (res)
-		: "D" (nr), "S" (arg0), "d" (arg1), "m" (arg2)
-		: "memory", "cc", "%rcx", "%r10");
+		: "D" (nr), "S" (arg0), "d" (arg1), "r" (arg2)
+		: "memory", "%rcx", "%r11", "%r12");
 
 	return res;
 }
