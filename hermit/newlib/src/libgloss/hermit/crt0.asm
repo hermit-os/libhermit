@@ -82,6 +82,9 @@ L4:
    pop rsi   ; argv pointer
    pop rdx   ; env pointer
 
+   ; align stack
+   and rsp, ~0xF
+
    call main
 
    ; call exit from the C library so atexit gets called, and the
