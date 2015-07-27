@@ -1,8 +1,0 @@
-config HERMIT_CORE
-	bool "HermitCore support"
-	depends on X86_64
-	depends on HOTPLUG_CPU
-	select SYSFS
-	---help---
-	  HermitCore is a lightweight extreme-scale kernel, which isolates
-	  cores from Linux and use it for bare-metal computation.
