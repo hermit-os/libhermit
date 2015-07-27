@@ -6,10 +6,3 @@ config HERMIT_CORE
 	---help---
 	  HermitCore is a lightweight extreme-scale kernel, which isolates
 	  cores from Linux and use it for bare-metal computation.
-
-config HERMIT_SIZE
-	hex "Size of HermitCore's memory"
-	default "0xA00000"
-	depends on HERMIT_CORE
-	---help---
-	  Set the default size of HermitCore's self-governed memory

@@ -33,6 +33,7 @@
 #include <linux/file.h>
 #include <linux/fs.h>
 #include <linux/spinlock.h>
+#include <linux/slab.h>
 #include <asm/page.h>
 #include <asm/pgtable.h>
 #include <asm/delay.h>
@@ -45,15 +46,16 @@
 #define CMOS_PORT	0x70
 #define CMOS_PORT_DATA	0x71
 
-/* code to switch from real mode in protected mode */
-static const uint8_t boot_code[] = {0xFA, 0x0F, 0x01, 0x16, 0x44, 0x00, 0x0F, 0x20, 0xC0, 0x0C, 0x01, 0x0F, 0x22, 0xC0, 0x66, 0xEA, 0x18, 0x00, 0x00, 0x00, 0x08, 0x00, 0x90, 0x90, 0x31, 0xC0, 0x66, 0xB8, 0x10, 0x00, 0x8E, 0xD8, 0x8E, 0xC0, 0x8E, 0xE0, 0x8E, 0xE8, 0x8E, 0xD0, 0x31, 0xDB, 0xBC, 0xF0, 0xFF, 0xFF, 0xFF, 0xBD, 0x00, 0x00, 0x00, 0x00, 0x6A, 0x00, 0x6A, 0x00, 0xEA, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0xEB, 0xFE, 0x90, 0x90, 0x90, 0x17, 0x00, 0x4A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x9A, 0xCF, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x92, 0xCF, 0x00};
+/* include code to switch from real mode to 64bit mode */
+#include "boot.h"
 
 static struct kobject *hermit_kobj = NULL;
-static struct kobject *cpu_kobj[NR_CPUS] = {[0 ... NR_CPUS-1] = NULL};
-static int cpu_online[NR_CPUS] = {[0 ... NR_CPUS-1] = 0};
+static struct kobject *isle_kobj[NR_CPUS] = {[0 ... NR_CPUS-1] = NULL};
+static int cpu_online[NR_CPUS] = {[0 ... NR_CPUS-1] = -1};
 static char path2hermit[NAME_SIZE] = "/hermit.bin";
-static char* hermit_base = NULL;
+static char* hermit_base[1 << NODES_SHIFT] = {[0 ... (1 << NODES_SHIFT)-1] = NULL};
 static arch_spinlock_t boot_lock = __ARCH_SPIN_LOCK_UNLOCKED;
+static size_t pool_size = 0x1000000;
 
 /* tramploline to boot a CPU */
 extern uint8_t* hermit_trampoline;
@@ -71,17 +73,19 @@ static inline void set_ipi_dest(uint32_t cpu_id)
 /*
  * Wake up a core and boot HermitCore on it
  */
-static int boot_hermit_core(int cpu)
+static int boot_hermit_core(int cpu, int isle, int cpu_counter)
 {
-	static uint32_t cpu_counter = 0;
 	int i;
 	unsigned int start_eip;
 
-	pr_notice("Try boot HermitCore on CPU %d\n", cpu);
+	pr_notice("Isle %d tries to boot HermitCore on CPU %d (boot code size 0x%zx)\n", isle, cpu, sizeof(boot_code));
 
 	if (!hermit_trampoline)
 		return -EINVAL;
 	start_eip = (unsigned int) virt_to_phys(hermit_trampoline);
+
+	if (!hermit_base[isle])
+		return -ENOMEM;
 
 	if (apic_read(APIC_ICR) & APIC_ICR_BUSY) {
 		pr_notice("ERROR: previous send not complete");
@@ -90,20 +94,24 @@ static int boot_hermit_core(int cpu)
 
 	arch_spin_lock(&boot_lock);
 
-	if (!cpu_counter && hermit_base) {
+	/* intialize trampoline code */
+	memcpy(hermit_trampoline, boot_code, sizeof(boot_code));
+
+	/* relocate code */
+	*((unsigned short*) (hermit_trampoline+0x04)) += (unsigned short) start_eip;
+	*((unsigned int*) (hermit_trampoline+0x10)) += start_eip;
+	*((unsigned int*) (hermit_trampoline+0x29)) += start_eip;
+	*((unsigned int*) (hermit_trampoline+0x2E)) += start_eip;
+	*((unsigned int*) (hermit_trampoline+0x3A)) += start_eip;
+	*((unsigned int*) (hermit_trampoline+0x72)) += start_eip;
+	*((unsigned int*) (hermit_trampoline+0xCE)) += virt_to_phys(hermit_base[isle]);
+	*((unsigned int*) (hermit_trampoline+0x180)) += start_eip;
+	*((unsigned int*) (hermit_trampoline+0x185)) += start_eip;
+
+	if (!cpu_counter) {
 		struct file * file;
 		ssize_t sz, pos;
 		ssize_t bytes;
-
-		memcpy(hermit_trampoline, boot_code, sizeof(boot_code));
-
-		/* relocate init code */
-		*((unsigned short*) (hermit_trampoline+0x04)) += (unsigned short) start_eip;
-		*((unsigned int*) (hermit_trampoline+0x10)) += start_eip;
-		*((unsigned int*) (hermit_trampoline+0x2B)) += start_eip + 0x1000;
-		*((unsigned int*) (hermit_trampoline+0x30)) += virt_to_phys(hermit_base);
-		*((unsigned int*) (hermit_trampoline+0x39)) += virt_to_phys(hermit_base);
-		*((unsigned int*) (hermit_trampoline+0x46)) += start_eip;
 
 		file = filp_open(path2hermit, O_RDONLY, 0);
 		if (IS_ERR(file)) {
@@ -119,7 +127,7 @@ static int boot_hermit_core(int cpu)
 
 		pos = 0;
 		while (pos < sz) {
-			bytes = kernel_read(file, pos, hermit_base + pos, sz - pos);
+			bytes = kernel_read(file, pos, hermit_base[isle] + pos, sz - pos);
 			if (bytes < 0) {
 				pr_notice("Unable to load HermitCore's kernel\n");
 				filp_close(file, NULL);
@@ -135,10 +143,10 @@ static int boot_hermit_core(int cpu)
 		/*
 		 * set base, limit and cpu frequency in HermitCore's kernel
 		 */
-		*((uint32_t*) (hermit_base + 0x48)) = (uint32_t) virt_to_phys(hermit_base);
-		*((uint32_t*) (hermit_base + 0x4C)) = (uint32_t) virt_to_phys(hermit_base+CONFIG_HERMIT_SIZE); 
-		*((uint32_t*) (hermit_base + 0x50)) = cpu_khz / 1000;
-		*((uint32_t*) (hermit_base + 0x54)) = cpu;
+		*((uint64_t*) (hermit_base[isle] + 0x08)) = (uint64_t) virt_to_phys(hermit_base[isle]);
+		*((uint64_t*) (hermit_base[isle] + 0x10)) = (uint64_t) virt_to_phys(hermit_base[isle] + pool_size / num_possible_nodes()); 
+		*((uint32_t*) (hermit_base[isle] + 0x18)) = cpu_khz / 1000;
+		*((uint32_t*) (hermit_base[isle] + 0x1C)) = cpu;
 	}
 
 	local_irq_disable();
@@ -192,7 +200,7 @@ static int boot_hermit_core(int cpu)
 	local_irq_enable();
 
 	cpu_counter++;
-	while(*((volatile uint32_t*) (hermit_base + 0x58)) < cpu_counter) { cpu_relax(); }
+	while(*((volatile uint32_t*) (hermit_base[isle] + 0x20)) < cpu_counter) { cpu_relax(); }
 
 	arch_spin_unlock(&boot_lock);
 
@@ -202,60 +210,95 @@ static int boot_hermit_core(int cpu)
 /*
  * shows if HermitCore is running on a specific CPU
  */
-static ssize_t hermit_is_online(struct kobject *kobj, struct kobj_attribute *attr,
+static ssize_t hermit_is_cpus(struct kobject *kobj, struct kobj_attribute *attr,
 				char *buf)
 {
-	int i;
+	char* path = kobject_get_path(kobj, GFP_KERNEL);
+	int i, isle = NR_CPUS;
+	int start;
 
-	/* search for the CPU, which is addressed by kobj */
-	for_each_possible_cpu(i) {
-		if (cpu_kobj[i] == kobj)
-			break;
-	}
-
-	if (i>= NR_CPUS)
+	if (!path)
 		return -EINVAL;
 
-	return sprintf(buf, "%d\n", cpu_online[i]);
+	sscanf(path, "/hermit/isle%d", &isle);
+
+	kfree(path);
+
+	for(i=0; (i<NR_CPUS) && (cpu_online[i] != isle); i++)
+		;
+
+	if (i >= NR_CPUS) 
+		return sprintf(buf, "%d", -1);
+
+	start = i;
+	for(; (i < NR_CPUS) && (cpu_online[i] == isle); i++)
+		;
+
+	if (i >= NR_CPUS)
+		i = NR_CPUS-1;
+	else
+		i--;
+
+	if ((i != start) && (cpu_online[i] == isle))
+		return sprintf(buf, "%d-%d\n", start, i);
+	else
+		return sprintf(buf, "%d\n", start);
 }
 
 /*
- * boot or shut down a CPU with HermitCore
+ * boot or shut down HermitCore
  */
-static ssize_t hermit_set_online(struct kobject *kobj, struct kobj_attribute *attr,
+static ssize_t hermit_set_cpus(struct kobject *kobj, struct kobj_attribute *attr,
  				const char *buf, size_t count)
 {
-	int i, new_state;
+	char* path = kobject_get_path(kobj, GFP_KERNEL);
+	int start = NR_CPUS, end = NR_CPUS;
+	int i, j, isle = NR_CPUS;
+	int ret;
 
-	/* search for the CPU, which is addressed by kobj */
-	for_each_possible_cpu(i) {
-		if (cpu_kobj[i] == kobj)
-			break;
-	}
-
-	if (i>= NR_CPUS)
+	if (!path)
 		return -EINVAL;
 
-	sscanf(buf, "%du", &new_state);
+	sscanf(path, "/hermit/isle%d", &isle);
 
-	if (!new_state) {
+	kfree(path);
+
+	/* Do we already boot the isle? */
+	for(i=0; i<NR_CPUS; i++)
+		if (cpu_online[i] == isle)
+			return -EBUSY;
+
+	sscanf(buf, "%d-%d", &start, &end);
+
+	if (end >= NR_CPUS)
+		end = start;
+
+	//pr_notice("Try to boot HermitCore on isle %d (cpu %d - %d)\n", isle, start, end);
+
+	if (start == -1) {
 		/* TODO: add feature to shut down a core */
-		pr_notice("Currently, HermitCore isn't able to set its CPUs offline\n");
-	} else {
-		/* 
-		 * only CPU, which are not maintained by Linux, could be used
-		 * for HermitCore
-		 */ 	
-		if (cpu_online(i)) {
-			pr_notice("HermitCore isn't able to use CPU %d, because it is already used by the Linux kernel.\n", i);
-		} else {
-			if (!boot_hermit_core(i)) {
-				// to avoid problems with Linux, we disable the hotplug feature
-				cpu_hotplug_disable();
+		pr_notice("Currently, HermitCore isn't able to set a isle offline\n");
+		return -EINVAL;
+	}
 
-				cpu_online[i] = 1;
-			}
+	for(i=start; i<=end; i++) {
+		/* Do Linux or HermitCore already use this CPU ? */
+		if (!(!cpu_online(i) && (cpu_online[i] == -1))) {
+			pr_notice("CPU %d is already online\n", i);
+			return -EINVAL;
 		}
+	}
+
+	//TODO: to avoid problems with Linux, we disable the hotplug feature
+	cpu_hotplug_disable();
+
+	/* reserve CPU for our isle */
+	for(j=0, i=start; i<=end; i++, j++) {
+		ret = boot_hermit_core(i, isle, j);
+		if (!ret)
+			cpu_online[i] = isle;
+		else
+			return ret;
 	}
 
 	return count;
@@ -267,7 +310,20 @@ static ssize_t hermit_set_online(struct kobject *kobj, struct kobj_attribute *at
 static ssize_t hermit_get_log(struct kobject *kobj, struct kobj_attribute *attr,
                                 char *buf)
 {
-	return snprintf(buf, 2*PAGE_SIZE, "%s\n", hermit_base+PAGE_SIZE);
+	int isle = NR_CPUS;
+	char* path = kobject_get_path(kobj, GFP_KERNEL);
+
+	if (!path)
+		return -EINVAL;
+
+	sscanf(path, "/hermit/isle%d", &isle);
+
+	kfree(path);
+
+	if ((isle >= 0) && (isle < NR_CPUS) && hermit_base[isle])
+		return snprintf(buf, 2*PAGE_SIZE, "%s\n", hermit_base[isle]+PAGE_SIZE);
+
+	return -ENOMEM;
 }
 
 /*
@@ -294,7 +350,7 @@ static ssize_t hermit_set_path(struct kobject *kobj, struct kobj_attribute *attr
 static ssize_t hermit_get_memsize(struct kobject *kobj, struct kobj_attribute *attr,
                                 char *buf)
 {
-	return sprintf(buf, "0x%x\n", CONFIG_HERMIT_SIZE);
+	return sprintf(buf, "%zd K per isle\n", pool_size / (1024 * num_possible_nodes()));
 }
 
 /*
@@ -303,7 +359,20 @@ static ssize_t hermit_get_memsize(struct kobject *kobj, struct kobj_attribute *a
 static ssize_t hermit_get_base(struct kobject *kobj, struct kobj_attribute *attr,
                                 char *buf)
 {
-	return sprintf(buf, "0x%lx\n", (size_t) hermit_base);
+	int isle = NR_CPUS;
+	char* path = kobject_get_path(kobj, GFP_KERNEL);
+
+	if (!path)
+		return -EINVAL;
+
+	sscanf(path, "/hermit/isle%d", &isle);
+
+	kfree(path);
+
+	if (isle >= NR_CPUS)
+		return -EINVAL;
+
+	return sprintf(buf, "0x%lx\n", (size_t) hermit_base[isle]);
 }
 
 /*
@@ -311,8 +380,9 @@ static ssize_t hermit_get_base(struct kobject *kobj, struct kobj_attribute *attr
  * and the HermitCore kernel
  *
  * Usage:
- * Boot CPUX             : echo 1 > /sys/hermit/cpuX/online 
- * Shut down CPUX        : echo 0 > /sys/hermit/cpuX/online
+ * Boot CPUX             : echo 1 > /sys/hermit/isleX/cpus 
+ * Boot CPU X-Y		 : echo 1-2 > /sys/hermit/isleX/cpus
+ * Shut down all CPUs    : echo 0 > /sys/hermit/isleX/online
  * Show log messages     : cat /sys/hermit/log 
  * Start address         : cat /sys/hermit/base
  * Memory size           : cat /sys/hermit/memsize
@@ -321,7 +391,7 @@ static ssize_t hermit_get_base(struct kobject *kobj, struct kobj_attribute *attr
  */
 
 static struct kobj_attribute cpu_attribute =
-	__ATTR(online, 0600, hermit_is_online, hermit_set_online);
+	__ATTR(cpus, 0600, hermit_is_cpus, hermit_set_cpus);
 
 static struct kobj_attribute log_attribute =
 	__ATTR(log, 0600, hermit_get_log, NULL);
@@ -335,11 +405,16 @@ static struct kobj_attribute memsize_attribute =
 static struct kobj_attribute base_attribute =
 	__ATTR(base, 0600, hermit_get_base, NULL);
 
-static struct attribute * hermit_attrs[] = {
+static struct attribute * isle_attrs[] = {
+	&cpu_attribute.attr,
 	&log_attribute.attr,
+	&base_attribute.attr,
+	NULL
+};
+
+static struct attribute * hermit_attrs[] = {
 	&path_attribute.attr,
 	&memsize_attribute.attr,
-	&base_attribute.attr,
 	NULL
 };
 
@@ -347,14 +422,24 @@ static struct attribute_group hermit_attr_group = {
 	.attrs = hermit_attrs,
 };
 
-static struct attribute * cpu_attrs[] = {
-	&cpu_attribute.attr,
-	NULL
+static struct attribute_group isle_attr_group = {
+	.attrs = isle_attrs,
 };
 
-static struct attribute_group cpu_attr_group = {
-	.attrs = cpu_attrs,
-};
+static int set_hermit_pool_size(char *arg)
+{
+	pool_size = memparse(arg, NULL);
+        return 0;
+}
+early_param("hermit_pool_size", set_hermit_pool_size);
+
+static int enable_hermit = 1;
+static int disable_hermit(char *arg)
+{
+	enable_hermit = 0;
+	return 0;
+}
+early_param("disable_hermit", disable_hermit);
 
 int __init hermit_init(void)
 {
@@ -362,24 +447,32 @@ int __init hermit_init(void)
 	char name[NAME_SIZE];
 	phys_addr_t mem;
 
+	if (!enable_hermit)
+		return 0;
+
 	pr_notice("Initialize HermitCore\n");
 	pr_notice("HermitCore trampoline at 0x%p (0x%zx)\n", hermit_trampoline, (size_t) virt_to_phys(hermit_trampoline));
+	pr_notice("Number of available nodes: %d\n", num_possible_nodes());
+	pr_notice("Pool size: 0x%zx\n", pool_size);
 
-	/* Has to be under 1M so we can execute real-mode AP code. */
-        mem = memblock_find_in_range(4 << 20, 100<<20, CONFIG_HERMIT_SIZE, 2 << 20);
-	if (!mem) {
-		ret = -ENOMEM;
-		goto _exit;
+	/* allocate for each HermitCore instance */
+	for(i=0; i<num_possible_nodes(); i++) {
+		mem = memblock_find_in_range_node(pool_size / num_possible_nodes(), 2 << 20, 4 << 20, MEMBLOCK_ALLOC_ACCESSIBLE, i);
+		//mem = memblock_find_in_range(4 << 20, 100<<20, CONFIG_HERMIT_SIZE, 2 << 20);
+		if (!mem) {
+			ret = -ENOMEM;
+			goto _exit;
+		}
+
+		ret = memblock_reserve(mem, pool_size / num_possible_nodes());
+		if (ret) {
+			ret = -ENOMEM;
+			goto _exit;
+		}
+
+		hermit_base[i] = (char*) phys_to_virt(mem);
+		pr_notice("HermitCore %d at 0x%p (0x%zx)\n", i, hermit_base[i], (size_t) mem);
 	}
-
-	ret = memblock_reserve(mem, CONFIG_HERMIT_SIZE);
-	if (ret) {
-		ret = -ENOMEM;
-		goto _exit;
-	}
-
-	hermit_base = (char*) phys_to_virt(mem);
-	pr_notice("HermitCore at 0x%p (0x%zx)\n", hermit_base, (size_t) mem);
 
 	/*
 	 * Create a kobject for HermitCore and located
@@ -398,24 +491,21 @@ int __init hermit_init(void)
 	/*
 	 * Create for each possible CPU an entry and located under /sys/hermit
 	 */
-	for_each_possible_cpu(i) {
-		/* CPU0 is always maintained by the Linux kernel */
-		if (i) {
-			if (snprintf(name, NAME_SIZE, "cpu%d", i) >= NAME_SIZE) {
-				printk(KERN_WARNING "HermitCore: buffer is too small\n");
-				continue;
-			}
-
-			cpu_kobj[i] = kobject_create_and_add(name, hermit_kobj);
-			if (!cpu_kobj[i]) {
-				ret = -ENOMEM;
-				goto _exit;
-			}
-
-			ret = sysfs_create_group(cpu_kobj[i], &cpu_attr_group);
-			if (ret)
-				goto _exit;
+	for(i=0; i<num_possible_nodes(); i++) {
+		if (snprintf(name, NAME_SIZE, "isle%d", i) >= NAME_SIZE) {
+			printk(KERN_WARNING "HermitCore: buffer is too small\n");
+			continue;
 		}
+
+		isle_kobj[i] = kobject_create_and_add(name, hermit_kobj);
+		if (!isle_kobj[i]) {
+			ret = -ENOMEM;
+			goto _exit;
+		}
+
+		ret = sysfs_create_group(isle_kobj[i], &isle_attr_group);
+		if (ret)
+			goto _exit;
 	}
 
 	return 0;
@@ -424,8 +514,8 @@ _exit:
 	if (hermit_kobj)
 		kobject_put(hermit_kobj);
 	for_each_possible_cpu(i) {
-		if (cpu_kobj[i]) 
-			kobject_put(cpu_kobj[i]);
+		if (isle_kobj[i]) 
+			kobject_put(isle_kobj[i]);
 	}
 
 	return ret;

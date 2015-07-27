@@ -30,7 +30,7 @@ void __init reserve_real_mode(void)
 	       base, (unsigned long long)mem, size);
 
 #ifdef CONFIG_HERMIT_CORE
-	size = PAGE_SIZE;
+	size = 0x5000;
 
 	/* Has to be under 1M so we can execute real-mode AP code. */
 	mem = memblock_find_in_range(0, 1<<16, size, PAGE_SIZE);
