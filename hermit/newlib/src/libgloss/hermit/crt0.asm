@@ -97,4 +97,12 @@ L4:
    ; endless loop
    jmp $
 
+extern _ftext
+global get_cpufreq
+get_cpufreq:
+   mov rcx, _ftext - 0x1000 + 0x18
+   xor rax, rax
+   mov eax, dword [rcx]
+   ret
+
 SECTION .note.GNU-stack noalloc noexec nowrite progbits
