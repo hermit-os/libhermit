@@ -38,14 +38,6 @@ clock_t
 _DEFUN (_times, (buf),
         struct tms *buf)
 {
-	clock_t clock = 0;
-	int ret;
-
-	ret = SYSCALL2(__NR_times, buf, &clock);
-	if (ret < 0) {
-		errno = -ret;
-		return (clock_t) -1;
-	}
-
-	return clock;
+	errno = EACCES;
+	return -1;
 }
