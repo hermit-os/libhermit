@@ -28,35 +28,36 @@
 SECTION .text
 global _start
 extern __bss_start
-extern __bss_end
+extern _end
 extern main
 extern environ
 extern __env
 extern __do_global_dtors
 extern __do_global_ctors
-extern hardware_init_hook
-extern software_init_hook
+;extern hardware_init_hook
+;extern software_init_hook
 extern atexit
 extern exit
+phys equ 0x40200000
 _start:
    ; initialize BSS
    mov rdi, __bss_start
-   mov rcx, __bss_end
+   mov rcx, _end
    sub rcx, rdi
    xor rax, rax
    rep; stosb
 
    ; call init hooks, if any exists
-   lea rax, [qword hardware_init_hook]
-   cmp rax, 0
-   je	L1
-   call rax
-L1:
-   lea rax, [qword software_init_hook]
-   cmp rax, 0
-   je L2
-   call rax
-L2:
+   ;lea rax, [qword hardware_init_hook]
+   ;cmp rax, 0
+   ;je	L1
+   ;call rax
+;L1:
+   ;lea rax, [qword software_init_hook]
+   ;cmp rax, 0
+   ;je L2
+   ;call rax
+;L2:
    ; register a function to be called at normal process termination
    mov rdi, __do_global_dtors
    call atexit
@@ -100,7 +101,7 @@ L4:
 extern _ftext
 global get_cpufreq
 get_cpufreq:
-   mov rcx, _ftext - 0x1000 + 0x18
+   mov rcx, phys - 0x1000 + 0x18
    xor rax, rax
    mov eax, dword [rcx]
    ret

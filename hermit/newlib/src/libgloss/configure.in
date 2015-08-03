@@ -34,7 +34,7 @@ dnl indicates whether to run configure within the libnosys subdirectory
 config_libnosys=true
 
 case "${target}" in
- *-hermit-elf*)
+ *-hermit*)
 	AC_CONFIG_SUBDIRS([hermit])
 	config_testsuite=false
 	config_libnosys=false
