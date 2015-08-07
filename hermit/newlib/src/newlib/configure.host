@@ -369,10 +369,10 @@ esac
 # THIS TABLE IS ALPHA SORTED.  KEEP IT THAT WAY.
 
 case "${host}" in
-  *-hermit*)
-	newlib_cflags="${newlib_cflags} -DMISSING_SYSCALL_NAMES"
+  *-*-hermit*)
+	sys_dir=hermit
+	##newlib_cflags="${newlib_cflags} -DMISSING_SYSCALL_NAMES"
 	newlib_cflags="${newlib_cflags} -DREENTRANT_SYSCALLS_PROVIDED"
-	sys_dir=
 	;;
   *-*-cygwin*)
 	posix_dir=posix

@@ -36,6 +36,7 @@ if test -n "${sys_dir}"; then
 	netware) AC_CONFIG_SUBDIRS(netware) ;;
 	rdos) AC_CONFIG_SUBDIRS(rdos) ;;
 	rtems) AC_CONFIG_SUBDIRS(rtems) ;;
+	hermit) AC_CONFIG_SUBDIRS(hermit) ;;
 	sh) AC_CONFIG_SUBDIRS(sh) ;;
 	sparc64) AC_CONFIG_SUBDIRS(sparc64) ;;
 	sun4) AC_CONFIG_SUBDIRS(sun4) ;;
