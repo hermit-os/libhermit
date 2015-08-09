@@ -26,15 +26,15 @@
  */
 
 #include "config.h"
+#include <reent.h>
 #include <_ansi.h>
 #include <_syslist.h>
 #include <errno.h>
-#undef errno
-extern int errno;
 #include "warning.h"
 
 int
-_DEFUN (isatty, (file),
+_DEFUN (_isatty_r, (ptr, file),
+	struct _reent *ptr _AND
         int file)
 {
 	return (file < 3);

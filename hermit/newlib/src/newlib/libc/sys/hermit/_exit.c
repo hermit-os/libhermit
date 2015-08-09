@@ -27,21 +27,17 @@
 
 #include "config.h"
 #include "syscall.h"
+#include <reent.h>
 #include <_ansi.h>
 #include <_syslist.h>
-#undef errno
-extern int errno;
+#include <errno.h>
 
 _VOID
 _DEFUN (_exit, (rc),
 	int rc)
 {
-	int ret;
-
 	/* task exit */
-	ret = SYSCALL1(__NR_exit, rc); 
-	if (ret < 0)
-		errno = -ret;
+	SYSCALL1(__NR_exit, rc); 
 
 	/* Convince GCC that this function never returns.  */
 	for (;;)

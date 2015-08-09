@@ -26,18 +26,18 @@
  */
 
 #include "config.h"
+#include <reent.h>
 #include <_ansi.h>
 #include <_syslist.h>
 #include <sys/times.h>
 #include <errno.h>
-#undef errno
-extern int errno;
 #include "syscall.h"
 
 clock_t
-_DEFUN (_times, (buf),
+_DEFUN (_times_r, (ptr, buf),
+	struct _reent *ptr _AND
         struct tms *buf)
 {
-	errno = EACCES;
+	ptr->_errno = EACCES;
 	return -1;
 }

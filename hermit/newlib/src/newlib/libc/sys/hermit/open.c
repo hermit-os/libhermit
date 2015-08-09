@@ -26,17 +26,17 @@
  */
 
 #include "config.h"
+#include <reent.h>
 #include <_ansi.h>
 #include <_syslist.h>
 #include <errno.h>
-#undef errno
-extern int errno;
 #include "warning.h"
 #include "syscall.h"
 
 int
-_DEFUN (_open, (file, flags, mode),
-        char *file  _AND
+_DEFUN (_open_r, (ptr, file, flags, mode),
+	struct _reent *ptr _AND
+        const char *file  _AND
         int   flags _AND
         int   mode)
 {
@@ -44,7 +44,7 @@ _DEFUN (_open, (file, flags, mode),
 
         ret = SYSCALL3(__NR_open, file, flags, mode);
 	if (ret < 0) {
-		errno = -ret;
+		ptr->_errno = -ret;
 		ret = -1;
 	}
 

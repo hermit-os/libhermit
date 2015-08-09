@@ -26,25 +26,25 @@
  */
 
 #include "config.h"
+#include <reent.h>
 #include <_ansi.h>
 #include <_syslist.h>
 #include <errno.h>
-#undef errno
-extern int errno;
 #include "warning.h"
 #include "syscall.h"
 
-int
-_DEFUN (write, (file, ptr, len),
+_ssize_t
+_DEFUN (_write_r, (ptr, file, ptr, len),
+	struct _reent *r _AND
         int   file  _AND
-        char *ptr   _AND
-        int   len)
+        const void *ptr   _AND
+        size_t  len)
 {
 	int ret; 
 
         ret = SYSCALL3(__NR_write, file, ptr, len); 
 	if (ret < 0) {
-		errno = -ret;
+		r->_errno = -ret;
 		ret = -1;
 	}
 

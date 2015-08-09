@@ -27,17 +27,14 @@
 
 #include "config.h"
 #include "syscall.h"
+#include <reent.h>
 #include <_ansi.h>
 #include <_syslist.h>
-#include <errno.h>
-#undef errno
-extern int errno;
 #include "warning.h"
 
 typedef void (*ctp)();
 
-void
-__do_global_ctors ()
+void __do_global_ctors(void)
 {
 	extern int __CTOR_LIST__;
 	int *c = &__CTOR_LIST__;
@@ -50,8 +47,7 @@ __do_global_ctors ()
 	}
 }
 
-void
-__do_global_dtors ()
+void __do_global_dtors(void)
 {
 	extern int __DTOR_LIST__;
 	int *c = &__DTOR_LIST__;

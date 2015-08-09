@@ -26,18 +26,18 @@
  */
 
 #include "config.h"
+#include <reent.h>
 #include <_ansi.h>
 #include <_syslist.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
-#undef errno
-extern int errno;
 #include "warning.h"
 #include "syscall.h"
 
 int
-_DEFUN (fstat, (fildes, st),
+_DEFUN (_fstat_r, (ptr, fildes, st),
+	struct _reent *ptr _AND
         int          fildes _AND
         struct stat *st)
 {

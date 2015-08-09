@@ -68,14 +68,14 @@ CONFIG_CLEAN_VPATH_FILES =
 LIBRARIES = $(noinst_LIBRARIES)
 ARFLAGS = cru
 lib_a_AR = $(AR) $(ARFLAGS)
-@MAY_SUPPLY_SYSCALLS_TRUE@am__DEPENDENCIES_1 = chown.o dup2.o \
+@MAY_SUPPLY_SYSCALLS_TRUE@am__DEPENDENCIES_1 = errno.o chown.o dup2.o \
 @MAY_SUPPLY_SYSCALLS_TRUE@	environ.o execve.o fork.o getpid.o \
 @MAY_SUPPLY_SYSCALLS_TRUE@	init.o kill.o lseek.o pthread_init.o \
 @MAY_SUPPLY_SYSCALLS_TRUE@	readlink.o stat.o times.o wait.o \
-@MAY_SUPPLY_SYSCALLS_TRUE@	close.o dup.o errno.o _exit.o \
-@MAY_SUPPLY_SYSCALLS_TRUE@	fstat.o gettod.o isatty.o link.o \
-@MAY_SUPPLY_SYSCALLS_TRUE@	open.o read.o sbrk.o symlink.o \
-@MAY_SUPPLY_SYSCALLS_TRUE@	unlink.o write.o
+@MAY_SUPPLY_SYSCALLS_TRUE@	close.o dup.o _exit.o fstat.o \
+@MAY_SUPPLY_SYSCALLS_TRUE@	gettod.o isatty.o link.o open.o \
+@MAY_SUPPLY_SYSCALLS_TRUE@	read.o sbrk.o symlink.o unlink.o \
+@MAY_SUPPLY_SYSCALLS_TRUE@	write.o
 am_lib_a_OBJECTS =
 lib_a_OBJECTS = $(am_lib_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@
@@ -205,10 +205,10 @@ AM_CCASFLAGS = $(INCLUDES)
 noinst_LIBRARIES = lib.a
 NASMFLAGS = -felf64 
 @MAY_SUPPLY_SYSCALLS_FALSE@extra_objs = 
-@MAY_SUPPLY_SYSCALLS_TRUE@extra_objs = chown.o dup2.o environ.o execve.o fork.o getpid.o init.o kill.o lseek.o pthread_init.o readlink.o stat.o times.o wait.o close.o dup.o errno.o _exit.o fstat.o gettod.o isatty.o link.o open.o read.o sbrk.o symlink.o unlink.o write.o
+@MAY_SUPPLY_SYSCALLS_TRUE@extra_objs = errno.o chown.o dup2.o environ.o execve.o fork.o getpid.o init.o kill.o lseek.o pthread_init.o readlink.o stat.o times.o wait.o close.o dup.o _exit.o fstat.o gettod.o isatty.o link.o open.o read.o sbrk.o symlink.o unlink.o write.o
 lib_a_SOURCES = 
 lib_a_LIBADD = $(extra_objs)
-EXTRA_lib_a_SOURCES = chown.c dup2.c environ.c execve.c fork.c getpid.c init.c kill.c lseek.c pthread_init.c readlink.c stat.c times.c wait.c close.c dup.c errno.c _exit.c fstat.c gettod.c isatty.c link.c open.c read.c sbrk.c symlink.c unlink.c write.c
+EXTRA_lib_a_SOURCES = errno.c chown.c dup2.c environ.c execve.c fork.c getpid.c init.c kill.c lseek.c pthread_init.c readlink.c stat.c times.c wait.c close.c dup.c _exit.c fstat.c gettod.c isatty.c link.c open.c read.c sbrk.c symlink.c unlink.c write.c
 lib_a_DEPENDENCIES = $(extra_objs)
 lib_a_CCASFLAGS = $(AM_CCASFLAGS)
 lib_a_CFLAGS = $(AM_CFLAGS)
@@ -271,6 +271,12 @@ distclean-compile:
 
 .c.obj:
 	$(COMPILE) -c `$(CYGPATH_W) '$<'`
+
+lib_a-errno.o: errno.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-errno.o `test -f 'errno.c' || echo '$(srcdir)/'`errno.c
+
+lib_a-errno.obj: errno.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-errno.obj `if test -f 'errno.c'; then $(CYGPATH_W) 'errno.c'; else $(CYGPATH_W) '$(srcdir)/errno.c'; fi`
 
 lib_a-chown.o: chown.c
 	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-chown.o `test -f 'chown.c' || echo '$(srcdir)/'`chown.c
@@ -367,12 +373,6 @@ lib_a-dup.o: dup.c
 
 lib_a-dup.obj: dup.c
 	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-dup.obj `if test -f 'dup.c'; then $(CYGPATH_W) 'dup.c'; else $(CYGPATH_W) '$(srcdir)/dup.c'; fi`
-
-lib_a-errno.o: errno.c
-	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-errno.o `test -f 'errno.c' || echo '$(srcdir)/'`errno.c
-
-lib_a-errno.obj: errno.c
-	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-errno.obj `if test -f 'errno.c'; then $(CYGPATH_W) 'errno.c'; else $(CYGPATH_W) '$(srcdir)/errno.c'; fi`
 
 lib_a-_exit.o: _exit.c
 	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-_exit.o `test -f '_exit.c' || echo '$(srcdir)/'`_exit.c

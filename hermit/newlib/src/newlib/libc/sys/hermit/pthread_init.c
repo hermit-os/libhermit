@@ -26,12 +26,10 @@
  */
 
 #include "config.h"
+#include <reent.h>
 #include <_ansi.h>
 #include <_syslist.h>
 #include <errno.h>
-#undef errno
-extern int errno;
-#include "warning.h"
 
 /*
  * Just a weak symbol for crt0. Will be overloaded by

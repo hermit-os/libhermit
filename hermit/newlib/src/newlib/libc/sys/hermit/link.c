@@ -26,18 +26,18 @@
  */
 
 #include "config.h"
+#include <reent.h>
 #include <_ansi.h>
 #include <_syslist.h>
 #include <errno.h>
-#undef errno
-extern int errno;
 #include "warning.h"
 
 int
-_DEFUN (_link, (existing, new),
-        char *existing _AND
-        char *new)
+_DEFUN (_link_r, (ptr, existing, new),
+	struct _reent *ptr _AND
+        const char *existing _AND
+        const char *new)
 {
-	errno = EMLINK;
+	ptr->_errno = EMLINK;
 	return -1;
 }

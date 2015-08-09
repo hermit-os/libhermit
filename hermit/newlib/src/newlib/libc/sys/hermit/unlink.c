@@ -26,17 +26,17 @@
  */
 
 #include "config.h"
+#include <reent.h>
 #include <_ansi.h>
 #include <_syslist.h>
 #include <errno.h>
-#undef errno
-extern int errno;
 #include "warning.h"
 
 int
-_DEFUN (_unlink, (name),
-        char *name)
+_DEFUN (_unlink_r, (ptr, name),
+	struct _reent *ptr _AND
+        const char *name)
 {
-	errno = ENOENT;
+	ptr->_errno = ENOENT;
 	return -1;
 }

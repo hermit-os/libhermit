@@ -26,16 +26,16 @@
  */
 
 #include "config.h"
+#include <reent.h>
 #include <_ansi.h>
 #include <_syslist.h>
 #include <errno.h>
-#undef errno
-extern int errno;
 #include "warning.h"
 #include "syscall.h"
 
 int
-_DEFUN (dup2, (fildes, fildes2),
+_DEFUN (dup2_r, (ptr, fildes, fildes2),
+	struct _reent *ptr _AND
         int fildes _AND
 	int fildes2)
 {
@@ -43,7 +43,7 @@ _DEFUN (dup2, (fildes, fildes2),
 
 	ret = SYSCALL2(__NR_dup2, fildes, fildes2);
 	if (ret < 0) {
-		errno = -ret;
+		ptr->_errno = -ret;
 		ret = -1;
 	}
 

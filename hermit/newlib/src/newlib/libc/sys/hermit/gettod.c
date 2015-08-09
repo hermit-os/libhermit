@@ -26,24 +26,22 @@
  */
 
 #include "config.h"
+#include <reent.h>
 #include <_ansi.h>
 #include <_syslist.h>
 #include <sys/time.h>
 #include <sys/times.h>
 #include <errno.h>
-#undef errno
-extern int errno;
 #include "warning.h"
 
 struct timeval;
 
 int
-_DEFUN (_gettimeofday, (ptimeval, ptimezone),
+_DEFUN (_gettimeofday_r, (ptr, ptimeval, ptimezone),
+	struct _reent *ptr _AND
         struct timeval  *ptimeval  _AND
         void *ptimezone)
 {
-  errno = ENOSYS;
+  ptr->_errno = ENOSYS;
   return -1;
 }
-
-stub_warning(_gettimeofday)

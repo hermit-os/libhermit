@@ -26,22 +26,22 @@
  */
 
 #include "config.h"
+#include <reent.h>
 #include <_syslist.h>
 #include <errno.h>
-#undef errno
-extern int errno;
 #include "warning.h"
 #include "syscall.h"
 
 void*
-_DEFUN (sbrk, (incr),
-        int incr)
+_DEFUN (_sbrk_r, (ptr, incr),
+	struct _reent *ptr _AND
+	ptrdiff_t incr)
 {
-	int ret;
+	size_t ret;
 
 	ret = SYSCALL1(__NR_sbrk, incr);
 	if (ret < 0x1000) {
-		errno = -ret;
+		ptr->_errno = -ret;
 		ret = -1;
 	}
 

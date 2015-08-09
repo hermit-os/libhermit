@@ -26,18 +26,18 @@
  */
 
 #include "config.h"
+#include <reent.h>
 #include <_ansi.h>
 #include <_syslist.h>
 #include <errno.h>
-#undef errno
-extern int errno;
 #include "warning.h"
 
 int
-_DEFUN (_kill, (pid, sig),
+_DEFUN (_kill_r, (ptr, pid, sig),
+	struct _reent *ptr _AND
         int pid  _AND
         int sig)
 {
-	errno = EINVAL;
+	ptr->_errno = EINVAL;
 	return -1;
 }

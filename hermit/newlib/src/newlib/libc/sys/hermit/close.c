@@ -26,23 +26,23 @@
  */
 
 #include "config.h"
+#include <reent.h>
 #include <_ansi.h>
 #include <_syslist.h>
 #include <errno.h>
-#undef errno
-extern int errno;
 #include "warning.h"
 #include "syscall.h"
 
 int
-_DEFUN (close, (fildes),
+_DEFUN (_close_r, (ptr, fildes),
+	struct _reent *ptr _AND
         int fildes)
 {
 	int ret;
 
         ret = SYSCALL1(__NR_close, fildes);
 	if (ret < 0) {
-		errno = -ret;
+		ptr->_errno = -ret;
 		ret = -1;
 	}
 

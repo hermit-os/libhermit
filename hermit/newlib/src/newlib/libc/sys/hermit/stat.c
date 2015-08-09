@@ -30,31 +30,31 @@
  */
 
 #include "config.h"
+#include <reent.h>
 #include <_ansi.h>
 #include <_syslist.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
-#undef errno
-extern int errno;
 #include "warning.h"
 #include "syscall.h"
 
 int
-_DEFUN (stat, (file, st),
+_DEFUN (stat_r, (ptr, file, st),
+	struct _reent *ptr _AND
         const char  *file _AND
         struct stat *st)
 {
 	int ret;
 
 	if (!file && ! st) {
-		errno = EINVAL;
+		ptr->_errno = EINVAL;
 		return -1;
 	}
 
 	ret = SYSCALL2(__NR_stat, file, st);
 	if (ret < 0) {
-		errno = -ret;
+		ptr->_errno = -ret;
 		return -1;
 	}
 	

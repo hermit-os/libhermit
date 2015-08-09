@@ -26,16 +26,16 @@
  */
 
 #include "config.h"
+#include <reent.h>
 #include <_ansi.h>
 #include <_syslist.h>
 #include <errno.h>
-#undef errno
-extern int errno;
 #include "syscall.h"
 #include "warning.h"
 
 int
-_DEFUN (_wait, (status),
+_DEFUN (_wait_r, (ptr, status),
+	struct _reent *ptr _AND
         int  *status)
 {
 	int ret;
@@ -43,7 +43,7 @@ _DEFUN (_wait, (status),
 	/* create a child process */
 	ret = SYSCALL1(__NR_wait, status);
 	if (ret < 0) {
-		errno = -ret;
+		ptr->_errno = -ret;
 		ret = -1;
 	}
 
