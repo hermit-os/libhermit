@@ -2,13 +2,15 @@ HOMEDIR := $(shell pwd)
 INITRAMFS=../busybox-1.23.2/initramfs/
 #QEMU = qemu-system-x86_64
 QEMU = qemu-kvm -cpu host
-NJOBS = -j20
 
-default:
-	make -C hermit default
+default: help
 
 all:
-	make -C hermit all
+
+help:
+	@echo 1. Change to subdiretory linux, configure Linux and build Linux with "make"
+	@echo 2. Change to the subdirectory hermit and build HermitCore with "make"
+	@echo 3. TBD
 
 clean:
 	make -C hermit clean
@@ -18,8 +20,6 @@ veryclean:
 
 ramfs:
 	touch myinitrd.cpio
-	make -C linux $(NJOBS)
-	make -C hermit $(NJOBS)
 	cp hermit/hermit.bin $(INITRAMFS)
 	cd $(INITRAMFS); \
 	find . -print0 | cpio --null -ov --format=newc > $(HOMEDIR)/myinitrd.cpio
