@@ -1,0 +1,55 @@
+<dir>
+<file name="comm_disconnect.c" info="1447123141"/>
+<file name="open_port.c" info="1447123141"/>
+<file name="unpublish_name.c" info="1447123141"/>
+<file name="lookup_name.c" info="1447123141"/>
+<file name="publish_name.c" info="1447123141"/>
+<file name="comm_accept.c" info="1447123141"/>
+<file name="namepub.h" info="1447123141"/>
+<file name="comm_connect.c" info="1447123141"/>
+<file name="close_port.c" info="1447123141"/>
+<file name="comm_join.c" info="1447123141"/>
+<file name="comm_get_parent.c" info="1447123141"/>
+<file name="comm_spawn.c" info="1447123141"/>
+<file name="comm_spawn_multiple.c" info="1447123141"/>
+</dir>
+<data>
+<fileinfo name="comm_disconnect.c">
+MPID_STATE_MPI_COMM_DISCONNECT MPI_Comm_disconnect
+</fileinfo>
+<fileinfo name="open_port.c">
+MPID_STATE_MPI_OPEN_PORT MPI_Open_port
+</fileinfo>
+<fileinfo name="unpublish_name.c">
+MPID_STATE_MPI_UNPUBLISH_NAME MPI_Unpublish_name
+</fileinfo>
+<fileinfo name="lookup_name.c">
+MPID_STATE_MPI_LOOKUP_NAME MPI_Lookup_name
+</fileinfo>
+<fileinfo name="publish_name.c">
+MPID_STATE_MPI_PUBLISH_NAME MPI_Publish_name
+</fileinfo>
+<fileinfo name="comm_accept.c">
+MPID_STATE_MPI_COMM_ACCEPT MPI_Comm_accept
+</fileinfo>
+<fileinfo name="namepub.h">
+</fileinfo>
+<fileinfo name="comm_connect.c">
+MPID_STATE_MPI_COMM_CONNECT MPI_Comm_connect
+</fileinfo>
+<fileinfo name="close_port.c">
+MPID_STATE_MPI_CLOSE_PORT MPI_Close_port
+</fileinfo>
+<fileinfo name="comm_join.c">
+MPID_STATE_MPI_COMM_JOIN MPI_Comm_join
+</fileinfo>
+<fileinfo name="comm_get_parent.c">
+MPID_STATE_MPI_COMM_GET_PARENT MPI_Comm_get_parent
+</fileinfo>
+<fileinfo name="comm_spawn.c">
+MPID_STATE_MPI_COMM_SPAWN MPI_Comm_spawn
+</fileinfo>
+<fileinfo name="comm_spawn_multiple.c">
+MPID_STATE_MPI_COMM_SPAWN_MULTIPLE MPI_Comm_spawn_multiple
+</fileinfo>
+</data>

@@ -1,0 +1,76 @@
+<dir>
+<file name="mpidu_socki.h" info="1447123141"/>
+<file name="socki_util.i" info="1447123141"/>
+<file name="sock_immed.i" info="1447123141"/>
+<file name="sock_post.i" info="1447123141"/>
+<file name="sock_init.i" info="1447123141"/>
+<file name="sock_set.i" info="1447123141"/>
+<file name="sock.c" info="1447123141"/>
+<file name="sock_wait.i" info="1447123141"/>
+<file name="sock_misc.i" info="1447123141"/>
+</dir>
+<data>
+<fileinfo name="mpidu_socki.h">
+</fileinfo>
+<fileinfo name="socki_util.i">
+MPID_STATE_MPIDI_SOCK_UPDATE_SOCK_SET MPIDI_Sock_update_sock_set
+MPID_STATE_MPIDU_SOCKI_SOCK_ALLOC MPIDU_Socki_sock_alloc
+MPID_STATE_MPIDU_SOCKI_SOCK_FREE MPIDU_Socki_sock_free
+MPID_STATE_SOCKI_EVENT_ENQUEUE MPIDU_Socki_event_enqueue
+MPID_STATE_SOCKI_EVENT_DEQUEUE MPIDU_Socki_event_dequeue
+MPID_STATE_SOCKI_FREE_EVENTQ_MEM MPIDU_Socki_free_eventq_mem
+</fileinfo>
+<fileinfo name="sock_immed.i">
+MPID_STATE_MPIDU_SOCK_ACCEPT MPIDU_Sock_accept
+MPID_STATE_READ read
+MPID_STATE_MPIDU_SOCK_READ MPIDU_Sock_read
+MPID_STATE_READV readv
+MPID_STATE_MPIDU_SOCK_READV MPIDU_Sock_readv
+MPID_STATE_WRITE write
+MPID_STATE_MPIDU_SOCK_WRITE MPIDU_Sock_write
+MPID_STATE_WRITEV writev
+MPID_STATE_MPIDU_SOCK_WRITEV MPIDU_Sock_writev
+MPID_STATE_MPIDU_SOCK_WAKEUP MPIDU_Sock_wakeup
+</fileinfo>
+<fileinfo name="sock_post.i">
+MPID_STATE_MPIDU_SOCK_POST_CONNECT_IFADDR MPIDU_Sock_post_connect_ifaddr
+MPID_STATE_MPIDU_SOCK_LISTEN MPID_STATE_MPIDU_SOCK_ACCEPT
+MPID_STATE_MPIDU_SOCK_POST_READ MPIDU_Sock_post_read
+MPID_STATE_MPIDU_SOCK_POST_READV MPIDU_Sock_post_readv
+MPID_STATE_MPIDU_SOCK_POST_WRITE MPIDU_Sock_post_write
+MPID_STATE_MPIDU_SOCK_POST_WRITEV MPIDU_Sock_post_writev
+MPID_STATE_MPIDU_SOCK_POST_CLOSE MPIDU_Sock_post_close
+</fileinfo>
+<fileinfo name="sock_init.i">
+MPID_STATE_MPIDU_SOCK_INIT MPIDU_Sock_init
+MPID_STATE_MPIDU_SOCK_FINALIZE MPIDU_Sock_finalize
+</fileinfo>
+<fileinfo name="sock_set.i">
+MPID_STATE_MPIDU_SOCK_CREATE_SET MPIDU_Sock_create_set
+MPID_STATE_MPIDU_SOCK_CLOSE_OPEN_SOCKETS MPIDU_Sock_close_open_sockets
+MPID_STATE_MPIDU_SOCK_DESTROY_SET MPIDU_Sock_destroy_set
+</fileinfo>
+<fileinfo name="sock.c">
+</fileinfo>
+<fileinfo name="sock_wait.i">
+MPID_STATE_MPIDU_SOCK_WAIT MPIDU_Sock_wait
+MPID_STATE_POLL poll
+MPID_STATE_MPIDU_SOCKI_HANDLE_POLLHUP MPIDU_Socki_handle_pollhup
+MPID_STATE_MPIDU_SOCKI_HANDLE_POLLERR MPIDU_Socki_handle_pollerr
+MPID_STATE_READ read
+MPID_STATE_READV readv
+MPID_STATE_MPIDU_SOCKI_HANDLE_READ MPIDU_Socki_handle_read
+MPID_STATE_WRITE write
+MPID_STATE_WRITEV writev
+MPID_STATE_MPIDU_SOCKI_HANDLE_WRITE MPIDU_Socki_handle_write
+MPID_STATE_MPIDU_SOCKI_HANDLE_CONNECT MPIDU_Socki_handle_connect
+</fileinfo>
+<fileinfo name="sock_misc.i">
+MPID_STATE_MPIDU_SOCK_GET_HOST_DESCRIPTION MPIDU_Sock_get_host_description
+MPID_STATE_SOCK_NATIVE_TO_SOCK MPIDU_Sock_native_to_sock
+MPID_STATE_MPIDU_SOCK_SET_USER_PTR MPIDU_Sock_set_user_ptr
+MPID_STATE_MPIDU_SOCK_GET_SOCK_ID MPIDU_Sock_get_sock_id
+MPID_STATE_MPIDU_SOCK_GET_SOCK_SET_ID MPIDU_Sock_get_sock_set_id
+MPID_STATE_MPIDU_SOCK_GET_ERROR_CLASS_STRING MPIDU_Sock_get_error_class_string
+</fileinfo>
+</data>

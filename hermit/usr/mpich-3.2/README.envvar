@@ -1,0 +1,647 @@
+(C) 2010 by Argonne National Laboratory.
+    See COPYRIGHT in top-level directory.
+
+Automatically generated
+  by:   ./maint/extractcvars
+  at:   Wed Nov 11 22:07:04 2015
+DO NOT EDIT!!!
+
+This file lists the various environment variables available to change the
+behavior of the MPICH library.  These are intended to be used by advanced
+users.
+---------------------------------------------------------------------------
+
+MPIR_CVAR_DEBUG_HOLD
+    Aliases: MPIR_PARAM_DEBUG_HOLD
+             MPICH_DEBUG_HOLD
+    Description: If true, causes processes to wait in MPI_Init and
+        MPI_Initthread for a debugger to be attached.  Once the debugger
+        has attached, the variable 'hold' should be set to 0 in order to
+        allow the process to continue (e.g., in gdb, "set hold=0").
+    Default: 0
+
+MPIR_CVAR_ERROR_CHECKING
+    Aliases: MPIR_PARAM_ERROR_CHECKING
+             MPICH_ERROR_CHECKING
+    Description: If true, perform checks for errors, typically to verify
+        valid inputs to MPI routines.  Only effective when MPICH is
+        configured with --enable-error-checking=runtime .
+    Default: 1
+
+MPIR_CVAR_ASYNC_PROGRESS
+    Aliases: MPIR_PARAM_ASYNC_PROGRESS
+             MPICH_ASYNC_PROGRESS
+    Description: If set to true, MPICH will initiate an additional thread
+        to make asynchronous progress on all communication operations
+        including point-to-point, collective, one-sided operations and I/O.
+         Setting this variable will automatically increase the
+        thread-safety level to MPI_THREAD_MULTIPLE.  While this improves
+        the progress semantics, it might cause a small amount of
+        performance overhead for regular MPI operations.  The user is
+        encouraged to leave one or more hardware threads vacant in order to
+        prevent contention between the application threads and the progress
+        thread(s).  The impact of oversubscription is highly system
+        dependent but may be substantial in some cases, hence this
+        recommendation.
+    Default: 0
+
+MPIR_CVAR_DEFAULT_THREAD_LEVEL
+    Aliases: MPIR_PARAM_DEFAULT_THREAD_LEVEL
+             MPICH_DEFAULT_THREAD_LEVEL
+    Description: Sets the default thread level to use when using MPI_INIT.
+    Default: "MPI_THREAD_SINGLE"
+
+MPIR_CVAR_MEMDUMP
+    Aliases: MPIR_PARAM_MEMDUMP
+             MPICH_MEMDUMP
+    Description: If true, list any memory that was allocated by MPICH and
+        that remains allocated when MPI_Finalize completes.
+    Default: 1
+
+MPIR_CVAR_SUPPRESS_ABORT_MESSAGE
+    Aliases: MPIR_PARAM_SUPPRESS_ABORT_MESSAGE
+             MPICH_SUPPRESS_ABORT_MESSAGE
+    Description: Disable printing of abort error message.
+    Default: 0
+
+MPIR_CVAR_REDUCE_SHORT_MSG_SIZE
+    Aliases: MPIR_PARAM_REDUCE_SHORT_MSG_SIZE
+             MPICH_REDUCE_SHORT_MSG_SIZE
+    Description: the short message algorithm will be used if the send
+        buffer size is <= this value (in bytes)
+    Default: 2048
+
+MPIR_CVAR_ENABLE_SMP_REDUCE
+    Aliases: MPIR_PARAM_ENABLE_SMP_REDUCE
+             MPICH_ENABLE_SMP_REDUCE
+    Description: Enable SMP aware reduce.
+    Default: 1
+
+MPIR_CVAR_MAX_SMP_REDUCE_MSG_SIZE
+    Aliases: MPIR_PARAM_MAX_SMP_REDUCE_MSG_SIZE
+             MPICH_MAX_SMP_REDUCE_MSG_SIZE
+    Description: Maximum message size for which SMP-aware reduce is used. 
+        A value of '0' uses SMP-aware reduce for all message sizes.
+    Default: 0
+
+MPIR_CVAR_REDSCAT_COMMUTATIVE_LONG_MSG_SIZE
+    Aliases: MPIR_PARAM_REDSCAT_COMMUTATIVE_LONG_MSG_SIZE
+             MPICH_REDSCAT_COMMUTATIVE_LONG_MSG_SIZE
+    Description: the long message algorithm will be used if the operation
+        is commutative and the send buffer size is >= this value (in bytes)
+    Default: 524288
+
+MPIR_CVAR_BCAST_MIN_PROCS
+    Aliases: MPIR_PARAM_BCAST_MIN_PROCS
+             MPICH_BCAST_MIN_PROCS
+    Description: Let's define short messages as messages with size <
+        MPIR_CVAR_BCAST_SHORT_MSG_SIZE, and medium messages as messages
+        with size >= MPIR_CVAR_BCAST_SHORT_MSG_SIZE but <
+        MPIR_CVAR_BCAST_LONG_MSG_SIZE, and long messages as messages with
+        size >= MPIR_CVAR_BCAST_LONG_MSG_SIZE. The broadcast algorithms
+        selection procedure is as follows. For short messages or when the
+        number of processes is < MPIR_CVAR_BCAST_MIN_PROCS, we do broadcast
+        using the binomial tree algorithm. Otherwise, for medium messages
+        and with a power-of-two number of processes, we do broadcast based
+        on a scatter followed by a recursive doubling allgather algorithm.
+        Otherwise, for long messages or with non power-of-two number of
+        processes, we do broadcast based on a scatter followed by a ring
+        allgather algorithm. (See also: MPIR_CVAR_BCAST_SHORT_MSG_SIZE,
+        MPIR_CVAR_BCAST_LONG_MSG_SIZE)
+    Default: 8
+
+MPIR_CVAR_BCAST_SHORT_MSG_SIZE
+    Aliases: MPIR_PARAM_BCAST_SHORT_MSG_SIZE
+             MPICH_BCAST_SHORT_MSG_SIZE
+    Description: Let's define short messages as messages with size <
+        MPIR_CVAR_BCAST_SHORT_MSG_SIZE, and medium messages as messages
+        with size >= MPIR_CVAR_BCAST_SHORT_MSG_SIZE but <
+        MPIR_CVAR_BCAST_LONG_MSG_SIZE, and long messages as messages with
+        size >= MPIR_CVAR_BCAST_LONG_MSG_SIZE. The broadcast algorithms
+        selection procedure is as follows. For short messages or when the
+        number of processes is < MPIR_CVAR_BCAST_MIN_PROCS, we do broadcast
+        using the binomial tree algorithm. Otherwise, for medium messages
+        and with a power-of-two number of processes, we do broadcast based
+        on a scatter followed by a recursive doubling allgather algorithm.
+        Otherwise, for long messages or with non power-of-two number of
+        processes, we do broadcast based on a scatter followed by a ring
+        allgather algorithm. (See also: MPIR_CVAR_BCAST_MIN_PROCS,
+        MPIR_CVAR_BCAST_LONG_MSG_SIZE)
+    Default: 12288
+
+MPIR_CVAR_BCAST_LONG_MSG_SIZE
+    Aliases: MPIR_PARAM_BCAST_LONG_MSG_SIZE
+             MPICH_BCAST_LONG_MSG_SIZE
+    Description: Let's define short messages as messages with size <
+        MPIR_CVAR_BCAST_SHORT_MSG_SIZE, and medium messages as messages
+        with size >= MPIR_CVAR_BCAST_SHORT_MSG_SIZE but <
+        MPIR_CVAR_BCAST_LONG_MSG_SIZE, and long messages as messages with
+        size >= MPIR_CVAR_BCAST_LONG_MSG_SIZE. The broadcast algorithms
+        selection procedure is as follows. For short messages or when the
+        number of processes is < MPIR_CVAR_BCAST_MIN_PROCS, we do broadcast
+        using the binomial tree algorithm. Otherwise, for medium messages
+        and with a power-of-two number of processes, we do broadcast based
+        on a scatter followed by a recursive doubling allgather algorithm.
+        Otherwise, for long messages or with non power-of-two number of
+        processes, we do broadcast based on a scatter followed by a ring
+        allgather algorithm. (See also: MPIR_CVAR_BCAST_MIN_PROCS,
+        MPIR_CVAR_BCAST_SHORT_MSG_SIZE)
+    Default: 524288
+
+MPIR_CVAR_ENABLE_SMP_BCAST
+    Aliases: MPIR_PARAM_ENABLE_SMP_BCAST
+             MPICH_ENABLE_SMP_BCAST
+    Description: Enable SMP aware broadcast (See also:
+        MPIR_CVAR_MAX_SMP_BCAST_MSG_SIZE)
+    Default: 1
+
+MPIR_CVAR_MAX_SMP_BCAST_MSG_SIZE
+    Aliases: MPIR_PARAM_MAX_SMP_BCAST_MSG_SIZE
+             MPICH_MAX_SMP_BCAST_MSG_SIZE
+    Description: Maximum message size for which SMP-aware broadcast is
+        used.  A value of '0' uses SMP-aware broadcast for all message
+        sizes. (See also: MPIR_CVAR_ENABLE_SMP_BCAST)
+    Default: 0
+
+MPIR_CVAR_GATHERV_INTER_SSEND_MIN_PROCS
+    Aliases: MPIR_PARAM_GATHERV_INTER_SSEND_MIN_PROCS
+             MPICH_GATHERV_INTER_SSEND_MIN_PROCS
+    Description: Use Ssend (synchronous send) for intercommunicator
+        MPI_Gatherv if the "group B" size is >= this value.  Specifying
+        "-1" always avoids using Ssend.  For backwards compatibility,
+        specifying "0" uses the default value.
+    Default: 32
+
+MPIR_CVAR_ALLREDUCE_SHORT_MSG_SIZE
+    Aliases: MPIR_PARAM_ALLREDUCE_SHORT_MSG_SIZE
+             MPICH_ALLREDUCE_SHORT_MSG_SIZE
+    Description: the short message algorithm will be used if the send
+        buffer size is <= this value (in bytes)
+    Default: 2048
+
+MPIR_CVAR_ENABLE_SMP_COLLECTIVES
+    Aliases: MPIR_PARAM_ENABLE_SMP_COLLECTIVES
+             MPICH_ENABLE_SMP_COLLECTIVES
+    Description: Enable SMP aware collective communication.
+    Default: 1
+
+MPIR_CVAR_ENABLE_SMP_ALLREDUCE
+    Aliases: MPIR_PARAM_ENABLE_SMP_ALLREDUCE
+             MPICH_ENABLE_SMP_ALLREDUCE
+    Description: Enable SMP aware allreduce.
+    Default: 1
+
+MPIR_CVAR_MAX_SMP_ALLREDUCE_MSG_SIZE
+    Aliases: MPIR_PARAM_MAX_SMP_ALLREDUCE_MSG_SIZE
+             MPICH_MAX_SMP_ALLREDUCE_MSG_SIZE
+    Description: Maximum message size for which SMP-aware allreduce is
+        used.  A value of '0' uses SMP-aware allreduce for all message
+        sizes.
+    Default: 0
+
+MPIR_CVAR_GATHER_VSMALL_MSG_SIZE
+    Aliases: MPIR_PARAM_GATHER_VSMALL_MSG_SIZE
+             MPICH_GATHER_VSMALL_MSG_SIZE
+    Description: use a temporary buffer for intracommunicator MPI_Gather if
+        the send buffer size is < this value (in bytes) (See also:
+        MPIR_CVAR_GATHER_INTER_SHORT_MSG_SIZE)
+    Default: 1024
+
+MPIR_CVAR_GATHER_INTER_SHORT_MSG_SIZE
+    Aliases: MPIR_PARAM_GATHER_INTER_SHORT_MSG_SIZE
+             MPICH_GATHER_INTER_SHORT_MSG_SIZE
+    Description: use the short message algorithm for intercommunicator
+        MPI_Gather if the send buffer size is < this value (in bytes) (See
+        also: MPIR_CVAR_GATHER_VSMALL_MSG_SIZE)
+    Default: 2048
+
+MPIR_CVAR_ENABLE_SMP_BARRIER
+    Aliases: MPIR_PARAM_ENABLE_SMP_BARRIER
+             MPICH_ENABLE_SMP_BARRIER
+    Description: Enable SMP aware barrier.
+    Default: 1
+
+MPIR_CVAR_ALLGATHER_SHORT_MSG_SIZE
+    Aliases: MPIR_PARAM_ALLGATHER_SHORT_MSG_SIZE
+             MPICH_ALLGATHER_SHORT_MSG_SIZE
+    Description: For MPI_Allgather and MPI_Allgatherv, the short message
+        algorithm will be used if the send buffer size is < this value (in
+        bytes). (See also: MPIR_CVAR_ALLGATHER_LONG_MSG_SIZE)
+    Default: 81920
+
+MPIR_CVAR_ALLGATHER_LONG_MSG_SIZE
+    Aliases: MPIR_PARAM_ALLGATHER_LONG_MSG_SIZE
+             MPICH_ALLGATHER_LONG_MSG_SIZE
+    Description: For MPI_Allgather and MPI_Allgatherv, the long message
+        algorithm will be used if the send buffer size is >= this value (in
+        bytes) (See also: MPIR_CVAR_ALLGATHER_SHORT_MSG_SIZE)
+    Default: 524288
+
+MPIR_CVAR_ALLTOALL_SHORT_MSG_SIZE
+    Aliases: MPIR_PARAM_ALLTOALL_SHORT_MSG_SIZE
+             MPICH_ALLTOALL_SHORT_MSG_SIZE
+    Description: the short message algorithm will be used if the
+        per-destination message size (sendcount*size(sendtype)) is <= this
+        value (See also: MPIR_CVAR_ALLTOALL_MEDIUM_MSG_SIZE)
+    Default: 256
+
+MPIR_CVAR_ALLTOALL_MEDIUM_MSG_SIZE
+    Aliases: MPIR_PARAM_ALLTOALL_MEDIUM_MSG_SIZE
+             MPICH_ALLTOALL_MEDIUM_MSG_SIZE
+    Description: the medium message algorithm will be used if the
+        per-destination message size (sendcount*size(sendtype)) is <= this
+        value and larger than MPIR_CVAR_ALLTOALL_SHORT_MSG_SIZE (See also:
+        MPIR_CVAR_ALLTOALL_SHORT_MSG_SIZE)
+    Default: 32768
+
+MPIR_CVAR_ALLTOALL_THROTTLE
+    Aliases: MPIR_PARAM_ALLTOALL_THROTTLE
+             MPICH_ALLTOALL_THROTTLE
+    Description: max no. of irecvs/isends posted at a time in some alltoall
+        algorithms. Setting it to 0 causes all irecvs/isends to be posted
+        at once
+    Default: 32
+
+MPIR_CVAR_SCATTER_INTER_SHORT_MSG_SIZE
+    Aliases: MPIR_PARAM_SCATTER_INTER_SHORT_MSG_SIZE
+             MPICH_SCATTER_INTER_SHORT_MSG_SIZE
+    Description: use the short message algorithm for intercommunicator
+        MPI_Scatter if the send buffer size is < this value (in bytes)
+    Default: 2048
+
+MPIR_CVAR_ALLGATHERV_PIPELINE_MSG_SIZE
+    Aliases: MPIR_PARAM_ALLGATHERV_PIPELINE_MSG_SIZE
+             MPICH_ALLGATHERV_PIPELINE_MSG_SIZE
+    Description: The smallest message size that will be used for the
+        pipelined, large-message, ring algorithm in the MPI_Allgatherv
+        implementation.
+    Default: 32768
+
+MPIR_CVAR_CTXID_EAGER_SIZE
+    Aliases: MPIR_PARAM_CTXID_EAGER_SIZE
+             MPICH_CTXID_EAGER_SIZE
+    Description: The MPIR_CVAR_CTXID_EAGER_SIZE environment variable allows
+        you to specify how many words in the context ID mask will be set
+        aside for the eager allocation protocol.  If the application is
+        running out of context IDs, reducing this value may help.
+    Default: 2
+
+MPIR_CVAR_COMM_SPLIT_USE_QSORT
+    Aliases: MPIR_PARAM_COMM_SPLIT_USE_QSORT
+             MPICH_COMM_SPLIT_USE_QSORT
+    Description: Use qsort(3) in the implementation of MPI_Comm_split
+        instead of bubble sort.
+    Default: 1
+
+MPIR_CVAR_PROCTABLE_SIZE
+    Aliases: MPIR_PARAM_PROCTABLE_SIZE
+             MPICH_PROCTABLE_SIZE
+    Description: Size of the "MPIR" debugger interface proctable (process
+        table).
+    Default: 64
+
+MPIR_CVAR_PROCTABLE_PRINT
+    Aliases: MPIR_PARAM_PROCTABLE_PRINT
+             MPICH_PROCTABLE_PRINT
+    Description: If true, dump the proctable entries at
+        MPIR_WaitForDebugger-time.
+    Default: 0
+
+MPIR_CVAR_PRINT_ERROR_STACK
+    Aliases: MPIR_PARAM_PRINT_ERROR_STACK
+             MPICH_PRINT_ERROR_STACK
+    Description: If true, print an error stack trace at error handling
+        time.
+    Default: 1
+
+MPIR_CVAR_CHOP_ERROR_STACK
+    Aliases: MPIR_PARAM_CHOP_ERROR_STACK
+             MPICH_CHOP_ERROR_STACK
+    Description: If >0, truncate error stack output lines this many
+        characters wide.  If 0, do not truncate, and if <0 use a sensible
+        default.
+    Default: 0
+
+MPIR_CVAR_NAMESERV_FILE_PUBDIR
+    Aliases: MPIR_PARAM_NAMESERV_FILE_PUBDIR
+             MPICH_NAMESERV_FILE_PUBDIR
+             MPIR_CVAR_NAMEPUB_DIR
+             MPIR_PARAM_NAMEPUB_DIR
+             MPICH_NAMEPUB_DIR
+    Description: Sets the directory to use for MPI service publishing in
+        the file nameserv implementation.  Allows the user to override
+        where the publish and lookup information is placed for
+        connect/accept based applications.
+    Default: NULL
+
+MPIR_CVAR_ABORT_ON_LEAKED_HANDLES
+    Aliases: MPIR_PARAM_ABORT_ON_LEAKED_HANDLES
+             MPICH_ABORT_ON_LEAKED_HANDLES
+    Description: If true, MPI will call MPI_Abort at MPI_Finalize if any
+        MPI object handles have been leaked.  For example, if MPI_Comm_dup
+        is called without calling a corresponding MPI_Comm_free.  For
+        uninteresting reasons, enabling this option may prevent all known
+        object leaks from being reported.  MPICH must have been configure
+        with "--enable-g=handlealloc" or better in order for this
+        functionality to work.
+    Default: 0
+
+MPIR_CVAR_COLL_ALIAS_CHECK
+    Aliases: MPIR_PARAM_COLL_ALIAS_CHECK
+             MPICH_COLL_ALIAS_CHECK
+    Description: Enable checking of aliasing in collective operations
+    Default: 1
+
+MPIR_CVAR_CH3_ENABLE_HCOLL
+    Aliases: MPIR_PARAM_CH3_ENABLE_HCOLL
+             MPICH_CH3_ENABLE_HCOLL
+    Description: If true, enable HCOLL collectives.
+    Default: 0
+
+MPIR_CVAR_CH3_NOLOCAL
+    Aliases: MPIR_PARAM_CH3_NOLOCAL
+             MPICH_CH3_NOLOCAL
+             MPIR_CVAR_CH3_NO_LOCAL
+             MPIR_PARAM_CH3_NO_LOCAL
+             MPICH_CH3_NO_LOCAL
+    Description: If true, force all processes to operate as though all
+        processes are located on another node.  For example, this disables
+        shared memory communication hierarchical collectives.
+    Default: 0
+
+MPIR_CVAR_CH3_ODD_EVEN_CLIQUES
+    Aliases: MPIR_PARAM_CH3_ODD_EVEN_CLIQUES
+             MPICH_CH3_ODD_EVEN_CLIQUES
+             MPIR_CVAR_CH3_EVEN_ODD_CLIQUES
+             MPIR_PARAM_CH3_EVEN_ODD_CLIQUES
+             MPICH_CH3_EVEN_ODD_CLIQUES
+    Description: If true, odd procs on a node are seen as local to each
+        other, and even procs on a node are seen as local to each other. 
+        Used for debugging on a single machine.
+    Default: 0
+
+MPIR_CVAR_CH3_EAGER_MAX_MSG_SIZE
+    Aliases: MPIR_PARAM_CH3_EAGER_MAX_MSG_SIZE
+             MPICH_CH3_EAGER_MAX_MSG_SIZE
+    Description: This cvar controls the message size at which CH3 switches
+        from eager to rendezvous mode.
+    Default: 131072
+
+MPIR_CVAR_CH3_RMA_SLOTS_SIZE
+    Aliases: MPIR_PARAM_CH3_RMA_SLOTS_SIZE
+             MPICH_CH3_RMA_SLOTS_SIZE
+    Description: Number of RMA slots during window creation. Each slot
+        contains a linked list of target elements. The distribution of
+        ranks among slots follows a round-robin pattern. Requires a
+        positive value.
+    Default: 262144
+
+MPIR_CVAR_CH3_RMA_TARGET_LOCK_DATA_BYTES
+    Aliases: MPIR_PARAM_CH3_RMA_TARGET_LOCK_DATA_BYTES
+             MPICH_CH3_RMA_TARGET_LOCK_DATA_BYTES
+    Description: Size (in bytes) of available lock data this window can
+        provided. If current buffered lock data is more than this value,
+        the process will drop the upcoming operation data. Requires a
+        positive calue.
+    Default: 655360
+
+MPIR_CVAR_CH3_RMA_OP_PIGGYBACK_LOCK_DATA_SIZE
+    Aliases: MPIR_PARAM_CH3_RMA_OP_PIGGYBACK_LOCK_DATA_SIZE
+             MPICH_CH3_RMA_OP_PIGGYBACK_LOCK_DATA_SIZE
+    Description: Specify the threshold of data size of a RMA operation
+        which can be piggybacked with a LOCK message. It is always a
+        positive value and should not be smaller than
+        MPIDI_RMA_IMMED_BYTES. If user sets it as a small value, for middle
+        and large data size, we will lose performance because of always
+        waiting for round-trip of LOCK synchronization; if user sets it as
+        a large value, we need to consume more memory on target side to
+        buffer this lock request when lock is not satisfied.
+    Default: 65536
+
+MPIR_CVAR_CH3_RMA_SCALABLE_FENCE_PROCESS_NUM
+    Aliases: MPIR_PARAM_CH3_RMA_SCALABLE_FENCE_PROCESS_NUM
+             MPICH_CH3_RMA_SCALABLE_FENCE_PROCESS_NUM
+    Description: Specify the threshold of switching the algorithm used in
+        FENCE from the basic algorithm to the scalable algorithm. The value
+        can be nagative, zero or positive. When the number of processes is
+        larger than or equal to this value, FENCE will use a scalable
+        algorithm which do not use O(P) data structure; when the number of
+        processes is smaller than the value, FENCE will use a basic but
+        fast algorithm which requires an O(P) data structure.
+    Default: 1024
+
+MPIR_CVAR_CH3_RMA_DELAY_ISSUING_FOR_PIGGYBACKING
+    Aliases: MPIR_PARAM_CH3_RMA_DELAY_ISSUING_FOR_PIGGYBACKING
+             MPICH_CH3_RMA_DELAY_ISSUING_FOR_PIGGYBACKING
+    Description: Specify if delay issuing of RMA operations for
+        piggybacking LOCK/UNLOCK/FLUSH is enabled. It can be either 0 or 1.
+        When it is set to 1, the issuing of LOCK message is delayed until
+        origin process see the first RMA operation and piggyback LOCK with
+        that operation, and the origin process always keeps the current
+        last operation until the ending synchronization call in order to
+        piggyback UNLOCK/FLUSH with that operation. When it is set to 0, in
+        WIN_LOCK/UNLOCK case, the LOCK message is sent out as early as
+        possible, in WIN_LOCK_ALL/UNLOCK_ALL case, the origin process still
+        tries to piggyback LOCK message with the first operation; for
+        UNLOCK/FLUSH message, the origin process no longer keeps the
+        current last operation but only piggyback UNLOCK/FLUSH if there is
+        an operation avaliable in the ending synchronization call.
+    Default: 0
+
+MPIR_CVAR_CH3_RMA_ACTIVE_REQ_THRESHOLD
+    Aliases: MPIR_PARAM_CH3_RMA_ACTIVE_REQ_THRESHOLD
+             MPICH_CH3_RMA_ACTIVE_REQ_THRESHOLD
+    Description: Threshold of number of active requests to trigger blocking
+        waiting in operation routines. When the value is negative, we never
+        blockingly wait in operation routines. When the value is zero, we
+        always trigger blocking waiting in operation routines to wait until
+        no. of active requests becomes zero. When the value is positive, we
+        do blocking waiting in operation routines to wait until no. of
+        active requests being reduced to this value.
+    Default: 65536
+
+MPIR_CVAR_CH3_RMA_POKE_PROGRESS_REQ_THRESHOLD
+    Aliases: MPIR_PARAM_CH3_RMA_POKE_PROGRESS_REQ_THRESHOLD
+             MPICH_CH3_RMA_POKE_PROGRESS_REQ_THRESHOLD
+    Description: Threshold at which the RMA implementation attempts to
+        complete requests while completing RMA operations and while using
+        the lazy synchonization approach.  Change this value if programs
+        fail because they run out of requests or other internal resources
+    Default: 128
+
+MPIR_CVAR_CH3_RMA_OP_WIN_POOL_SIZE
+    Aliases: MPIR_PARAM_CH3_RMA_OP_WIN_POOL_SIZE
+             MPICH_CH3_RMA_OP_WIN_POOL_SIZE
+    Description: Size of the window-private RMA operations pool (in number
+        of operations) that stores information about RMA operations that
+        could not be issued immediately.  Requires a positive value.
+    Default: 256
+
+MPIR_CVAR_CH3_RMA_OP_GLOBAL_POOL_SIZE
+    Aliases: MPIR_PARAM_CH3_RMA_OP_GLOBAL_POOL_SIZE
+             MPICH_CH3_RMA_OP_GLOBAL_POOL_SIZE
+    Description: Size of the Global RMA operations pool (in number of
+        operations) that stores information about RMA operations that could
+        not be issued immediatly.  Requires a positive value.
+    Default: 16384
+
+MPIR_CVAR_CH3_RMA_TARGET_WIN_POOL_SIZE
+    Aliases: MPIR_PARAM_CH3_RMA_TARGET_WIN_POOL_SIZE
+             MPICH_CH3_RMA_TARGET_WIN_POOL_SIZE
+    Description: Size of the window-private RMA target pool (in number of
+        targets) that stores information about RMA targets that could not
+        be issued immediately.  Requires a positive value.
+    Default: 256
+
+MPIR_CVAR_CH3_RMA_TARGET_GLOBAL_POOL_SIZE
+    Aliases: MPIR_PARAM_CH3_RMA_TARGET_GLOBAL_POOL_SIZE
+             MPICH_CH3_RMA_TARGET_GLOBAL_POOL_SIZE
+    Description: Size of the Global RMA targets pool (in number of targets)
+        that stores information about RMA targets that could not be issued
+        immediatly.  Requires a positive value.
+    Default: 16384
+
+MPIR_CVAR_CH3_RMA_TARGET_LOCK_ENTRY_WIN_POOL_SIZE
+    Aliases: MPIR_PARAM_CH3_RMA_TARGET_LOCK_ENTRY_WIN_POOL_SIZE
+             MPICH_CH3_RMA_TARGET_LOCK_ENTRY_WIN_POOL_SIZE
+    Description: Size of the window-private RMA lock entries pool (in
+        number of lock entries) that stores information about RMA lock
+        requests that could not be satisfied immediatly.  Requires a
+        positive value.
+    Default: 256
+
+MPIR_CVAR_ENABLE_FT
+    Aliases: MPIR_PARAM_ENABLE_FT
+             MPICH_ENABLE_FT
+    Description: Enable fault tolerance functions
+    Default: 0
+
+MPIR_CVAR_NEMESIS_SHM_EAGER_MAX_SZ
+    Aliases: MPIR_PARAM_NEMESIS_SHM_EAGER_MAX_SZ
+             MPICH_NEMESIS_SHM_EAGER_MAX_SZ
+    Description: This cvar controls the message size at which Nemesis
+        switches from eager to rendezvous mode for shared memory. If this
+        cvar is set to -1, then Nemesis will choose an appropriate value.
+    Default: -1
+
+MPIR_CVAR_NEMESIS_SHM_READY_EAGER_MAX_SZ
+    Aliases: MPIR_PARAM_NEMESIS_SHM_READY_EAGER_MAX_SZ
+             MPICH_NEMESIS_SHM_READY_EAGER_MAX_SZ
+    Description: This cvar controls the message size at which Nemesis
+        switches from eager to rendezvous mode for ready-send messages.  If
+        this cvar is set to -1, then ready messages will always be sent
+        eagerly.  If this cvar is set to -2, then Nemesis will choose an
+        appropriate value.
+    Default: -2
+
+MPIR_CVAR_NEMESIS_ENABLE_CKPOINT
+    Aliases: MPIR_PARAM_NEMESIS_ENABLE_CKPOINT
+             MPICH_NEMESIS_ENABLE_CKPOINT
+    Description: If true, enables checkpointing support and returns an
+        error if checkpointing library cannot be initialized.
+    Default: 0
+
+MPIR_CVAR_NEMESIS_NETMOD
+    Aliases: MPIR_PARAM_NEMESIS_NETMOD
+             MPICH_NEMESIS_NETMOD
+    Description: If non-empty, this cvar specifies which network module
+        should be used for communication.
+    Default: ""
+
+MPIR_CVAR_NEMESIS_LMT_DMA_THRESHOLD
+    Aliases: MPIR_PARAM_NEMESIS_LMT_DMA_THRESHOLD
+             MPICH_NEMESIS_LMT_DMA_THRESHOLD
+    Description: Messages larger than this size will use the "dma" (knem)
+        intranode LMT implementation, if it is enabled and available.
+    Default: 2097152
+
+MPIR_CVAR_POLLS_BEFORE_YIELD
+    Aliases: MPIR_PARAM_POLLS_BEFORE_YIELD
+             MPICH_POLLS_BEFORE_YIELD
+    Description: When MPICH is in a busy waiting loop, it will periodically
+        call a function to yield the processor.  This cvar sets the number
+        of loops before the yield function is called.  A value of 0
+        disables yielding.
+    Default: 1000
+
+MPIR_CVAR_OFI_USE_PROVIDER
+    Aliases: MPIR_PARAM_OFI_USE_PROVIDER
+             MPICH_OFI_USE_PROVIDER
+    Description: If non-null, choose an OFI provider by name
+    Default: NULL
+
+MPIR_CVAR_OFI_DUMP_PROVIDERS
+    Aliases: MPIR_PARAM_OFI_DUMP_PROVIDERS
+             MPICH_OFI_DUMP_PROVIDERS
+    Description: If true, dump provider information at init
+    Default: 0
+
+MPIR_CVAR_CH3_INTERFACE_HOSTNAME
+    Aliases: MPIR_PARAM_CH3_INTERFACE_HOSTNAME
+             MPICH_CH3_INTERFACE_HOSTNAME
+             MPIR_CVAR_INTERFACE_HOSTNAME
+             MPIR_PARAM_INTERFACE_HOSTNAME
+             MPICH_INTERFACE_HOSTNAME
+    Description: If non-NULL, this cvar specifies the IP address that other
+        processes should use when connecting to this process. This cvar is
+        mutually exclusive with the MPIR_CVAR_CH3_NETWORK_IFACE cvar and it
+        is an error to set them both.
+    Default: NULL
+
+MPIR_CVAR_CH3_PORT_RANGE
+    Aliases: MPIR_PARAM_CH3_PORT_RANGE
+             MPICH_CH3_PORT_RANGE
+             MPIR_CVAR_PORTRANGE
+             MPIR_CVAR_PORT_RANGE
+             MPIR_PARAM_PORTRANGE
+             MPIR_PARAM_PORT_RANGE
+             MPICH_PORTRANGE
+             MPICH_PORT_RANGE
+    Description: The MPIR_CVAR_CH3_PORT_RANGE environment variable allows
+        you to specify the range of TCP ports to be used by the process
+        manager and the MPICH library. The format of this variable is
+        <low>:<high>.  To specify any available port, use 0:0.
+    Default: {0,0}
+
+MPIR_CVAR_NEMESIS_TCP_NETWORK_IFACE
+    Aliases: MPIR_PARAM_NEMESIS_TCP_NETWORK_IFACE
+             MPICH_NEMESIS_TCP_NETWORK_IFACE
+             MPIR_CVAR_NETWORK_IFACE
+             MPIR_PARAM_NETWORK_IFACE
+             MPICH_NETWORK_IFACE
+    Description: If non-NULL, this cvar specifies which pseudo-ethernet
+        interface the tcp netmod should use (e.g., "eth1", "ib0"). Note,
+        this is a Linux-specific cvar. This cvar is mutually exclusive with
+        the MPIR_CVAR_CH3_INTERFACE_HOSTNAME cvar and it is an error to set
+        them both.
+    Default: NULL
+
+MPIR_CVAR_NEMESIS_TCP_HOST_LOOKUP_RETRIES
+    Aliases: MPIR_PARAM_NEMESIS_TCP_HOST_LOOKUP_RETRIES
+             MPICH_NEMESIS_TCP_HOST_LOOKUP_RETRIES
+    Description: This cvar controls the number of times to retry the
+        gethostbyname() function before giving up.
+    Default: 10
+
+MPIR_CVAR_NEMESIS_MXM_BULK_CONNECT
+    Aliases: MPIR_PARAM_NEMESIS_MXM_BULK_CONNECT
+             MPICH_NEMESIS_MXM_BULK_CONNECT
+    Description: If true, force mxm to connect all processes at
+        initialization time.
+    Default: 0
+
+MPIR_CVAR_NEMESIS_MXM_BULK_DISCONNECT
+    Aliases: MPIR_PARAM_NEMESIS_MXM_BULK_DISCONNECT
+             MPICH_NEMESIS_MXM_BULK_DISCONNECT
+    Description: If true, force mxm to disconnect all processes at
+        finalization time.
+    Default: 0
+
+MPIR_CVAR_NEMESIS_MXM_HUGEPAGE
+    Aliases: MPIR_PARAM_NEMESIS_MXM_HUGEPAGE
+             MPICH_NEMESIS_MXM_HUGEPAGE
+    Description: If true, mxm tries detecting hugepage support.  On HPC-X
+        2.3 and earlier, this might cause problems on Ubuntu and other
+        platforms even if the system provides hugepage support.
+    Default: 0
+

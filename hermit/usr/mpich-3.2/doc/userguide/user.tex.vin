@@ -1,0 +1,603 @@
+% -*- Mode: latex; -*-
+\documentclass[dvipdfm,11pt]{article}
+\usepackage[dvipdfm]{hyperref} % Upgraded url package
+\parskip=.1in
+
+% Formatting conventions for contributors
+% 
+% A quoting mechanism is needed to set off things like file names, command
+% names, code fragments, and other strings that would confuse the flow of
+% text if left undistinguished from preceding and following text.  In this
+% document we use the LaTeX macro '\texttt' to indicate such text in the
+% source, which normally produces, when used as in '\texttt{special text}',
+% the typewriter font.
+
+% It is particularly easy to use this convention if one is using emacs as
+% the editor and LaTeX mode within emacs for editing LaTeX documents.  In
+% such a case the key sequence ^C^F^T (hold down the control key and type
+% 'cft') produces '\texttt{}' with the cursor positioned between the
+% braces, ready for the special text to be typed.  The closing brace can
+% be skipped over by typing ^e (go to the end of the line) if entering
+% text or ^C-} to just move the cursor past the brace.
+%
+% Please add index entries for important terms and keywords, including
+% environment variables that may control the behavior of MPI or one of the
+% tools and concepts such as line labeling from mpiexec.
+
+% LaTeX mode is usually loaded automatically.  At Argonne, one way to 
+% get several useful emacs tools working for you automatically is to put
+% the following in your .emacs file.
+
+% (require 'tex-site)
+% (setq LaTeX-mode-hook '(lambda ()
+%                        (auto-fill-mode 1)
+%                        (flyspell-mode 1)
+%                        (reftex-mode 1)
+%                        (setq TeX-command "latex")))
+   
+\begin{document}
+\markright{MPICH User's Guide}
+\title{\textbf{MPICH User's Guide}\thanks{This work was supported by the Mathematical,
+    Information, and Computational Sciences Division subprogram of the
+    Office of Advanced Scientific Computing Research, SciDAC Program,
+    Office of Science, U.S. Department of Energy, under Contract
+    DE-AC02-06CH11357.}\\
+Version %MPICH_VERSION%\\
+Mathematics and Computer Science Division\\
+Argonne National Laboratory}
+
+\author{
+Abdelhalim Amer \and Pavan Balaji \and Wesley Bland \and William Gropp
+\and Rob Latham \and Huiwei Lu \and Lena Oden \and Antonio J. Pe\~na
+\and Ken Raffenetti \and Sangmin Seo \and Rajeev Thakur \and Junchao
+Zhang
+}
+
+\maketitle
+
+\cleardoublepage
+
+\pagenumbering{roman}
+\tableofcontents
+\clearpage
+
+\pagenumbering{arabic}
+\pagestyle{headings}
+
+
+\section{Introduction}
+\label{sec:introduction}
+
+This manual assumes that MPICH has already been installed.  For
+instructions on how to install MPICH, see the \emph{MPICH
+  Installer's Guide}, or the \texttt{README} in the top-level MPICH
+directory.  This manual explains how to compile, link, and run MPI
+applications, and use certain tools that come with MPICH.  This is a
+preliminary version and some sections are not complete yet.  However,
+there should be enough here to get you started with MPICH.
+
+
+\section{Getting Started with MPICH}
+\label{sec:migrating}
+
+MPICH is a high-performance and widely portable implementation of the
+MPI Standard, designed to implement all of MPI-1, MPI-2, and MPI-3
+(including dynamic process management, one-sided operations, parallel
+I/O, and other extensions).  The \emph{MPICH Installer's Guide}
+provides some information on MPICH with respect to configuring and
+installing it. Details on compiling, linking, and running MPI programs
+are described below.
+
+
+\subsection{Default Runtime Environment}
+\label{sec:default-environment}
+
+MPICH provides a separation of process management and communication.
+The default runtime environment in MPICH is called Hydra. Other
+process managers are also available.
+
+\subsection{Starting Parallel Jobs}
+\label{sec:startup}
+
+MPICH implements \texttt{mpiexec} and all of its standard arguments,
+together with some extensions. See Section~\ref{sec:mpiexec-standard}
+for standard arguments to \texttt{mpiexec} and various subsections of
+Section~\ref{sec:mpiexec} for extensions particular to various process
+management systems.
+
+
+\subsection{Command-Line Arguments in Fortran}
+\label{sec:fortran-command-line}
+
+MPICH1 (more precisely MPICH1's \texttt{mpirun}) required access to
+command line arguments in all application programs, including Fortran
+ones, and MPICH1's \texttt{configure} devoted some effort to finding
+the libraries that contained the right versions of \texttt{iargc} and
+\texttt{getarg} and including those libraries with which the
+\texttt{mpifort} script linked MPI programs.  Since MPICH does not
+require access to command line arguments to applications, these
+functions are optional, and \texttt{configure} does nothing special
+with them.  If you need them in your applications, you will have to
+ensure that they are available in the Fortran environment you are
+using.
+
+\section{Quick Start}
+\label{sec:quickstart}
+
+To use MPICH, you will have to know the directory where MPICH has
+been installed.  (Either you installed it there yourself, or your
+systems administrator has installed it.  One place to look in this
+case might be \texttt{/usr/local}.  If MPICH has not yet been
+installed, see the \emph{MPICH Installer's Guide}.)  We suggest that
+you put the \texttt{bin} subdirectory of that directory into your
+path.  This will give you access to assorted MPICH commands to
+compile, link, and run your programs conveniently.  Other commands in
+this directory manage parts of the run-time environment and execute
+tools.
+
+One of the first commands you might run is \texttt{mpichversion} to
+find out the exact version and configuration of MPICH you are working
+with. Some of the material in this manual depends on just what version
+of MPICH you are using and how it was configured at installation
+time.
+
+You should now be able to run an MPI program.  Let us assume that the
+directory where MPICH has been installed is
+\texttt{/home/you/mpich-installed}, and that you have added that directory to
+your path, using 
+\begin{verbatim}
+    setenv PATH /home/you/mpich-installed/bin:$PATH
+\end{verbatim}
+for \texttt{tcsh} and \texttt{csh}, or 
+\begin{verbatim}
+    export PATH=/home/you/mpich-installed/bin:$PATH
+\end{verbatim}
+for \texttt{bash} or \texttt{sh}.
+Then to run an MPI program, albeit only on one machine, you can do:
+\begin{verbatim}
+    cd  /home/you/mpich-installed/examples
+    mpiexec -n 3 ./cpi
+\end{verbatim}
+
+Details for these commands are provided below, but if you can
+successfully execute them here, then you have a correctly installed
+MPICH and have run an MPI program. 
+
+\section{Compiling and Linking}
+\label{sec:compiling}
+
+A convenient way to compile and link your program is by using scripts
+that use the same compiler that MPICH was built with.  These are
+\texttt{mpicc}, \texttt{mpicxx}, and \texttt{mpifort},
+for C, C++, and Fortran programs, respectively.  If any
+of these commands are missing, it means that MPICH was configured
+without support for that particular language.
+
+%% Pavan Balaji (12/27/2009): I'm commenting out this part as this is
+%% broken in the current MPICH stack (see ticket #502).
+
+%% \subsection{Specifying Compilers}
+%% \label{sec:specifying-compilers}
+
+%% You need not use the same compiler that MPICH was built with, but not
+%% all compilers are compatible.  You can also specify the compiler for
+%% building MPICH itself, as reported by \texttt{mpichversion}, just by
+%% using the compiling and linking commands from the previous section.
+%% The environment variables \texttt{MPICH_CC}, \texttt{MPICH_CXX},
+%% \texttt{MPICH_F77}, and \texttt{MPICH_F90} may be used to specify
+%% alternate C, C++, Fortran 77, and Fortran 90 compilers, respectively.
+
+
+\subsection{Special Issues for C++}
+\label{sec:cxx}
+
+Some users may get error messages such as
+\begin{small}
+\begin{verbatim}
+    SEEK_SET is #defined but must not be for the C++ binding of MPI
+\end{verbatim}
+\end{small}
+The problem is that both \texttt{stdio.h} and the MPI C++ interface use
+\texttt{SEEK\_SET}, \texttt{SEEK\_CUR}, and \texttt{SEEK\_END}.  This is really a bug
+in the MPI standard.  You can try adding
+\begin{verbatim}
+    #undef SEEK_SET
+    #undef SEEK_END
+    #undef SEEK_CUR
+\end{verbatim}
+before \texttt{mpi.h} is included, or add the definition
+\begin{verbatim}
+    -DMPICH_IGNORE_CXX_SEEK
+\end{verbatim}
+to the command line (this will cause the MPI versions of \texttt{SEEK\_SET}
+etc. to be skipped).
+
+\subsection{Special Issues for Fortran}
+\label{sec:fortran}
+
+MPICH provides two kinds of support for Fortran programs.  For
+Fortran 77 programmers, the file \texttt{mpif.h} provides the
+definitions of the MPI constants such as \texttt{MPI\_COMM\_WORLD}.
+Fortran 90 programmers should use the \texttt{MPI} module instead;
+this provides all of the definitions as well as interface definitions
+for many of the MPI functions.  However, this MPI module does not
+provide full Fortran 90 support; in particular, interfaces for the
+routines, such as \texttt{MPI\_Send}, that take ``choice'' arguments
+are not provided.
+
+
+\section{Running Programs with \texttt{mpiexec}}
+\label{sec:mpiexec}
+
+The MPI Standard describes \texttt{mpiexec} as a suggested way to run
+MPI programs. MPICH implements the \texttt{mpiexec} standard, and also
+provides some extensions.
+
+\subsection{Standard \texttt{mpiexec}}
+\label{sec:mpiexec-standard}
+
+Here we describe the standard \texttt{mpiexec} arguments from the MPI
+Standard~\cite{mpi-forum:mpi2-journal}.  To run a program with 'n'
+processes on your local machine, you can use:
+
+\begin{verbatim}
+   mpiexec -n <number> ./a.out
+\end{verbatim}
+
+To test that you can run an 'n' process job on multiple nodes:
+
+\begin{verbatim}
+   mpiexec -f machinefile -n <number> ./a.out
+\end{verbatim}
+
+The 'machinefile' is of the form:
+
+\begin{verbatim}
+   host1
+   host2:2
+   host3:4   # Random comments
+   host4:1
+\end{verbatim}
+
+'host1', 'host2', 'host3' and 'host4' are the hostnames of the
+machines you want to run the job on. The ':2', ':4', ':1' segments
+depict the number of processes you want to run on each node. If
+nothing is specified, ':1' is assumed.
+
+More details on interacting with Hydra can be found at
+\url{http://wiki.mpich.org/mpich/index.php/Using_the_Hydra_Process_Manager}
+
+
+\subsection{Extensions for All Process Management Environments}
+\label{sec:extensions-uniform}
+
+Some \texttt{mpiexec} arguments are specific to particular
+communication subsystems (``devices'') or process management
+environments (``process managers'').  Our intention is to make all
+arguments as uniform as possible across devices and process managers.
+For the time being we will document these separately.
+
+\subsection{\texttt{mpiexec} Extensions for the Hydra Process Manager}
+
+MPICH provides a number of process management systems. Hydra is the
+default process manager in MPICH. More details on Hydra and its
+extensions to mpiexec can be found at
+\url{http://wiki.mpich.org/mpich/index.php/Using\_the\_Hydra\_Process\_Manager}
+
+
+\subsection{Extensions for the gforker Process Management Environment}
+\label{sec:extensions-forker}
+\texttt{gforker} is a process management system for starting
+processes on a single machine, so called because the MPI processes are
+simply \texttt{fork}ed from the \texttt{mpiexec} process.  This process
+manager supports programs that use \texttt{MPI\_Comm\_spawn} and the other
+dynamic process routines, but does not support the use of the dynamic process
+routines from programs that are not started with \texttt{mpiexec}.  The
+\texttt{gforker} process manager is primarily intended as a debugging aid as
+it simplifies development and testing of MPI programs on a single node or
+processor.  
+
+\subsubsection{\texttt{mpiexec} arguments for gforker}
+\label{sec:mpiexec-forker}
+
+In addition to the standard \texttt{mpiexec} command-line arguments, the
+\texttt{gforker} \texttt{mpiexec} supports the following options:
+\begin{description}
+\item[\texttt{-np <num>}]A synonym for the standard \texttt{-n} argument
+\item[\texttt{-env <name> <value>}]Set the environment variable
+\texttt{<name>} to \texttt{<value>} for the processes being run by
+\texttt{mpiexec}.
+\item[\texttt{-envnone}]Pass no environment variables (other than ones
+specified with  other \texttt{-env} or \texttt{-genv} arguments) to the
+processes being run by \texttt{mpiexec}. 
+By default, all environment
+variables are provided to each MPI process (rationale: principle of
+least surprise for the user)
+\item[\texttt{-envlist <list>}]Pass the listed environment variables (names
+separated  by commas), with their current values, to the processes being run by
+ \texttt{mpiexec}.
+\item[\texttt{-genv <name> <value>}]The \item{-genv} options have the same
+meaning as their corresponding \texttt{-env} version, except they apply to all
+executables, not just the current executable (in the case that the colon
+syntax is used to specify multiple execuables).
+\item[\texttt{-genvnone}]Like \texttt{-envnone}, but for all executables
+\item[\texttt{-genvlist <list>}]Like \texttt{-envlist}, but for all executables
+\item[\texttt{-usize <n>}]Specify the value returned for the value of the
+attribute \texttt{MPI\_UNIVERSE\_SIZE}.
+\item[\texttt{-l}]Label standard out and standard error (\texttt{stdout} and \texttt{stderr}) with 
+  the rank of the process
+\item[\texttt{-maxtime <n>}]Set a timelimit of \texttt{<n>} seconds.
+\item[\texttt{-exitinfo}]Provide more information on the reason each process
+exited if there is an abnormal exit
+\end{description}
+
+In addition to the commandline argments, the \texttt{gforker} \texttt{mpiexec}
+provides a number of environment variables that can be used to control the
+behavior of \texttt{mpiexec}:
+
+\begin{description}
+\item[\texttt{MPIEXEC\_TIMEOUT}]Maximum running time in seconds.
+\texttt{mpiexec} will terminate MPI programs that take longer than the value
+specified by \texttt{MPIEXEC\_TIMEOUT}.  
+\item[\texttt{MPIEXEC\_UNIVERSE\_SIZE}]Set the universe size
+\item[\texttt{MPIEXEC\_PORT\_RANGE}]Set the range of ports that
+\texttt{mpiexec} will use  
+  in communicating with the processes that it starts.  The format of 
+  this is \texttt{<low>:<high>}.  For example, to specify any port between
+  10000 and 10100, use \texttt{10000:10100}.  
+\item[\texttt{MPICH\_PORT\_RANGE}]Has the same meaning as
+\texttt{MPIEXEC\_PORT\_RANGE} and is used if \texttt{MPIEXEC\_PORT\_RANGE} is
+not set. 
+\item[\texttt{MPIEXEC\_PREFIX\_DEFAULT}]If this environment variable is set,
+output to standard output is prefixed by the rank in \texttt{MPI\_COMM\_WORLD}
+of the process and output to standard error is prefixed by the rank and the
+text \texttt{(err)}; both are followed by an angle bracket (\texttt{>}).  If 
+  this variable is not set, there is no prefix.
+\item[\texttt{MPIEXEC\_PREFIX\_STDOUT}]Set the prefix used for lines sent to
+standard output.  A \texttt{\%d} is replaced with the rank in
+\texttt{MPI\_COMM\_WORLD}; a \texttt{\%w} is replaced with an indication of
+which \texttt{MPI\_COMM\_WORLD} in MPI jobs that involve multiple
+\texttt{MPI\_COMM\_WORLD}s (e.g., ones that use \texttt{MPI\_Comm\_spawn} or
+\texttt{MPI\_Comm\_connect}). 
+\item[\texttt{MPIEXEC\_PREFIX\_STDERR}]Like \texttt{MPIEXEC\_PREFIX\_STDOUT},
+but for standard error. 
+\item[\texttt{MPIEXEC\_STDOUTBUF}]Sets the buffering mode for standard
+  output.  Valid  values are \texttt{NONE} (no buffering),
+  \texttt{LINE} (buffering by lines), and \texttt{BLOCK} (buffering by
+  blocks of characters; the size of the block is implementation
+  defined).  The default is \texttt{NONE}. 
+\item[\texttt{MPIEXEC\_STDERRBUF}]Like \texttt{MPIEXEC\_STDOUTBUF},
+  but for standard error. 
+\end{description}
+
+\subsection{Restrictions of the remshell Process Management Environment}
+\label{sec:restrictions-remshell}
+
+The \texttt{remshell} ``process manager'' provides a very simple version of
+\texttt{mpiexec} that makes use of the secure shell command (\texttt{ssh}) to
+start processes on a collection of machines.  As this is intended primarily as
+an illustration of how to build a version of \texttt{mpiexec} that works with
+other process managers, it does not implement all of the features of the other
+\texttt{mpiexec} programs described in this document.  In particular, it
+ignores the command line options that control the environment variables given
+to the MPI programs.  It does support the same output labeling features
+provided by the \texttt{gforker} version of \texttt{mpiexec}. 
+However, this version of \texttt{mpiexec} can be used
+much like the \texttt{mpirun} for the \texttt{ch\_p4} device in MPICH-1 to run
+programs on a collection of machines that allow remote shells.  A file by the
+name of \texttt{machines} should contain the names of machines on which
+processes can be run, one machine name per line.  There must be enough
+machines listed to satisfy the requested number of processes; you can list the
+same machine name multiple times if necessary.  
+
+
+\subsection{Using MPICH with SLURM and PBS}
+\label{sec:external_pm}
+
+There are multiple ways of using MPICH with SLURM or PBS. Hydra
+provides native support for both SLURM and PBS, and is likely the
+easiest way to use MPICH on these systems (see the Hydra
+documentation above for more details).
+
+Alternatively, SLURM also provides compatibility with MPICH's
+internal process management interface. To use this, you need to
+configure MPICH with SLURM support, and then use the {\texttt srun}
+job launching utility provided by SLURM.
+
+For PBS, MPICH jobs can be launched in two ways: (i) use Hydra's
+mpiexec with the appropriate options corresponding to PBS, or (ii)
+using the OSC mpiexec.
+
+
+\subsubsection{OSC mpiexec}
+\label{sec:osc_mpiexec}
+
+Pete Wyckoff from the Ohio Supercomputer Center provides a alternate
+utility called OSC mpiexec to launch MPICH jobs on PBS systems. More
+information about this can be found here:
+\url{http://www.osc.edu/~pw/mpiexec}
+
+
+\section{Specification of Implementation Details}
+\label{sec:specification}
+
+The MPI Standard defines a number of areas where a library is free to
+define its own specific behavior as long as such behavior is documented
+appropriately. This section provides that documentation for MPICH where
+necessary.
+
+\subsection{MPI Error Handlers for Communicators}
+\label{sec:errhandler}
+
+In Section 8.3.1 (Error Handlers for Communicators) of the MPI-3.0
+Standard~\cite{mpi-forum:mpi3},
+MPI defines an error handler callback function as
+
+\begin{verbatim}
+typedef void MPI_Comm_errhandler_function(MPI_Comm *, int *, ...);
+\end{verbatim}
+
+Where the first argument is the communicator in use, the second argument is
+the error code to be returned by the MPI routine that raised the error, and
+the remaining arguments to be implementation specific ``{\texttt varargs}''.
+MPICH does not provide any arguments as part of this list. So a callback
+function being provided to MPICH is sufficient if the header is
+
+\begin{verbatim}
+typedef void MPI_Comm_errhandler_function(MPI_Comm *, int *);
+\end{verbatim}
+
+\section{Debugging}
+\label{sec:debugging}
+
+Debugging parallel programs is notoriously difficult.  Here we describe
+a number of approaches, some of which depend on the exact version of
+MPICH you are using. 
+
+
+\subsection{TotalView}
+\label{sec:totalview}
+
+MPICH supports use of the TotalView debugger from Etnus.  If MPICH
+has been configured to enable debugging with TotalView then one can
+debug an MPI program using
+
+\begin{verbatim}
+    totalview -a mpiexec -a -n 3 cpi
+\end{verbatim}
+
+You will get a popup window from TotalView asking whether you want to
+start the job in a stopped state.  If so, when the TotalView window
+appears, you may see assembly code in the source window.  Click on
+\texttt{main} in the stack window (upper left) to see the source of
+the \texttt{main} function.  TotalView will show that the program (all
+processes) are stopped in the call to \texttt{MPI\_Init}.
+
+If you have TotalView 8.1.0 or later, you can use a TotalView feature
+called indirect launch with MPICH. Invoke TotalView as:
+
+\begin{verbatim}
+    totalview <program> -a <program args>
+\end{verbatim}
+
+Then select the Process/Startup Parameters command. Choose the
+Parallel tab in the resulting dialog box and choose MPICH as the
+parallel system. Then set the number of tasks using the Tasks field
+and enter other needed mpiexec arguments into the Additional Starter
+Arguments field.
+
+\section{Checkpointing}
+\label{sec:checkpointing}
+MPICH supports checkpoint/rollback fault tolerance when used with the
+Hydra process manager.  Currently only the BLCR checkpointing library
+is supported.  BLCR needs to be installed separately.  Below we
+describe how to enable the feature in MPICH and how to use it.  This
+information can also be found on the MPICH Wiki:
+\url{http://wiki.mpich.org/mpich/index.php/Checkpointing}
+
+\subsection{Configuring for checkpointing}
+\label{sec:conf-checkp}
+
+First, you need to have BLCR version 0.8.2 installed on your
+machine.  If it's installed in the default system location, add the
+following two options to your configure command:
+\begin{small}
+\begin{verbatim}
+    --enable-checkpointing --with-hydra-ckpointlib=blcr
+\end{verbatim}
+\end{small}
+
+If BLCR is not installed in the default system location, you'll need
+to tell MPICH's configure where to find it.  You might also need to
+set the \texttt{LD\_LIBRARY\_PATH} environment variable so that BLCR's shared
+libraries can be found.  In this case add the following options to your
+configure command:
+\begin{small}
+\begin{verbatim}
+    --enable-checkpointing --with-hydra-ckpointlib=blcr 
+    --with-blcr=BLCR_INSTALL_DIR LD_LIBRARY_PATH=BLCR_INSTALL_DIR/lib
+\end{verbatim}
+\end{small}
+where \texttt{BLCR\_INSTALL\_DIR} is the directory where BLCR has been
+installed (whatever was specified in \texttt{--prefix} when BLCR was
+configured).  Note, checkpointing is only supported with the Hydra
+process manager.  Hyrda will used by default, unless you choose
+something else with the \texttt{--with-pm=} configure option.
+
+After it's configured, compile as usual (e.g., \texttt{make; make install}). 
+
+\subsection{Taking checkpoints}
+\label{sec:taking-checkpoints}
+
+To use checkpointing, include the \texttt{-ckpointlib} option for
+\texttt{mpiexec} to specify the checkpointing library to use and
+\texttt{-ckpoint-prefix} to specify the directory where the checkpoint
+images should be written:
+\begin{small}
+\begin{verbatim}
+    shell$ mpiexec -ckpointlib blcr \
+           -ckpoint-prefix /home/buntinas/ckpts/app.ckpoint \
+           -f hosts -n 4 ./app
+\end{verbatim}
+\end{small}
+
+While the application is running, the user can request for a
+checkpoint at any time by sending a \texttt{SIGUSR1} signal to
+\texttt{mpiexec}.  You can also automatically checkpoint the
+application at regular intervals using the mpiexec option
+\texttt{-ckpoint-interval} to specify the number of seconds between
+checkpoints:
+\begin{small}
+\begin{verbatim}
+    shell$ mpiexec -ckpointlib blcr \
+           -ckpoint-prefix /home/buntinas/ckpts/app.ckpoint \
+           -ckpoint-interval 3600 -f hosts -n 4 ./app
+\end{verbatim}
+\end{small}
+
+The checkpoint/restart parameters can also be controlled with the
+environment variables \texttt{HYDRA\_\linebreak[0]CKPOINTLIB},
+\texttt{HYDRA\_\linebreak[0]CKPOINT\_\linebreak[0]PREFIX} and
+\texttt{HYDRA\_\linebreak[0]CKPOINT\_\linebreak[0]INTERVAL}.
+
+Each checkpoint generates one file per node.  Note that checkpoints
+for all processes on a node will be stored in the same file.  Each
+time a new checkpoint is taken an additional set of files are created.
+The files are numbered by the checkpoint number.  This allows the
+application to be restarted from checkpoints other than the most
+recent.  The checkpoint number can be specified with the
+\texttt{-ckpoint-num} parameter.  To restart a process:
+\begin{small}
+\begin{verbatim}
+    shell$ mpiexec -ckpointlib blcr \
+           -ckpoint-prefix /home/buntinas/ckpts/app.ckpoint \
+           -ckpoint-num 5 -f hosts -n 4
+\end{verbatim}
+\end{small}
+
+Note that by default, the process will be restarted from the first
+checkpoint, so in most cases, the checkpoint number should be
+specified.
+
+
+\section{Other Tools Provided with MPICH}
+\label{sec:other-tools}
+MPICH also includes a test suite for MPI functionality; this suite may
+be found in the \texttt{mpich/test/mpi} source directory and can be
+run with the command \texttt{make testing}.  This test suite should
+work with any MPI implementation, not just MPICH.
+
+\clearpage
+\appendix
+
+\section{Frequently Asked Questions}
+
+The frequently asked questions are maintained online
+here:\url{http://wiki.mpich.org/mpich/index.php/Frequently_Asked_Questions}
+
+\bibliographystyle{plain}
+\bibliography{user}
+
+\end{document}
+
+

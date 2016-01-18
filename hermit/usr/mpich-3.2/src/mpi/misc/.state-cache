@@ -1,0 +1,28 @@
+<dir>
+<file name="library_version.c" info="1447123141"/>
+<file name="getpname.c" info="1447123141"/>
+<file name="version.c" info="1447123141"/>
+<file name="aint_add.c" info="1447123141"/>
+<file name="pcontrol.c" info="1447123141"/>
+<file name="aint_diff.c" info="1447123141"/>
+</dir>
+<data>
+<fileinfo name="library_version.c">
+MPID_STATE_MPI_GET_LIBRARY_VERSION MPI_Get_library_version
+</fileinfo>
+<fileinfo name="getpname.c">
+MPID_STATE_MPI_GET_PROCESSOR_NAME MPI_Get_processor_name
+</fileinfo>
+<fileinfo name="version.c">
+MPID_STATE_MPI_GET_VERSION MPI_Get_version
+</fileinfo>
+<fileinfo name="aint_add.c">
+MPID_STATE_MPI_AINT_ADD MPI_Aint_add
+</fileinfo>
+<fileinfo name="pcontrol.c">
+MPID_STATE_MPI_PCONTROL MPI_Pcontrol
+</fileinfo>
+<fileinfo name="aint_diff.c">
+MPID_STATE_MPI_AINT_DIFF MPI_Aint_diff
+</fileinfo>
+</data>

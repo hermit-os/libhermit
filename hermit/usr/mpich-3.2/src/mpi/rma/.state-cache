@@ -1,0 +1,170 @@
+<dir>
+<file name="win_set_info.c" info="1447123141"/>
+<file name="win_set_name.c" info="1447123141"/>
+<file name="rget.c" info="1447123141"/>
+<file name="win_attach.c" info="1447123141"/>
+<file name="win_get_info.c" info="1447123141"/>
+<file name="win_sync.c" info="1447123141"/>
+<file name="win_allocate_shared.c" info="1447123141"/>
+<file name="rput.c" info="1447123141"/>
+<file name="put.c" info="1447123141"/>
+<file name="alloc_mem.c" info="1447123141"/>
+<file name="win_flush_all.c" info="1447123141"/>
+<file name="win_flush_local.c" info="1447123141"/>
+<file name="win_fence.c" info="1447123141"/>
+<file name="win_unlock.c" info="1447123141"/>
+<file name="win_post.c" info="1447123141"/>
+<file name="win_shared_query.c" info="1447123141"/>
+<file name="win_unlock_all.c" info="1447123141"/>
+<file name="win_detach.c" info="1447123141"/>
+<file name="win_complete.c" info="1447123141"/>
+<file name="free_mem.c" info="1447123141"/>
+<file name="win_start.c" info="1447123141"/>
+<file name="winutil.c" info="1447123141"/>
+<file name="win_create_dynamic.c" info="1447123141"/>
+<file name="win_flush_local_all.c" info="1447123141"/>
+<file name="win_flush.c" info="1447123141"/>
+<file name="fetch_and_op.c" info="1447123141"/>
+<file name="win_lock.c" info="1447123141"/>
+<file name="win_create.c" info="1447123141"/>
+<file name="win_allocate.c" info="1447123141"/>
+<file name="win_lock_all.c" info="1447123141"/>
+<file name="raccumulate.c" info="1447123141"/>
+<file name="rmatypeutil.c" info="1447123141"/>
+<file name="win_free.c" info="1447123141"/>
+<file name="rget_accumulate.c" info="1447123141"/>
+<file name="get.c" info="1447123141"/>
+<file name="get_accumulate.c" info="1447123141"/>
+<file name="accumulate.c" info="1447123141"/>
+<file name="win_test.c" info="1447123141"/>
+<file name="compare_and_swap.c" info="1447123141"/>
+<file name="win_wait.c" info="1447123141"/>
+<file name="win_get_name.c" info="1447123141"/>
+<file name="win_get_group.c" info="1447123141"/>
+</dir>
+<data>
+<fileinfo name="win_set_info.c">
+MPID_STATE_MPI_WIN_SET_INFO MPI_Win_set_info
+</fileinfo>
+<fileinfo name="win_set_name.c">
+MPID_STATE_MPI_WIN_SET_NAME MPI_Win_set_name
+</fileinfo>
+<fileinfo name="rget.c">
+MPID_STATE_MPI_RGET MPI_Rget
+</fileinfo>
+<fileinfo name="win_attach.c">
+MPID_STATE_MPI_WIN_ATTACH MPI_Win_attach
+</fileinfo>
+<fileinfo name="win_get_info.c">
+MPID_STATE_MPI_WIN_GET_INFO MPI_Win_get_info
+</fileinfo>
+<fileinfo name="win_sync.c">
+MPID_STATE_MPI_WIN_SYNC MPI_Win_sync
+</fileinfo>
+<fileinfo name="win_allocate_shared.c">
+MPID_STATE_MPI_WIN_ALLOCATE_SHARED MPI_Win_allocate_shared
+</fileinfo>
+<fileinfo name="rput.c">
+MPID_STATE_MPI_RPUT MPI_Rput
+</fileinfo>
+<fileinfo name="put.c">
+MPID_STATE_MPI_PUT MPI_Put
+</fileinfo>
+<fileinfo name="alloc_mem.c">
+MPID_STATE_MPI_ALLOC_MEM MPI_Alloc_mem
+</fileinfo>
+<fileinfo name="win_flush_all.c">
+MPID_STATE_MPI_WIN_FLUSH_ALL MPI_Win_flush_all
+</fileinfo>
+<fileinfo name="win_flush_local.c">
+MPID_STATE_MPI_WIN_FLUSH_LOCAL MPI_Win_flush_local
+</fileinfo>
+<fileinfo name="win_fence.c">
+MPID_STATE_MPI_WIN_FENCE MPI_Win_fence
+</fileinfo>
+<fileinfo name="win_unlock.c">
+MPID_STATE_MPI_WIN_UNLOCK MPI_Win_unlock
+</fileinfo>
+<fileinfo name="win_post.c">
+MPID_STATE_MPI_WIN_POST MPI_Win_post
+</fileinfo>
+<fileinfo name="win_shared_query.c">
+MPID_STATE_MPI_WIN_SHARED_QUERY MPI_Win_shared_query
+</fileinfo>
+<fileinfo name="win_unlock_all.c">
+MPID_STATE_MPI_WIN_UNLOCK_ALL MPI_Win_unlock_all
+</fileinfo>
+<fileinfo name="win_detach.c">
+MPID_STATE_MPI_WIN_DETACH MPI_Win_detach
+</fileinfo>
+<fileinfo name="win_complete.c">
+MPID_STATE_MPI_WIN_COMPLETE MPI_Win_complete
+</fileinfo>
+<fileinfo name="free_mem.c">
+MPID_STATE_MPI_FREE_MEM MPI_Free_mem
+</fileinfo>
+<fileinfo name="win_start.c">
+MPID_STATE_MPI_WIN_START MPI_Win_start
+</fileinfo>
+<fileinfo name="winutil.c">
+</fileinfo>
+<fileinfo name="win_create_dynamic.c">
+MPID_STATE_MPI_WIN_CREATE_DYNAMIC MPI_Win_create_dynamic
+</fileinfo>
+<fileinfo name="win_flush_local_all.c">
+MPID_STATE_MPI_WIN_FLUSH_LOCAL_ALL MPI_Win_flush_local_all
+</fileinfo>
+<fileinfo name="win_flush.c">
+MPID_STATE_MPI_WIN_FLUSH MPI_Win_flush
+</fileinfo>
+<fileinfo name="fetch_and_op.c">
+MPID_STATE_MPI_FETCH_AND_OP MPI_Fetch_and_op
+</fileinfo>
+<fileinfo name="win_lock.c">
+MPID_STATE_MPI_WIN_LOCK MPI_Win_lock
+</fileinfo>
+<fileinfo name="win_create.c">
+MPID_STATE_MPI_WIN_CREATE MPI_Win_create
+</fileinfo>
+<fileinfo name="win_allocate.c">
+MPID_STATE_MPI_WIN_ALLOCATE MPI_Win_allocate
+</fileinfo>
+<fileinfo name="win_lock_all.c">
+MPID_STATE_MPI_WIN_LOCK_ALL MPI_Win_lock_all
+</fileinfo>
+<fileinfo name="raccumulate.c">
+MPID_STATE_MPI_RACCUMULATE MPI_Raccumulate
+</fileinfo>
+<fileinfo name="rmatypeutil.c">
+</fileinfo>
+<fileinfo name="win_free.c">
+MPID_STATE_MPI_WIN_FREE MPI_Win_free
+</fileinfo>
+<fileinfo name="rget_accumulate.c">
+MPID_STATE_MPI_RGET_ACCUMULATE MPI_Rget_accumulate
+</fileinfo>
+<fileinfo name="get.c">
+MPID_STATE_MPI_GET MPI_Get
+</fileinfo>
+<fileinfo name="get_accumulate.c">
+MPID_STATE_MPI_GET_ACCUMULATE MPI_Get_accumulate
+</fileinfo>
+<fileinfo name="accumulate.c">
+MPID_STATE_MPI_ACCUMULATE MPI_Accumulate
+</fileinfo>
+<fileinfo name="win_test.c">
+MPID_STATE_MPI_WIN_TEST MPI_Win_test
+</fileinfo>
+<fileinfo name="compare_and_swap.c">
+MPID_STATE_MPI_COMPARE_AND_SWAP MPI_Compare_and_swap
+</fileinfo>
+<fileinfo name="win_wait.c">
+MPID_STATE_MPI_WIN_WAIT MPI_Win_wait
+</fileinfo>
+<fileinfo name="win_get_name.c">
+MPID_STATE_MPI_WIN_GET_NAME MPI_Win_get_name
+</fileinfo>
+<fileinfo name="win_get_group.c">
+MPID_STATE_MPI_WIN_GET_GROUP MPI_Win_get_group
+</fileinfo>
+</data>
