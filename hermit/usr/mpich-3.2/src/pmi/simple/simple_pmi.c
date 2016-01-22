@@ -866,8 +866,10 @@ static int GetResponse( const char request[], const char expectedCmd[],
 /* TCP_NODELAY */
 #include <netinet/tcp.h>
 
+#ifndef __hermit__
 /* sockaddr_un (Unix) */
 #include <sys/un.h>
+#endif
 
 /* defs of gethostbyname */
 #include <netdb.h>
