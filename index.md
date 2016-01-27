@@ -19,7 +19,7 @@ image:
 
 <div class="tile">
   <h2 class="post-title">Platform</h2>
-  <p class="post-excerpt">HermitCore is designed for KVM/Linux but also for x86_64 bare-metal environments.</p>
+  <p class="post-excerpt">HermitCore is designed for KVM/Linux but espcially for x86_64 bare-metal environments.</p>
 </div><!-- /.tile -->
 
 <div class="tile">
