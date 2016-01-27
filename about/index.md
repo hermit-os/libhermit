@@ -12,6 +12,4 @@ share: false
 ads: false
 ---
 
-This is a work in progress.
-
-Just a little something I'm using to jump start a site refresh. I like to think of it as a starter for building your own Jekyll site. I purposely keep the styling minimal and bare to make it easier to add your own flare and markup.
+This project is maintained by [stlankes](https://github.com/stlankes/), who is member of the [Institute for Automation of Complex Power Systems](http://www.acs.eonerc.rwth-aachen.de/) at the [RWTH Aachen University](http://www.rwth-aachen.de/).
