@@ -1,3 +1,0 @@
-#!/bin/sh
-
-./configure CC="icc -mmic" F77="ifort -mmic" FC="ifort -mmic"
