@@ -8,6 +8,7 @@ The project has just initiated. Further information will be published shortly.
 * GNU Make, GNU Binutils
 * Tools and libraries to build *linux*, *binutils* and *gcc* (e.g. flex, bison, MPFR library, GMP library, MPC library, ISL library)
 * genisoimage
+* fakeroot
 * texinfo
 * Qemu
 
