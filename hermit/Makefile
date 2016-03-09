@@ -57,7 +57,7 @@ endif
 
 default: all
 
-all: bootstrap $(NAME) toolchain tools
+all: bootstrap $(NAME) toolchain tools initrd/initrd.cpio
 
 toolchain:
 	$Q$(MAKE) ARCH=$(ARCH) \
@@ -85,6 +85,9 @@ bootstrap:
 
 tools:
 	$Q$(MAKE) ARCH=$(ARCH) CFLAGS="$(CFLAGS_FOR_TOOLS)" LDFLAGS="$(LDFLAGS_FOR_TOOLS)" -C tools
+
+initrd/initrd.cpio:
+	$Q$(MAKE) -C initrd
 
 $(NAME):
 	@echo [AR] $(NAME)
