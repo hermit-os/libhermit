@@ -108,6 +108,23 @@ cd ..
 echo "[INITRAMFS] Copy busybox"
 cp -aR $BUSYBOX_BUILDDIR/_install/* .
 
+echo "[INITRAMFS] Detect depencies on shared libraries"
+DEPENDENCIES=""
+for binary in bin/*
+do
+    for dependency in `ldd $binary | grep '=>' | awk '{print $3}'`
+    do
+        if [[ ! $DEPENDENCIES == *"$dependency"* ]]; then
+            echo "[INITRAMFS]   $binary depends on $dependency"
+            DEPENDENCIES="$dependency ${DEPENDENCIES}"
+        fi
+    done
+done
+
+echo "[INITRAMFS] Copy shared libraries from host"
+ln -s lib lib64
+cp -L $DEPENDENCIES lib/
+
 echo "[INITRAMFS] Add /init"
 cat <<EOF > init
 #!/bin/sh
@@ -127,6 +144,9 @@ echo 'Welcome to HermitCore (http://rwth-os.github.io/HermitCore/)!'
 exec /bin/sh
 EOF
 chmod 755 init
+
+echo "[INITRAMFS] Create /hermit"
+mkdir -p hermit
 
 echo "[INITRAMFS] Roll compressed image"
 find . -print0 | cpio --null -o --format=newc > "$OUTPUT_INITRAMFS" 2> /dev/null
