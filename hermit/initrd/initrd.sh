@@ -24,42 +24,47 @@ fi
 
 ######## BusyBox ########
 
-# download busybox if not yet there
-if [ ! -f "$BUSYBOX_ARCHIVE" ]; then
-    # download busybox
-    echo "[BUSYBOX] Archive not found, so downloading it ..."
-    wget --quiet $BUSYBOX_URL
+if [ -d "$BUSYBOX_BUILDDIR" ]; then
+    echo "[BUSYBOX] Already built, skipping. Make veryclean to build again"
+else
+	# download busybox if not yet there
+	if [ ! -f "$BUSYBOX_ARCHIVE" ]; then
+		# download busybox
+		echo "[BUSYBOX] Archive not found, so downloading it ..."
+		wget --quiet $BUSYBOX_URL
 
-    if [ ! -f "$BUSYBOX_ARCHIVE" ]; then
-        echo "[BUSYBOX] Download failed, we have problem here!"
-        exit 1
-    fi
+		if [ ! -f "$BUSYBOX_ARCHIVE" ]; then
+		    echo "[BUSYBOX] Download failed, we have problem here!"
+		    exit 1
+		fi
+	fi
+
+	# extract busybox and move to build folder
+	echo "[BUSYBOX] Extract archive"
+	tar xf "$BUSYBOX_ARCHIVE"
+	mv "$(basename "${BUSYBOX_ARCHIVE}" .tar.bz2)" "$BUSYBOX_BUILDDIR"
+	cd "$BUSYBOX_BUILDDIR"
+
+	echo "[BUSYBOX] Configure"
+
+	# create initial default config
+	make defconfig &> /dev/null
+
+	# proposed by busybox/INSTALL
+	sed -e 's/.*FEATURE_PREFER_APPLETS.*/CONFIG_FEATURE_PREFER_APPLETS=y/' -i .config
+	sed -e 's/.*FEATURE_SH_STANDALONE.*/CONFIG_FEATURE_SH_STANDALONE=y/' -i .config
+
+	# config according to https://techblog.lankes.org/2015/05/01/My-Memo-to-build-a-custom-Linux-Kernel-for-Qemu/
+	sed -e 's/.*CONFIG_DESKTOP.*/CONFIG_DESKTOP=n/' -i .config
+	sed -e 's/.*CONFIG_EXTRA_CFLAGS.*/CONFIG_EXTRA_CFLAGS="-m64"/' -i .config
+	sed -e 's/.*CONFIG_EXTRA_LDFLAGS.*/CONFIG_EXTRA_LDFLAGS="-m64"/' -i .config
+
+	echo "[BUSYBOX] Building now ..."
+	make -j4 &> /dev/null
+	make install &> /dev/null
+	cd ..
+
 fi
-
-# extract busybox and move to build folder
-echo "[BUSYBOX] Extract archive"
-tar xf "$BUSYBOX_ARCHIVE"
-mv "$(basename "${BUSYBOX_ARCHIVE}" .tar.bz2)" "$BUSYBOX_BUILDDIR"
-cd "$BUSYBOX_BUILDDIR"
-
-echo "[BUSYBOX] Configure"
-
-# create initial default config
-make defconfig &> /dev/null
-
-# proposed by busybox/INSTALL
-sed -e 's/.*FEATURE_PREFER_APPLETS.*/CONFIG_FEATURE_PREFER_APPLETS=y/' -i .config
-sed -e 's/.*FEATURE_SH_STANDALONE.*/CONFIG_FEATURE_SH_STANDALONE=y/' -i .config
-
-# config according to https://techblog.lankes.org/2015/05/01/My-Memo-to-build-a-custom-Linux-Kernel-for-Qemu/
-sed -e 's/.*CONFIG_DESKTOP.*/CONFIG_DESKTOP=n/' -i .config
-sed -e 's/.*CONFIG_EXTRA_CFLAGS.*/CONFIG_EXTRA_CFLAGS="-m64"/' -i .config
-sed -e 's/.*CONFIG_EXTRA_LDFLAGS.*/CONFIG_EXTRA_LDFLAGS="-m64"/' -i .config
-
-echo "[BUSYBOX] Building now ..."
-make -j4 &> /dev/null
-make install &> /dev/null
-cd ..
 
 ######## Assemble initram fs ########
 
