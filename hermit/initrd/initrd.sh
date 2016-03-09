@@ -1,7 +1,7 @@
 #!/bin/bash
 
 BUSYBOX_VERSION=1.23.2
-BUSYBOX_URL=http://busybox.net/downloads/busybox-$BUSYBOX_VERSION.tar.bz2
+BUSYBOX_URL=https://busybox.net/downloads/busybox-$BUSYBOX_VERSION.tar.bz2
 BUSYBOX_ARCHIVE="$(basename $BUSYBOX_URL)"
 
 # first argument or default
