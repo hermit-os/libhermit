@@ -8,9 +8,8 @@ BUSYBOX_ARCHIVE="$(basename $BUSYBOX_URL)"
 OUTPUT_INITRAMFS="$(readlink -f ${1:-initrd.cpio})"
 
 # will be created on every run
-#BUSYBOX_BUILDDIR=busybox-2016-03-09_16-45-37
-BUSYBOX_BUILDDIR="$(readlink -f busybox-$(date '+%Y-%m-%d_%H-%M-%S'))"
-INITRAMFS_BUILDDIR="$(readlink -f initramfs-$(date '+%Y-%m-%d_%H-%M-%S'))"
+BUSYBOX_BUILDDIR="$(readlink -f busybox-build)"
+INITRAMFS_BUILDDIR="$(readlink -f initrd)"
 
 
 if [ ! $UID -eq 0 ]; then
@@ -131,4 +130,3 @@ find . -print0 | cpio --null -o --format=newc > "$OUTPUT_INITRAMFS" 2> /dev/null
 
 echo "Cleaning up ..."
 rm -r "${INITRAMFS_BUILDDIR}"
-rm -r "${BUSYBOX_BUILDDIR}"

@@ -20,4 +20,4 @@ clean:
 	$Q$(RM) initrd.cpio
 
 veryclean: clean
-	$Q$(RM) busybox-*
+	$Q$(RM) -r busybox-*
