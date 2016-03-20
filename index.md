@@ -9,7 +9,7 @@ image:
 
 <div class="tile">
   <h2 class="post-title">HermitCore</h2>
-  <p class="post-excerpt">HermitCore is a unikernel operating system for high-performance computing.</p>
+  <p class="post-excerpt">HermitCore is a <a href="http://unikernel.org">unikernel</a> operating system for high-performance computing.</p>
 </div><!-- /.tile -->
 
 <div class="tile">
