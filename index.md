@@ -28,3 +28,10 @@ image:
 </div><!-- /.tile -->
 
 </div><!-- /.tiles -->
+
+<h2 class="post-title"> &nbsp; </h2>
+<div style="width:90%; margin:0 auto;">
+<p> <h2 class="post-title" align="left">HermitCore Demo</h2>  </p>
+<script type="text/javascript" src="https://asciinema.org/a/0s03mc6qeeo5pufs4ny1ojo8g.js" id="asciicast-0s03mc6qeeo5pufs4ny1ojo8g" async data-autoplay="1" data-loop="1"></script>
+<p> </p>
+</div>
