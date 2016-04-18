@@ -30,8 +30,15 @@ image:
 </div><!-- /.tiles -->
 
 <h2 class="post-title"> &nbsp; </h2>
-<div style="width:90%; margin:0 auto;">
-<p> <h2 class="post-title" align="left">HermitCore Demo</h2>  </p>
-<script type="text/javascript" src="https://asciinema.org/a/0s03mc6qeeo5pufs4ny1ojo8g.js" id="asciicast-0s03mc6qeeo5pufs4ny1ojo8g" async data-autoplay="1" data-loop="1"></script>
+<div style="width:60%; margin:0 auto;">
+<h2 class="post-title" align="left">OpenMP Demo</h2>
+<script type="text/javascript" src="https://asciinema.org/a/04684tqzs3p8lgz3sfgyszk0o.js" id="asciicast-04684tqzs3p8lgz3sfgyszk0o" async data-loop="1"></script>
 <p> </p>
 </div>
+
+<div style="width:60%; margin:0 auto;">
+<h2 class="post-title" align="left">Message Passing Demo</h2>
+<script type="text/javascript" src="https://asciinema.org/a/a9sv9y2f4v1dz2yrc9d0hixoc.js" id="asciicast-a9sv9y2f4v1dz2yrc9d0hixoc" async data-loop="1"></script>
+<p> </p>
+</div>
+
