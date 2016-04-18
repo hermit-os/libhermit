@@ -30,15 +30,18 @@ image:
 </div><!-- /.tiles -->
 
 <h2 class="post-title"> &nbsp; </h2>
-<div style="width:60%; margin:0 auto;">
-<h2 class="post-title" align="left">OpenMP Demo</h2>
+<div style="width:100%; margin:0; auto" align="center">
+
+<div style="width:100%; margin:0; auto">
+<h2 class="post-title">OpenMP Demo</h2>
 <script type="text/javascript" src="https://asciinema.org/a/04684tqzs3p8lgz3sfgyszk0o.js" id="asciicast-04684tqzs3p8lgz3sfgyszk0o" async data-loop="1"></script>
 <p> </p>
 </div>
 
-<div style="width:60%; margin:0 auto;">
-<h2 class="post-title" align="left">Message Passing Demo</h2>
+<div style="width:100%; margin:0 auto;">
+<h2 class="post-title">Message Passing Demo</h2>
 <script type="text/javascript" src="https://asciinema.org/a/a9sv9y2f4v1dz2yrc9d0hixoc.js" id="asciicast-a9sv9y2f4v1dz2yrc9d0hixoc" async data-loop="1"></script>
 <p> </p>
 </div>
 
+</div>
