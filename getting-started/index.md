@@ -12,7 +12,7 @@ share: false
 ads: false
 ---
 
-## HermitCore - A lightweight extreme-scale satellite kernel
+## A lightweight extreme-scale satellite kernel
 
 The project [HermitCore](http://www.hermitcore.org) is new [unikernel](http://unikernel.org) targeting high-performance computing.
 HermitCore extends on the multi-kernel approach with unikernel features to provide better programmability and scalability for hierarchical systems.
