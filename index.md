@@ -34,13 +34,13 @@ image:
 
 <div style="width:100%; margin:0; auto">
 <h2 class="post-title">OpenMP Demo</h2>
-<script type="text/javascript" src="https://asciinema.org/a/04684tqzs3p8lgz3sfgyszk0o.js" id="asciicast-04684tqzs3p8lgz3sfgyszk0o" async data-loop="1"></script>
+<script type="text/javascript" src="https://asciinema.org/a/06yk7ltvvos9l626ut6xk9h7b.js" id="asciicast-06yk7ltvvos9l626ut6xk9h7b" async data-loop="1"></script>
 <p> </p>
 </div>
 
 <div style="width:100%; margin:0 auto;">
 <h2 class="post-title">Message Passing Demo</h2>
-<script type="text/javascript" src="https://asciinema.org/a/a9sv9y2f4v1dz2yrc9d0hixoc.js" id="asciicast-a9sv9y2f4v1dz2yrc9d0hixoc" async data-loop="1"></script>
+<script type="text/javascript" src="https://asciinema.org/a/1nwbnhi957hxpmet1zsxcoyg5.js" id="asciicast-1nwbnhi957hxpmet1zsxcoyg5" async data-loop="1"></script>
 <p> </p>
 </div>
 
