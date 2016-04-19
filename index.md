@@ -9,7 +9,7 @@ image:
 
 <div class="tile">
   <h2 class="post-title">HermitCore</h2>
-  <p class="post-excerpt">HermitCore is a <a href="http://unikernel.org">unikernel</a> operating system for high-performance computing.</p>
+  <p class="post-excerpt">HermitCore is a <a href="http://unikernel.org">unikernel</a> operating system for high-performance computing, which supports C/C++, Fortran, Pthreads, OpenMP and <a href="http://www.lfbs.rwth-aachen.de/publications/files/iRCCE.pdf">iRCCE</a> as message passing library.</p>
 </div><!-- /.tile -->
 
 <div class="tile">
