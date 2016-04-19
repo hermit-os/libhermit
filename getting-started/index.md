@@ -12,7 +12,7 @@ share: false
 ads: false
 ---
 
-# HermitCore - A lightweight extreme-scale satellite kernel
+## HermitCore - A lightweight extreme-scale satellite kernel
 
 The project [HermitCore](http://www.hermitcore.org) is new [unikernel](http://unikernel.org) targeting high-performance computing.
 HermitCore extends on the multi-kernel approach with unikernel features to provide better programmability and scalability for hierarchical systems.
@@ -22,7 +22,7 @@ HermitCore applications and the Linux system can communicate via an IP interface
 
 HermitCore is the result of a research project at RWTH Aachen University and is currently an experimental approach, i.e.  not production ready. Please use it carefully.
 
-## Requirements
+### Requirements
 
 * Netwide Assembler (NASM)
 * GNU Make, GNU Binutils
@@ -30,7 +30,7 @@ HermitCore is the result of a research project at RWTH Aachen University and is 
 * texinfo
 * Qemu
 
-## Building and testing HermitCore within a virtual machine
+### Building and testing HermitCore within a virtual machine
 
 0. Please make sure that you cloned this repository and all its submodules.
 1. The build process works currently only on x86-based Linux systems.
@@ -42,7 +42,7 @@ HermitCore is the result of a research project at RWTH Aachen University and is 
 7. It exists an virtual IP devices between HermitCore isles and the Linux system (see output of `ifconfig`). Per default, the Linux system has the IP address `192.168.28.1`. The HermitCore isles starts with the IP address `192.168.28.2` for isle 0 and is increased by one for every isle.
 8. More HermitCore applications are available at `/hermit/usr/{tests,benchmarks}` which is a shared directory between the host and QEmu.
 
-## Building and testing HermitCore on a real machine
+### Building and testing HermitCore on a real machine
 
 1. In principle you have to follow the tutorial above. After the configuration (step 2 in the above tutorial) go to the subdirectory `linux`, which contains the source code of the Linux kernel. Configure the kernel with `make menuconfig` for your system. Be sure, that the option `CONFIG_HERMIT_CORE` in `Processor type and features` is enabled.
 2. Go back to the root directory of this repository and build with `make` the Linux kernel, the HermitCore kernel, the cross-compiler and the demo applications.
