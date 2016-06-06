@@ -18,7 +18,7 @@ The project [HermitCore](http://www.hermitcore.org) is new [unikernel](http://un
 HermitCore extends on the multi-kernel approach with unikernel features to provide better programmability and scalability for hierarchical systems.
 By starting HermitCore applications, cores will be split off from the Linux system and the applications run bare-metal on these cores.
 This approach achieves a lower OS jitter and a better scalability.
-HermitCore applications and the Linux system can communicate via an IP interface (e.g. inter-kernel communication) or via the message passig interface [iRCCE](http://lfbs.rwth-aachen.de/publications/files/iRCCE.pdf), which was initially designed for the Single-Chip Cloud Computer (SCC).
+HermitCore applications and the Linux system can communicate via an IP interface (e.g. inter-kernel communication) or via the message passig interface [iRCCE](http://www.lfbs.rwth-aachen.de/publications/files/iRCCE.pdf), which was initially designed for the Single-Chip Cloud Computer (SCC).
 
 HermitCore provides a complete toolchain, which based on the GCC and supports C/C++, Fortran, Pthreads and OpenMP.
 To increase the performance, the toolchain uses per default Intel's instead of GCC' OpenMP runtime.
