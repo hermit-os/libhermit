@@ -2,7 +2,7 @@
 layout: article
 title: "Getting Started"
 date: 2016-014-19T09:44:20-04:00
-modified: 2016-04-19T14:56:44-04:00
+modified: 2016-06-06T14:56:44-04:00
 excerpt: "Getting Started"
 image:
   feature:
@@ -18,9 +18,18 @@ The project [HermitCore](http://www.hermitcore.org) is new [unikernel](http://un
 HermitCore extends on the multi-kernel approach with unikernel features to provide better programmability and scalability for hierarchical systems.
 By starting HermitCore applications, cores will be split off from the Linux system and the applications run bare-metal on these cores.
 This approach achieves a lower OS jitter and a better scalability.
-HermitCore applications and the Linux system can communicate via an IP interface (e.g. inter-kernel communication).
+HermitCore applications and the Linux system can communicate via an IP interface (e.g. inter-kernel communication) or via the message passig interface [iRCCE](http://lfbs.rwth-aachen.de/publications/files/iRCCE.pdf), which was initially designed for the Single-Chip Cloud Computer (SCC).
 
-HermitCore is the result of a research project at RWTH Aachen University and is currently an experimental approach, i.e.  not production ready. Please use it carefully.
+HermitCore provides a complete toolchain, which based on the GCC and supports C/C++, Fortran, Pthreads and OpenMP.
+To increase the performance, the toolchain uses per default Intel's instead of GCC' OpenMP runtime.
+By the support of Intel's runtime, their C-Compiler could be also used to build HermitCore applications.
+Both runtimes are part of HermitCore's source code.
+
+HermitCore is the result of a research project at RWTH Aachen University and is currently an experimental approach, i.e. not production ready.
+Please use it carefully.
+
+A first [paper](https://dl.acm.org/authorize?N04880), which sketchs the design of HermitCore, was prensted at the [International Workshop on Runtime and Operating Systems for Supercomputers (ROSS 2016)](http://www.mcs.anl.gov/events/workshops/ross/2016/program.php).
+The [slides](ross2016.pdf) summarize the design and present the first performance results.
 
 ### Requirements
 
