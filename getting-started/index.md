@@ -14,18 +14,18 @@ ads: false
 
 ## A lightweight extreme-scale satellite kernel
 
-The project [HermitCore](http://www.hermitcore.org) is new [unikernel](http://unikernel.org) targeting high-performance computing.
-HermitCore extends on the multi-kernel approach with unikernel features to provide better programmability and scalability for hierarchical systems.
-By starting HermitCore applications, cores will be split off from the Linux system and the applications run bare-metal on these cores.
+The project [HermitCore](http://www.hermitcore.org) is novel [HermitCore](http://www.hermitcore.org) targeting at high-performance computing.
+HermitCore extends the multi-kernel approach with unikernel features to provide better programmability and scalability for hierarchical systems.
+By starting HermitCore applications, cores will be isolated from the Linux system and the applications run bare-metal on these cores.
 This approach achieves a lower OS jitter and a better scalability.
-HermitCore applications and the Linux system can communicate via an IP interface (e.g. inter-kernel communication) or via the message passig interface [iRCCE](http://www.lfbs.rwth-aachen.de/publications/files/iRCCE.pdf), which was initially designed for the [Single-Chip Cloud Computer (SCC)](https://en.wikipedia.org/wiki/Single-chip_Cloud_Computer).
+HermitCore applications and the Linux system can communicate via an IP interface (e.g., inter-kernel communication) or via the message passig interface [iRCCE](http://www.lfbs.rwth-aachen.de/publications/files/iRCCE.pdf), which was initially designed for the [Single-Chip Cloud Computer (SCC)](https://en.wikipedia.org/wiki/Single-chip_Cloud_Computer).
 
-HermitCore provides a complete toolchain, which based on the GCC and supports C/C++, Fortran, Pthreads and OpenMP.
-To increase the performance, the toolchain uses per default Intel's instead of GCC' OpenMP runtime.
-By the support of Intel's runtime, their C-Compiler could be also used to build HermitCore applications.
-Both runtimes are part of HermitCore's source code.
+HermitCore provides a comprehensive toolchain, which is based on the GCC and supports C/C++, Fortran, Pthreads, and OpenMP.
+For an improvement of the performance, Intel’s OpenMP runtime is used instead of GCC’ per default.
+Therefore, Intel’s C-Compiler icc could be used as well to build HermitCore applications.
+Both runtimes are part of HermitCore’s source code.
 
-HermitCore is the result of a research project at RWTH Aachen University and is currently an experimental approach, i.e. not production ready.
+HermitCore is the result of a research project at RWTH Aachen University and is currently an experimental approach, i.e., not production ready.
 Please use it carefully.
 
 A first [paper](https://dl.acm.org/authorize?N04880), which sketchs the design of HermitCore, was prensted at the [International Workshop on Runtime and Operating Systems for Supercomputers (ROSS 2016)](http://www.mcs.anl.gov/events/workshops/ross/2016/program.php).
