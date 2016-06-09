@@ -14,7 +14,7 @@ ads: false
 
 ## A lightweight extreme-scale satellite kernel
 
-The project [HermitCore](http://www.hermitcore.org) is novel [HermitCore](http://www.hermitcore.org) targeting at high-performance computing.
+The project [HermitCore](http://www.hermitcore.org) is novel [unikernel](http://www.unikernel.org) targeting at high-performance computing.
 HermitCore extends the multi-kernel approach with unikernel features to provide better programmability and scalability for hierarchical systems.
 By starting HermitCore applications, cores will be isolated from the Linux system and the applications run bare-metal on these cores.
 This approach achieves a lower OS jitter and a better scalability.
