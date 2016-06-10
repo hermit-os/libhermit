@@ -12,10 +12,6 @@ share: false
 ads: false
 ---
 
-### Publisher
-
-[stlankes](https://github.com/stlankes/)
-
 ### Collection, Processing and Use of Personal Data
 
 *www.hermitcore.org* takes your privacy very seriously and follows the rules of german data protection laws and uses [Piwik](http://piwik.org/), a web analytics open-source software.
