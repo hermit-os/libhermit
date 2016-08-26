@@ -14,12 +14,12 @@ image:
 
 <div class="tile">
   <h2 class="post-title">Design</h2>
-  <p class="post-excerpt">HermitCore could be used as classical unikernel within a virtual machine. Furthermore, it extends the multi-kernel approach and combines it with unikernel features while providing better programmability and scalability for hierarchical systems, which based on multiple cluster-on-a-chip processors.</p>
+  <p class="post-excerpt">HermitCore could be used as classical unikernel within a virtual machine. Furthermore, it extends the multi-kernel approach and combines it with unikernel features.</p>
 </div><!-- /.tile -->
 
 <div class="tile">
   <h2 class="post-title">Platform</h2>
-  <p class="post-excerpt">HermitCore is designed for KVM/Linux but espcially for x86_64 bare-metal environments with the support of AVX2.</p>
+  <p class="post-excerpt">HermitCore is designed for KVM/Linux but espcially for x86_64 bare-metal environments and provides a better programmability and scalability for hierarchical systems, which based on multiple cluster-on-a-chip processors.</p>
 </div><!-- /.tile -->
 
 <div class="tile">
