@@ -31,6 +31,7 @@ image:
 
 <h2 class="post-title"> &nbsp; </h2>
 <div style="width:100%; margin:0; auto" align="center">
+<p> </p>
 
 <div style="width:100%; margin:0; auto">
 <h2 class="post-title">Bare-metal OpenMP Demo</h2>
