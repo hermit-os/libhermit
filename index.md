@@ -44,4 +44,10 @@ image:
 <p> </p>
 </div>
 
+<div style="width:100%; margin:0 auto;">
+<h2 class="post-title">Usage as Classical Unikernel</h2>
+<script type="text/javascript" src="https://asciinema.org/a/6bsynvmnwapfy9rn96eu8bjjc.js" id="asciicast-6bsynvmnwapfy9rn96eu8bjjc" async></script>
+<p> </p>
+</div>
+
 </div>
