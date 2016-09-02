@@ -88,7 +88,7 @@ HermitCore applications can be directly started as standalone kernel within a vi
 In this case, [iRCCE](http://www.lfbs.rwth-aachen.de/publications/files/iRCCE.pdf) isn't supported.
 Please register the loader like the multi-kernel version of HermitCore (see bullet 4 in section *Building and testing HermitCore on a real machine*).
 If the environment variable `HERMIT_ISLE` is set to `qemu`, the application will be started within a VM.
-Please note that the loader requires Qemu **with** KVM support and expects that the executable name is *qemu-system-x86_64*.
+Please note that the loader requires Qemu, uses per default *KVM* and expects that the executable name is *qemu-system-x86_64*.
 With the environment variable `HERMIT_QEMU`, the executable name could be adapted for your system.
 
 In this context, the environment variable `HERMIT_CPUS` specifies the number of cpus (and no longer a range of core ids).
