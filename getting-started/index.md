@@ -16,7 +16,7 @@ ads: false
 
 The project [HermitCore](http://www.hermitcore.org) is a novel [unikernel](http://www.unikernel.org) targeting a scalable and predictable runtime behavior for HPC and cloud environments.
 HermitCore could be used a classical unikernel within a virtual machine.
-Furthermore, it extends the multi-kernel approach (like *McKernel*) with unikernel features to provide better programmability and scalability for hierarchical systems.
+Furthermore, it extends the multi-kernel approach (like [McKernel](http://www-sys-aics.riken.jp/ResearchTopics/os/mckernel.html]) with unikernel features to provide better programmability and scalability for hierarchical systems.
 By starting HermitCore applications, cores will be isolated from the Linux system and the applications run bare-metal on these cores.
 This approach achieves a lower OS jitter and a better scalability.
 HermitCore applications and the Linux system can communicate via an IP interface (e.g., inter-kernel communication) or via the message passing interface [iRCCE](http://www.lfbs.rwth-aachen.de/publications/files/iRCCE.pdf), which was initially designed for the [Single-Chip Cloud Computer (SCC)](https://en.wikipedia.org/wiki/Single-chip_Cloud_Computer).
