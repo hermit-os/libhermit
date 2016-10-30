@@ -1,0 +1,41 @@
+---
+layout: page
+title: "Members"
+description: "Collaborators working on this project"
+header-img: "img/home-bg.jpg"
+order: 4
+---
+
+<p class="post-excerpt">HermitCore's core development team consists of the
+following members, which are supported by members of
+the <a href="http://www.rwth-aachen.de">RWTH Aachen University</a>:</p>
+
+{% for member in site.data.members %} {% if member.visible == true %}
+
+	<img src="{{ member.img }}" style="margin-top:0px; margin-bottom:5px; margin-right:10px; float:left; width:150px !important">
+
+	<h3>{{ member.name }}</h3>
+
+	<h4>{{ member.role }}</h4>
+
+	{% if member.github %}
+	<span class="social-share-googleplus"><a href="https://github.com/{{ member.github }}" title="Github"><img src="{{ "/img/icons/github-icon.png" | prepend: site.baseurl }}" style="height:20px">Github</a></span>
+	{% endif %}
+	{% if member.gplus %}
+	<span class="social-share-googleplus"><a href="{{ member.gplus }}" title="Google Plus"><img src="{{ "/img/icons/gplus-icon.png" | prepend: site.baseurl }}" style="height:20px">Google Plus</a></span>
+	{% endif %}
+	{% if member.url %}
+	<span class="social-share-googleplus"><a href="{{ member.url }}" title="Google Plus"><img src="{{ "/img/icons/url-icon.png"| prepend: site.baseurl }}" style="height:20px">Website</a></span>
+	{% endif %}
+
+	</br>
+
+	{% if member.bio %}
+	<p class="post-excerpt">
+	{{ member.bio }}
+	</p>
+	{% endif %}
+
+	<hr>
+
+{% endif %}{% endfor %}

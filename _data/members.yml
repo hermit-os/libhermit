@@ -1,0 +1,24 @@
+# Members
+
+- name: Stefan Lankes
+  role: Initiator
+  img: /img/stefan_simpson.png
+  github: stlankes
+  gplus: https://plus.google.com/+StefanLankes
+  bio: This project is maintained and initiated by Stefan Lankes, who is member of the <a href="http://www.acs.eonerc.rwth-aachen.de">Institute for Automation of Complex Power Systems</a> at the <a href="http://www.rwth-aachen.de">RWTH Aachen University</a>.
+  url: https://techblog.lankes.org
+  visible: true
+
+- name: Simon Pickartz
+  #role:
+  #img:
+  github: spickartz
+  bio: TBD
+  visible: true
+
+- name: Jens Breitbart
+  #url:
+  github: jbreitbart
+  #img:
+  bio: TBD
+  visible: true
