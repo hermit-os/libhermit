@@ -17,8 +17,9 @@
   visible: true
 
 - name: Jens Breitbart
-  #url:
+  url: https://www.jensbreitbart.de
   github: jbreitbart
-  #img:
-  bio: TBD
+  img: /img/jbreitbart.png
+  role: Consultant aka the person who nags Stefan
+  bio: Jens used to be your standard <a href="https://www.lrr.in.tum.de">off</a>-<a href="http://emcl.iwr.uni-heidelberg.de">the</a>-<a href="http://www.uni-kassel.de/eecs/plm">shelf</a> HPC guy, but he is currently roaming the embedded space at Bosch Chassis Systems Control.
   visible: true
