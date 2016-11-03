@@ -10,10 +10,10 @@
   visible: true
 
 - name: Simon Pickartz
-  #role:
-  #img:
+  role: The colleague next door asking challenging questions
+  img: /img/spickartz.jpg
   github: spickartz
-  bio: TBD
+  bio: Simon is a staff member at the <a href="http://www.acs.eonerc.rwth-aachen.de">Institute for Automation of Complex Power Systems</a> and works as research associate. 
   visible: true
 
 - name: Jens Breitbart
