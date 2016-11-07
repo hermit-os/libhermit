@@ -24,7 +24,7 @@ HermitCore is the result of a research project at RWTH Aachen University and is 
 Please use it carefully.
 
 A first [paper](https://dl.acm.org/authorize?N04880), which sketchs the design of HermitCore, was presented at the [International Workshop on Runtime and Operating Systems for Supercomputers (ROSS 2016)](http://www.mcs.anl.gov/events/workshops/ross/2016/program.php).
-The [slides](ross2016.pdf) summarize the design and present the first performance results.
+The [slides](/pdf/ross2016.pdf) summarize the design and present the first performance results.
 
 ## Requirements
 
