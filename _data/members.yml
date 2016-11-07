@@ -10,15 +10,16 @@
   visible: true
 
 - name: Simon Pickartz
-  #role:
-  #img:
+  role: The colleague next door asking challenging questions
+  img: /img/spickartz.jpg
   github: spickartz
-  bio: TBD
+  bio: Simon is a staff member at the <a href="http://www.acs.eonerc.rwth-aachen.de">Institute for Automation of Complex Power Systems</a> and works as research associate. 
   visible: true
 
 - name: Jens Breitbart
-  #url:
+  url: https://www.jensbreitbart.de
   github: jbreitbart
-  #img:
-  bio: TBD
+  img: /img/jbreitbart.png
+  role: Consultant aka the person who nags Stefan
+  bio: Jens used to be your standard <a href="https://www.lrr.in.tum.de">off</a>-<a href="http://emcl.iwr.uni-heidelberg.de">the</a>-<a href="http://www.uni-kassel.de/eecs/plm">shelf</a> HPC guy, but he is currently roaming the embedded space at Bosch Chassis Systems Control.
   visible: true
