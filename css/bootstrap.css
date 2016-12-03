@@ -916,7 +916,7 @@ textarea {
 }
 a {
   color: #337ab7;
-  text-decoration: none;
+  text-decoration: underline;
 }
 a:hover,
 a:focus {
@@ -3647,6 +3647,7 @@ select[multiple].input-group-sm > .input-group-btn > .btn {
   display: block;
 }
 .nav > li > a {
+  text-decoration: none;
   position: relative;
   display: block;
   padding: 10px 15px;
