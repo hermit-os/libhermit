@@ -6,7 +6,7 @@ tags: 	    hypervisor VM video
 subtitle:   Running standalone within a VM
 ---
 
-The video shows the usage of HermitCore with a virtual machine.
+The video shows the usage of HermitCore within a virtual machine.
 In this case, we use KVM as hypervisor.
 
 <div style="width:100%; margin:0; auto" align="center">
