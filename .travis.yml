@@ -24,7 +24,7 @@ script:
   - sudo dpkg -i ../libhermit*_amd64.deb
   - travis_retry sudo apt-get -y --force-yes install binutils-hermit newlib-hermit pthread-embedded-hermit gcc-hermit
   - make -j2 examples
-  - make test
+  - ./travis_test.sh
 
 deploy:
   on: devel
