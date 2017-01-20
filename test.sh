@@ -6,6 +6,12 @@
 FILES="usr/tests/hello usr/tests/hellof usr/tests/hello++ usr/tests/thr_hello usr/tests/pi usr/benchmarks/stream usr/benchmarks/basic"
 PROXY=/opt/hermit/bin/proxy
 
+HERMIT_ISLE=qemu
+HERMIT_CPUS=1
+HERMIT_MEM="512M"
+HERMIT_KVM="0"
+HERMIT_VERBOSE="1"
+
 for f in $FILES; do echo "check $f..."; $PROXY $f || exit 1; done
 
 # test echo server at port 8000
