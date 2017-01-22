@@ -41,6 +41,7 @@ The build process works currently only on **x86-based Linux** systems. The follo
 * Qemu
 
 On Debian-based systems the packets can be installed by executing:
+
 ```
   sudo apt-get install qemu-system-x86 nasm texinfo libmpfr-dev libmpc-dev libgmp-dev libisl-dev flex bison
 ```
@@ -49,11 +50,13 @@ On Debian-based systems the packets can be installed by executing:
 
 We provide binary packets for debian-based systems containing the complete HermitCore toolchain including a cross-compiler.
 To install the packets you have to execute the following commands:
+
 ```
 echo "deb [trusted=yes] https://dl.bintray.com/rwth-os/hermitcore vivid main" | sudo tee -a /etc/apt/sources.list
 sudo apt-get -qq update
 sudo apt-get install binutils-hermit newlib-hermit pthread-embedded-hermit gcc-hermit libhermit
 ```
+
 This toolchain is able to build applications for [classical unikernel](#building-and-testing-hermitcore-as-classical-standalone-unikernel) environments within virtual machines or bare-metal in a multi-kernel environment.
 For the latter, you have to install the modified Linux kernel.
 An introduction to this execution mode is provided in section [Building and testing HermitCore as multi-kernel on a real machine](#building-and-testing-hermitcore-as-multi-kernel-on a-real-machine).
