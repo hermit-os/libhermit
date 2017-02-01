@@ -1,7 +1,7 @@
 # Site settings
 title: HermitCore
 description: "A Unikernel for Extreme-Scale Computing"
-#url: "http://www.hermitcore.org"
+url: "http://www.hermitcore.org"
 
 # Secondary Parameters
 #baseurl: ""
