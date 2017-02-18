@@ -132,11 +132,11 @@ RCCE_minimum: RCCE_minimum.o
 
 clean:
 	@echo Cleaning tests
-	$Q$(RM) hello hello++ hellof jacobi thr_hello RCCE_minimum signals pi server test_ping_serve *.sym *.o *~
+	$Q$(RM) hello hello++ hellof jacobi thr_hello RCCE_minimum signals pi server ping *.sym *.o *~
 
 veryclean:
 	@echo Propper cleaning tests
-	$Q$(RM) hello hello++ hellof jacobi thr_hello RCCE_minimum pi server test_ping_serve *.sym *.o *~
+	$Q$(RM) hello hello++ hellof jacobi thr_hello RCCE_minimum pi server ping *.sym *.o *~
 
 depend:
 	$Q$(CC_FOR_TARGET) -MM $(CFLAGS_FOR_TARGET) *.c > Makefile.dep
