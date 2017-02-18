@@ -57,6 +57,7 @@
 #include <asm/msr-index.h>
 
 #include "uhyve-cpu.h"
+#include "uhyve-net.c"
 #include "proxy.h"
 
 #define GUEST_OFFSET		0x0
@@ -85,6 +86,38 @@
 #define UHYVE_PORT_EXIT		0x503
 #define UHYVE_PORT_LSEEK	0x504
 
+// Networkports
+#define UHYVE_PORT_NETINFO      0x505
+#define UHYVE_PORT_NETWRITE     0x506
+#define UHYVE_PORT_NETREAD      0x507
+
+/*
+#ifdef __UHYVE_HOST__
+#define UHYVE_GUEST_PTR(T) uint64_t
+#else
+#define UHYVE_GUEST_PTR(T) T
+#endif
+
+#define add_overflow(a,b,r)							\
+	({									\
+	__typeof(a) __a = a;							\
+	__typeof(b) __b = b;							\
+	(__b) < 1 ?								\
+	((__MIN(__typeof(r)) - (__b) <= (__a)) ? __assign(r, __a + __b) : 1) :	\
+	((__MAC(__typeof(r)) - (__b) >= (__a)) ? __assign(r, __a + __b) : 1);	\
+	})
+
+// Validate that pis in guest physical address room and given sz does not overflow
+#define GUEST_CHECK_PADDR(p, l, sz) \
+	{									\
+		uint64_t __e;							\
+		if ((p >= l || add_overflow(p, sz, __e) || (__e >= 1))		\
+			errx(1, "%s:%d: Invalid guest access: "			\
+				"paddr=0x%" PRIx64 ", sz=%zu",			\
+				__FILE__, __LINE__, p, sz);			\
+	}
+*/
+
 #define kvm_ioctl(fd, cmd, arg) ({ \
 	int ret = ioctl(fd, cmd, arg); \
 	if(ret == -1) \
@@ -92,7 +125,7 @@
 	ret; \
 	})
 
-static int kvm = -1, vmfd = -1, vcpufd = 1;
+static int kvm = -1, vmfd = -1, vcpufd = 1, netfd = -1;
 static uint8_t* guest_mem = NULL;
 static uint8_t* klog = NULL;
 static size_t guest_size = 0x20000000ULL;
@@ -519,6 +552,42 @@ static void* vcpu_loop(struct kvm_run *run)
 					uhyve_lseek->offset = lseek(uhyve_lseek->fd, uhyve_lseek->offset, uhyve_lseek->whence); 
 					break;
 				}
+			case UHYVE_PORT_NETINFO: {
+//					printf("UHYVE_PORT_NETINFO: 0x%x\n", UHYVE_PORT_NETINFO);
+					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
+					uhyve_netinfo_t* uhyve_netinfo = (uhyve_netinfo_t*)(guest_mem+data);
+//					memcpy(uhyve_netinfo, netinfo, sizeof(uhyve_netinfo_t));
+					memcpy(uhyve_netinfo->mac_str, netinfo.mac_str, 18);
+					memcpy(uhyve_netinfo->ip_str, netinfo.ip_str, 15);
+					break;
+				}
+			case UHYVE_PORT_NETWRITE: {
+//					printf("UHYVE_PORT_NETWRITE: 0x%x\n", UHYVE_PORT_NETWRITE);
+					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
+					uhyve_netwrite_t* uhyve_netwrite = (uhyve_netwrite_t*)(guest_mem + data);
+					int ret;
+					ret = write(netfd, guest_mem + (size_t)uhyve_netwrite->data, uhyve_netwrite->len);
+//					printf("%i\n", uhyve_netwrite->len);
+					assert(uhyve_netwrite->len == ret);
+					uhyve_netwrite->ret = 0;
+					break;
+				}
+			case UHYVE_PORT_NETREAD: {
+//					printf("UHYVE_PORT_NETREAD: 0x%x\n", UHYVE_PORT_NETREAD);
+					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
+					uhyve_netread_t* uhyve_netread = (uhyve_netread_t*)(guest_mem + data);
+					int ret;
+					ret = read(netfd, guest_mem + (size_t)uhyve_netread->data, uhyve_netread->len);
+					if ((ret == 0) || (ret == -1 && errno == EAGAIN)) {
+						uhyve_netread->ret = -1;
+//						printf("uhyve.c: NETREAD: ERROR: ret = %i, netfd = %i, len = %i\n", ret, netfd, uhyve_netread->len);
+						break;
+					}
+					assert(ret > 0);
+					uhyve_netread->len = ret;
+					uhyve_netread->ret = 0;
+					break;
+				}
 			default:
 				err(1, "KVM: unhandled KVM_EXIT_IO at port 0x%x, direction %d", run->io.port, run->io.direction);
 				break;
@@ -604,7 +673,7 @@ static void* uhyve_thread(void* arg)
 	 * Arguments to the kernel main are passed using the x86_64 calling
 	 * convention: RDI, RSI, RDX, RCX, R8, and R9
 	 */
-	struct kvm_regs regs = {
+ 	struct kvm_regs regs = {
 		.rip = elf_entry,
 		.rax = 2,
 		.rbx = 2,
@@ -624,6 +693,14 @@ static void* uhyve_thread(void* arg)
 		err(1, "KVM: VCPU mmap failed");
 
 	setup_cpuid(kvm, vcpufd);
+
+	str = getenv("HERMIT_NETIF");
+	if (str)
+	{
+		//TODO3: strncmp for different network interfaces for example tun/tap device or uhyvetap device
+		char *hermit_netif = str;
+		netfd = setup_network(vcpufd, guest_mem, hermit_netif);
+	}
 
 	return vcpu_loop(run);
 }
