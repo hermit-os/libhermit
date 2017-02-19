@@ -49,7 +49,6 @@ int attach_linux_tap(const char *dev) {
 	fd = open("/dev/net/tun", O_RDWR | O_NONBLOCK);
 
 	// Initialize interface request for TAP interface
-	//printf("Initialize interface request for TAP interface\n");
 	memset(&ifr, 0, sizeof(ifr));
 
 	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
@@ -69,8 +68,6 @@ int attach_linux_tap(const char *dev) {
 	// sudo ip link set dev <devname> up
 	//
 
-	//printf("Try to create OR attach to an existing device. The Linux API has no way\nto differentiate between the two\n");
-
 	if (ioctl(fd, TUNSETIFF, (void *)&ifr) == -1) {
 		err = errno;
 		close(fd);
@@ -80,7 +77,6 @@ int attach_linux_tap(const char *dev) {
 	// If we got back a different device than the one requested, e.g. because
 	// the caller mistakenly passed in '%d' (yes, that's really in the Linux API)
 	// then fail
-	//printf("Got different device?");
 
 	if (strncmp(ifr.ifr_name, dev, IFNAMSIZ) != 0) {
 		close(fd);
@@ -95,7 +91,6 @@ int attach_linux_tap(const char *dev) {
 	// If this check produces a false positive then caller's later writes to fd will
 	// fali with EIO, which is not great but at least we tried
 
-	//printf("Device freshly created?");
 	char buf[1] = { 0 };
 	if (write(fd, buf, 0) == -1 && errno == EIO) {
 		close(fd);
@@ -107,40 +102,6 @@ int attach_linux_tap(const char *dev) {
 }
 
 //---------------------------------- SET MAC ----------------------------------------------//
-
-int set_ip() {
-	int ip_is_set = 0;
-	char* str = getenv("HERMIT_NETIF_IP");
-	if (str)
-	{
-		const char *ipptr = str;
-		const char *v_ipptr = ipptr;
-		// checking str is a valid IP address
-		int i = 0, s = 0;
-		while(*v_ipptr) {
-			if (isdigit(*v_ipptr)) {
-				i = 1 ;
-			} else if (i == 1 && *v_ipptr == '.') {
-				s++;
-				i = 0;
-			} else {
-				s = -1;
-			}
-			v_ipptr++;
-		}
-		if (i != 1 && s != 3) {
-			warnx("Malformed ip address: %s\n", ipptr);
-		} else {
-			snprintf(netinfo.ip_str, sizeof(netinfo.ip_str), "%s", ipptr);
-		}
-	}
-	if (!ip_is_set) {
-		snprintf(netinfo.ip_str, sizeof(netinfo.mac_str), "%d.%d.%d.%d",
-			 guest_ip[0], guest_ip[1], guest_ip[2],guest_ip[3]);
-	}
-	printf("IP address: %s\n", netinfo.ip_str);
-	return 0;
-}
 
 int set_mac() {
 	int mac_is_set = 0;
@@ -226,9 +187,7 @@ static int setup_network(int vcpufd, uint8_t *mem, char *hermit_netif)
 		err(1, "Could not attach interface: %s\n", netif);
 		exit(1);
 	}
-//	printf("netfd: %i\n", netfd);
 	set_mac();
-	set_ip();
 	//LOG_INFO("UHYVE_NET has MAC: %s", netinfo.mac_str);
 	return netfd;
 }

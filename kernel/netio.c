@@ -61,9 +61,6 @@
 typedef struct {
         /* OUT */
         char mac_str[18];
-	char ip_str[15];
-//	char subnet_str[15];
-//	char gw_str[15];
 } __attribute__((packed)) uhyve_netinfo_t;
 
 // UHYVE_PORT_NETWRITE
@@ -108,13 +105,6 @@ int hermit_net_read_sync(uint8_t *data, int *n)
 	return uhyve_netread.ret;
 }
 
-uhyve_netinfo_t hermit_netinfo(void)
-{
-	volatile uhyve_netinfo_t uhyve_netinfo;
-	outportl(UHYVE_PORT_NETINFO, (unsigned)virt_to_phys((size_t)&uhyve_netinfo));
-	return uhyve_netinfo;
-}
-
 static char mac_str[18];
 char *hermit_net_mac_str(void)
 {
@@ -122,12 +112,4 @@ char *hermit_net_mac_str(void)
 	outportl(UHYVE_PORT_NETINFO, (unsigned)virt_to_phys((size_t)&uhyve_netinfo));
 	memcpy(mac_str, (void *)&uhyve_netinfo.mac_str, 18);
 	return mac_str;
-}
-static char ip_str[15];
-char *hermit_net_ip_str(void)
-{
-	volatile uhyve_netinfo_t uhyve_netinfo;
-	outportl(UHYVE_PORT_NETINFO, (unsigned)virt_to_phys((size_t)&uhyve_netinfo));
-	memcpy(ip_str, (void *)&uhyve_netinfo.ip_str, 15);
-	return ip_str;
 }

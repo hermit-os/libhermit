@@ -553,34 +553,27 @@ static void* vcpu_loop(struct kvm_run *run)
 					break;
 				}
 			case UHYVE_PORT_NETINFO: {
-//					printf("UHYVE_PORT_NETINFO: 0x%x\n", UHYVE_PORT_NETINFO);
 					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 					uhyve_netinfo_t* uhyve_netinfo = (uhyve_netinfo_t*)(guest_mem+data);
-//					memcpy(uhyve_netinfo, netinfo, sizeof(uhyve_netinfo_t));
 					memcpy(uhyve_netinfo->mac_str, netinfo.mac_str, 18);
-					memcpy(uhyve_netinfo->ip_str, netinfo.ip_str, 15);
 					break;
 				}
 			case UHYVE_PORT_NETWRITE: {
-//					printf("UHYVE_PORT_NETWRITE: 0x%x\n", UHYVE_PORT_NETWRITE);
 					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 					uhyve_netwrite_t* uhyve_netwrite = (uhyve_netwrite_t*)(guest_mem + data);
 					int ret;
 					ret = write(netfd, guest_mem + (size_t)uhyve_netwrite->data, uhyve_netwrite->len);
-//					printf("%i\n", uhyve_netwrite->len);
 					assert(uhyve_netwrite->len == ret);
 					uhyve_netwrite->ret = 0;
 					break;
 				}
 			case UHYVE_PORT_NETREAD: {
-//					printf("UHYVE_PORT_NETREAD: 0x%x\n", UHYVE_PORT_NETREAD);
 					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 					uhyve_netread_t* uhyve_netread = (uhyve_netread_t*)(guest_mem + data);
 					int ret;
 					ret = read(netfd, guest_mem + (size_t)uhyve_netread->data, uhyve_netread->len);
 					if ((ret == 0) || (ret == -1 && errno == EAGAIN)) {
 						uhyve_netread->ret = -1;
-//						printf("uhyve.c: NETREAD: ERROR: ret = %i, netfd = %i, len = %i\n", ret, netfd, uhyve_netread->len);
 						break;
 					}
 					assert(ret > 0);

@@ -25,7 +25,6 @@
 
 #include "uhyve-cpu.h"
 
-int guest_ip[4] = {10, 0, 5, 2};
 static char *netif;
 static int netfd;
 
@@ -33,9 +32,6 @@ static int netfd;
 typedef struct {
 	/* OUT */
 	char mac_str[18];
-	char ip_str[15];
-//	char subnet_str[15];
-//	char gw_str[15];
 } __attribute__((packed)) uhyve_netinfo_t;
 
 // UHYVE_PORT_NETWRITE
