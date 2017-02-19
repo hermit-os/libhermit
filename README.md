@@ -145,7 +145,7 @@ For network support, you have to link the Go application with the flag `-lnetgo`
 
 ## Using NETIF in uhyve
 
-First create a tap interface on your host with the following commands (replace <tapname> and <yourusername>)
+First create a tap interface on your host with the following commands (replace \<tapname\> and \<yourusername\>)
 
 ```
 ip tuntap add <tapname> mode tap user <yourusername>
@@ -153,7 +153,7 @@ ip addr add 10.0.5.1/24 dev <tapname>
 ip link set dev <tapname> up
 ```
 
-Then you can add the NETIF device with ``` HERMIT_NETIF=<tapname> ``` and a MAC address for the NETIF device wiith HERMIT_NETIF_MAC=<MAC-address>
+Then you can add the NETIF device with ``` HERMIT_NETIF=<tapname> ``` and a MAC address for the NETIF device wiith HERMIT_NETIF_MAC=\<MAC-address\>
 
 ## Tips
 
