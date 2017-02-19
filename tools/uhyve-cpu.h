@@ -105,5 +105,4 @@ struct _kvm_segment {
         seg.avl = GDT_GET_AVL(gdt_ent);         \
     } while (0)
 
-
 #endif
