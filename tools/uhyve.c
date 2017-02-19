@@ -666,7 +666,7 @@ static void* uhyve_thread(void* arg)
 	 * Arguments to the kernel main are passed using the x86_64 calling
 	 * convention: RDI, RSI, RDX, RCX, R8, and R9
 	 */
- 	struct kvm_regs regs = {
+	struct kvm_regs regs = {
 		.rip = elf_entry,
 		.rax = 2,
 		.rbx = 2,
