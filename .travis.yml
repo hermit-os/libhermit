@@ -20,7 +20,7 @@ script:
   - debuild -e PATH -e CFLAGS_FOR_TARGET -e GOFLAGS_FOR_TARGET -e FCFLAGS_FOR_TARGET -e FFLAGS_FOR_TARGET -e CXXFLAGS_FOR_TARGET -us -uc -j2
   - sudo dpkg -i ../libhermit*_amd64.deb
   - make -j2 examples
-  - if [ "$TRAVIS_BRANCH" != "master" ]; then make test; fi
+  - make test
 
 deploy:
   on: master
@@ -38,8 +38,8 @@ env:
     - HERMIT_MEM="512M"
     - HERMIT_KVM="0"
     - HERMIT_VERBOSE="1"
-    - CFLAGS_FOR_TARGET="-m64 -O2 -ftree-vectorize"
-    - GOFLAGS_FOR_TARGET"=-m64 -O2 -ftree-vectorize"
-    - FCFLAGS_FOR_TARGET"=-m64 -O2 -ftree-vectorize"
-    - FFLAGS_FOR_TARGET="-m64 -O2 -ftree-vectorize"
-    - CXXFLAGS_FOR_TARGET="-m64 -O2 -ftree-vectorize"
+    - CFLAGS_FOR_TARGET="-m64 -O3 -ftree-vectorize"
+    - GOFLAGS_FOR_TARGET"=-m64 -O3 -ftree-vectorize"
+    - FCFLAGS_FOR_TARGET"=-m64 -O3 -ftree-vectorize"
+    - FFLAGS_FOR_TARGET="-m64 -O3 -ftree-vectorize"
+    - CXXFLAGS_FOR_TARGET="-m64 -O3 -ftree-vectorize"

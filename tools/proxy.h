@@ -39,4 +39,7 @@
 #define __HERMIT_read	4
 #define __HERMIT_lseek	5
 
-#endif	
+int uhyve_init(char *path);
+int uhyve_loop(void);
+
+#endif
