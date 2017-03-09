@@ -21,7 +21,7 @@ Therefore, Intel’s C-Compiler icc could be used as well to build HermitCore ap
 Both runtimes are part of HermitCore’s source code.
 
 In addition to the multi-kernel approach described above, HermitCore can be used as classical standalone unikernel as well.
-In this case HermitCore run a single-kernel exklusive on the hardware or within a virtual machine.
+In this case HermitCore run a single-kernel exclusive on the hardware or within a virtual machine.
 This reduces the demand on resources and improves the boot time, which is an excellent behavior for cloud computing.
 
 HermitCore is the result of a research project at RWTH Aachen University and is currently an experimental approach, i.e., not production ready.
