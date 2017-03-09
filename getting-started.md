@@ -27,8 +27,9 @@ This reduces the demand on resources and improves the boot time, which is an exc
 HermitCore is the result of a research project at RWTH Aachen University and is currently an experimental approach, i.e., not production ready.
 Please use it carefully.
 
-A first [paper](https://dl.acm.org/authorize?N04880), which sketchs the design of HermitCore, was presented at the [International Workshop on Runtime and Operating Systems for Supercomputers (ROSS 2016)](http://www.mcs.anl.gov/events/workshops/ross/2016/program.php).
+The first [paper](https://dl.acm.org/authorize?N04880), which sketchs the design of HermitCore, was presented at the [International Workshop on Runtime and Operating Systems for Supercomputers (ROSS 2016)](http://www.mcs.anl.gov/events/workshops/ross/2016/program.php).
 The [slides](/pdf/ross2016.pdf) summarize the design and present the first performance results.
+At the [30th International Conference on Architecture of Computing Systems](http://arcs2017.itec.kit.edu) the migration from a pure multi-kernel to a kernel, which supports a multi-kernel and also a unikernel mode, will be [presented](http://dx.doi.org/10.1007/978-3-319-54999-6_6).
 
 ## Requirements
 
