@@ -50,7 +50,7 @@ endif
 
 default: all
 
-all: hello hello++ thr_hello jacobi hellof RCCE_minimum signals pi server
+all: hello hello++ thr_hello jacobi hellof RCCE_minimum signals pi server ping
 
 hello++: hello++.o
 	@echo [LD] $@
@@ -60,6 +60,13 @@ hello++: hello++.o
 	$Qchmod a-x $@.sym
 
 hello: hello.o
+	@echo [LD] $@
+	$Q$(CC_FOR_TARGET) -o $@ $< $(LDFLAGS_FOR_TARGET) $(CFLAGS_FOR_TARGET)
+	$Q$(OBJCOPY_FOR_TARGET) $(KEEP_DEBUG) $@ $@.sym
+	$Q$(OBJCOPY_FOR_TARGET) $(STRIP_DEBUG) $@
+	$Qchmod a-x $@.sym
+
+ping: ping.o
 	@echo [LD] $@
 	$Q$(CC_FOR_TARGET) -o $@ $< $(LDFLAGS_FOR_TARGET) $(CFLAGS_FOR_TARGET)
 	$Q$(OBJCOPY_FOR_TARGET) $(KEEP_DEBUG) $@ $@.sym
@@ -125,11 +132,11 @@ RCCE_minimum: RCCE_minimum.o
 
 clean:
 	@echo Cleaning tests
-	$Q$(RM) hello hello++ hellof jacobi thr_hello RCCE_minimum signals pi server *.sym *.o *~
+	$Q$(RM) hello hello++ hellof jacobi thr_hello RCCE_minimum signals pi server ping *.sym *.o *~
 
 veryclean:
 	@echo Propper cleaning tests
-	$Q$(RM) hello hello++ hellof jacobi thr_hello RCCE_minimum pi server *.sym *.o *~
+	$Q$(RM) hello hello++ hellof jacobi thr_hello RCCE_minimum pi server ping *.sym *.o *~
 
 depend:
 	$Q$(CC_FOR_TARGET) -MM $(CFLAGS_FOR_TARGET) *.c > Makefile.dep
