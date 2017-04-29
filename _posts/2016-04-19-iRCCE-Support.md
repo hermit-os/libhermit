@@ -13,5 +13,5 @@ In this demo, NUMA nodes are isolated and on each node runs a HermitCore instanc
 This promises a reduction of remote memory accesses, which increases the scalability of the system.
 
 <div style="width:100%; margin:0; auto" align="center">
-<script type="text/javascript" src="https://asciinema.org/a/1nwbnhi957hxpmet1zsxcoyg5.js" id="asciicast-1nwbnhi957hxpmet1zsxcoyg5" async=""></script>
+<script type="text/javascript" src="https://asciinema.org/a/42864.js" id="asciicast-42864" async=""></script>
 </div>
