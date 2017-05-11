@@ -110,7 +110,7 @@ impl Entry {
 
     // return the flags bits
     pub fn get_flags(&self) -> FlagBits {
-        FlagBits { flags: self.flags_limit_h & 0x0F }
+        FlagBits { flags: (self.flags_limit_h & 0xF0) >> 4 }
     }
 
     // convert the struct to an unsigned integer

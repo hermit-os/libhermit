@@ -1497,45 +1497,35 @@ impl Clone for kvm_cpuid_entry2 {
     fn clone(&self) -> Self { *self }
 }
 #[repr(C)]
-#[derive(Debug, Copy)]
-pub struct kvm_cpuid2 {
+#[derive(Copy)]
+pub struct kvm_cpuid2_header {
     pub nent: __u32,
     pub padding: __u32,
-    pub entries: [kvm_cpuid_entry2; 4]
+}
+
+impl Clone for kvm_cpuid2_header {
+    fn clone(&self) -> Self { *self }
+}
+
+#[repr(C)]
+#[derive(Copy)]
+pub struct kvm_cpuid2 {
+    pub header: kvm_cpuid2_header,
+    pub data: [kvm_cpuid_entry2; 40]
 }
 
 impl kvm_cpuid2 {
     pub fn empty() -> kvm_cpuid2 {
         kvm_cpuid2 {
-            nent: 4,
-            padding: 0,
-            entries: [kvm_cpuid_entry2::empty(); 4]
+            header: kvm_cpuid2_header {
+                nent: 40,
+                padding: 0
+            },
+            data: [kvm_cpuid_entry2::empty();40]
         }
     }
 }
 
-#[test]
-fn bindgen_test_layout_kvm_cpuid2() {
-    assert_eq!(::std::mem::size_of::<kvm_cpuid2>() , 8usize , concat ! (
-               "Size of: " , stringify ! ( kvm_cpuid2 ) ));
-    assert_eq! (::std::mem::align_of::<kvm_cpuid2>() , 4usize , concat ! (
-                "Alignment of " , stringify ! ( kvm_cpuid2 ) ));
-    assert_eq! (unsafe {
-                & ( * ( 0 as * const kvm_cpuid2 ) ) . nent as * const _ as
-                usize } , 0usize , concat ! (
-                "Alignment of field: " , stringify ! ( kvm_cpuid2 ) , "::" ,
-                stringify ! ( nent ) ));
-    assert_eq! (unsafe {
-                & ( * ( 0 as * const kvm_cpuid2 ) ) . padding as * const _ as
-                usize } , 4usize , concat ! (
-                "Alignment of field: " , stringify ! ( kvm_cpuid2 ) , "::" ,
-                stringify ! ( padding ) ));
-    assert_eq! (unsafe {
-                & ( * ( 0 as * const kvm_cpuid2 ) ) . entries as * const _ as
-                usize } , 8usize , concat ! (
-                "Alignment of field: " , stringify ! ( kvm_cpuid2 ) , "::" ,
-                stringify ! ( entries ) ));
-}
 impl Clone for kvm_cpuid2 {
     fn clone(&self) -> Self { *self }
 }

@@ -7,7 +7,7 @@ use memmap::{Mmap, Protection};
 use errno::errno;
 
 use uhyve;
-use uhyve::kvm_header::{kvm_sregs, kvm_regs, kvm_segment, kvm_cpuid2};
+use uhyve::kvm_header::{kvm_sregs, kvm_regs, kvm_segment, kvm_cpuid2,kvm_cpuid2_header};
 use uhyve::{Result, Error, NameIOCTL};
 use uhyve::gdt;
 use uhyve::proto;
@@ -30,7 +30,7 @@ pub const X86_CR0_PE: u64 = (1 << 0);
 pub const X86_CR0_PG: u64 = (1 << 31);
 
 /// Intel long mode page directory/table entries
-pub const X86_CR4_PAE: u64 = (1 << 0);
+pub const X86_CR4_PAE: u64 = (1u64 << 5);
 
 /// Intel long mode page directory/table entries
 pub const X86_PDPT_P:  u64 = (1 << 0);
@@ -76,11 +76,14 @@ impl VirtualCPU {
             cpu.setup_first(&mut mem)?;
         }
 
-        debug!("Initialize the register of {}", id);
 
         let mut regs = kvm_regs::empty();
         regs.rip = entry;
         regs.rflags = 0x2;
+        regs.rax = 2;
+        regs.rbx = 2;
+        
+        debug!("Initialize the register of {} with start address {:?}", id, entry);
 
         cpu.set_regs(regs)?;
 
@@ -131,7 +134,7 @@ impl VirtualCPU {
         debug!("Size {}", mem::size_of::<kvm_cpuid2>());
 
         unsafe {
-            uhyve::ioctl::get_supported_cpuid(self.kvm_fd, (&mut cpuid) as *mut kvm_cpuid2)
+            uhyve::ioctl::get_supported_cpuid(self.kvm_fd, (&mut cpuid.header) as *mut kvm_cpuid2_header)
                 .map_err(|x| Error::IOCTL(NameIOCTL::GetSupportedCpuID))?;
         }
 
@@ -140,7 +143,7 @@ impl VirtualCPU {
 
     pub fn set_cpuid2(&self, mut cpuid: kvm_cpuid2) -> Result<()> {
         unsafe {
-            uhyve::ioctl::set_cpuid2(self.vm_fd, (&mut cpuid) as *mut kvm_cpuid2)
+            uhyve::ioctl::set_cpuid2(self.vcpu_fd, (&mut cpuid.header) as *mut kvm_cpuid2_header)
                 .map_err(|x| Error::IOCTL(NameIOCTL::SetCpuID2))?;
         }
 
@@ -159,6 +162,8 @@ impl VirtualCPU {
             uhyve::ioctl::run(self.vcpu_fd, ptr::null_mut())
                 .map_err(|x| Error::IOCTL(NameIOCTL::Run))
         }?;
+
+        debug!("Run with {}", ret);
 
         if ret == -1 {
             match errno().0 {
@@ -201,6 +206,8 @@ impl VirtualCPU {
         debug!("Set the system to 64bit");
         self.setup_system_64bit(&mut sregs)?;
 
+        debug!("SREGS {:?}", sregs);
+
         self.set_sregs(sregs)?;
 
         Ok(())
@@ -219,8 +226,10 @@ impl VirtualCPU {
         unsafe {
             *(ptr.offset(gdt::BOOT_NULL)) = gdt_null.as_u64();
             *(ptr.offset(gdt::BOOT_CODE)) = gdt_code.as_u64();
-            *(ptr.offset(gdt::BOOT_DATA)) = gdt_code.as_u64();
+            *(ptr.offset(gdt::BOOT_DATA)) = gdt_data.as_u64();
         }
+
+        debug!("{} {} {}", gdt_null.as_u64(), gdt_code.as_u64(), gdt_data.as_u64());
 
         gdt_code.apply_to_kvm(gdt::BOOT_CODE, &mut code_seg);
         gdt_data.apply_to_kvm(gdt::BOOT_DATA, &mut data_seg);
@@ -233,6 +242,8 @@ impl VirtualCPU {
         sregs.fs = data_seg;
         sregs.gs = data_seg;
         sregs.ss = data_seg;
+
+        debug!("Code: {:#?},\n Data: {:#?}", code_seg,data_seg);
 
         Ok(())
     }
@@ -252,7 +263,9 @@ impl VirtualCPU {
             
             *pml4 = (BOOT_PDPTE as u64) | (X86_PDPT_P | X86_PDPT_RW);
             *pdpte = (BOOT_PDE as u64) | (X86_PDPT_P | X86_PDPT_RW);
-            
+           
+            println!("\n{}\n", *pdpte);
+
             for i in 0..(GUEST_SIZE/GUEST_PAGE_SIZE) {
                 *(pde.offset(i as isize)) = (i*GUEST_PAGE_SIZE) as u64 | (X86_PDPT_P | X86_PDPT_RW | X86_PDPT_PS);
             }
@@ -275,12 +288,13 @@ impl VirtualCPU {
     pub fn setup_cpuid(&self) -> Result<()> {
         let mut kvm_cpuid = self.get_supported_cpuid()?;
 
-        debug!("Supported CPUs {:?}", kvm_cpuid);
+        debug!("Supported CPUs {:?}", kvm_cpuid.data.iter());
 
-        for entry in kvm_cpuid.entries.iter_mut() {
+        for entry in kvm_cpuid.data.iter_mut() {
             match entry.function {
                 1 => {
                     entry.ecx |= 1u32 << 31; // propagate that we are running on a hypervisor
+                    entry.ecx = entry.ecx & !(1 << 21);
                     entry.edx |= 1u32 << 5; // enable msr support
                 },
                 0x0A => {

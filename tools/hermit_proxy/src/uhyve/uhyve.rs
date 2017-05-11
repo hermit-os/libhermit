@@ -15,7 +15,7 @@ use uhyve::vm::VirtualMachine;
 /// ioctl! macro and need to be wrapped further to provide a safe interface.
 pub mod ioctl {
     use std::mem;
-    use uhyve::kvm_header::{KVMIO, kvm_msr_list, kvm_cpuid2, kvm_memory_region, kvm_dirty_log, kvm_memory_alias, kvm_userspace_memory_region, kvm_regs,kvm_sregs};
+    use uhyve::kvm_header::{KVMIO, kvm_msr_list, kvm_cpuid2_header, kvm_memory_region, kvm_dirty_log, kvm_memory_alias, kvm_userspace_memory_region, kvm_regs,kvm_sregs};
     
     ioctl!(get_version with io!(KVMIO,  0x00));
     ioctl!(create_vm with io!(KVMIO, 0x01));
@@ -23,9 +23,9 @@ pub mod ioctl {
     ioctl!(check_extension with io!(KVMIO, 0x03));
     ioctl!(get_vcpu_mmap_size with io!(KVMIO, 0x04));
     
-    ioctl!(read get_supported_cpuid with KVMIO, 0x05; kvm_cpuid2);
-    ioctl!(read get_emulated_cpuid with KVMIO,0x09; kvm_cpuid2);
-    ioctl!(write set_cpuid2 with KVMIO, 0x90; kvm_cpuid2);
+    ioctl!(readwrite get_supported_cpuid with KVMIO, 0x05; kvm_cpuid2_header);
+    ioctl!(read get_emulated_cpuid with KVMIO,0x09; kvm_cpuid2_header);
+    ioctl!(write set_cpuid2 with KVMIO, 0x90; kvm_cpuid2_header);
 
     ioctl!(create_vcpu with io!(KVMIO, 0x41));
     ioctl!(read get_dirty_log with KVMIO, 0x42;  kvm_dirty_log);

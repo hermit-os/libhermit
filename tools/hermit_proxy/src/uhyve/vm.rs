@@ -77,19 +77,25 @@ impl VirtualMachine {
             debug!("Load segment with start addr {} and size {} to {}", header.paddr, header.filesz, header.offset);
 
             vm_mem[vm_start..vm_end].copy_from_slice(&kernel_file[kernel_start..kernel_end]);
+            
+            unsafe {
+                libc::memset(vm_mem.as_mut_ptr().offset(vm_end as isize) as *mut libc::c_void, 0x00, (header.memsz - header.filesz) as usize);
+            }
 
             let ptr = vm_mem[vm_start..vm_end].as_mut_ptr();
            
             unsafe {
                 *(ptr.offset(0x08) as *mut u64) = header.paddr;   // physical start addr
                 *(ptr.offset(0x10) as *mut u64) = vm_mem_length;  // physical size limit
-                *(ptr.offset(0x18) as *mut u32) = utils::cpufreq()?; // CPU frequency
+                *(ptr.offset(0x18) as *mut u32) = utils::cpufreq()? / 1000; // CPU frequency
                 *(ptr.offset(0x24) as *mut u32) = 1;              // number of used CPUs
                 *(ptr.offset(0x30) as *mut u32) = 0;              // apicid (?)
                 *(ptr.offset(0x38) as *mut u64) = header.filesz;  // 
                 *(ptr.offset(0x60) as *mut u32) = 1;              // NUMA nodes
                 *(ptr.offset(0x94) as *mut u32) = 1;              // announce uhyve
             }
+
+
         }
 
         debug!("Kernel loaded");
