@@ -41,6 +41,7 @@ pub struct VirtualCPU {
     vm_fd: libc::c_int,
     pub vcpu_fd: libc::c_int,
     id: u8,
+    file: File,
     run_mem: Mmap
 }
 
@@ -53,13 +54,15 @@ impl VirtualCPU {
 
         debug!("Got fd {}", fd);
 
+        let file = unsafe { File::from_raw_fd(fd) };
+
         let run_mem = unsafe {
-            Mmap::open_with_offset(&File::from_raw_fd(fd), Protection::ReadWrite, 0, VirtualCPU::get_mmap_size(kvm_fd)?)
+            Mmap::open_with_offset(&file, Protection::ReadWrite, 0, VirtualCPU::get_mmap_size(kvm_fd)?)
                 .map_err(|x| panic!("{:?}", x) )//Error::InvalidFile)
         }?;
        
         let cpu = VirtualCPU {
-            vm_fd: vm_fd, vcpu_fd: fd, id: id, run_mem: run_mem
+            vm_fd: vm_fd, vcpu_fd: fd, id: id, file: file, run_mem: run_mem
         };
 
         if id == 0 {
@@ -95,7 +98,7 @@ impl VirtualCPU {
     pub fn get_sregs(&self) -> Result<kvm_sregs> {
         let mut sregs = kvm_sregs::empty();
         unsafe {
-            uhyve::ioctl::get_sregs(self.vcpu_fd, (&mut sregs) as *mut kvm_sregs as *mut u8)
+            uhyve::ioctl::get_sregs(self.vcpu_fd, (&mut sregs) as *mut kvm_sregs)
                 .map_err(|x| Error::FailedIOCTL(x))?;
         }
 
@@ -104,7 +107,7 @@ impl VirtualCPU {
 
     pub fn set_sregs(&self, mut sregs: kvm_sregs) -> Result<()> {
         unsafe {
-            uhyve::ioctl::set_sregs(self.vcpu_fd, (&mut sregs) as *mut kvm_sregs as *mut u8)
+            uhyve::ioctl::set_sregs(self.vcpu_fd, (&mut sregs) as *mut kvm_sregs)
                 .map_err(|x| Error::FailedIOCTL(x))?;
         }
 
@@ -113,7 +116,7 @@ impl VirtualCPU {
 
     pub fn set_regs(&self, mut regs: kvm_regs) -> Result<()> {
         unsafe {
-            uhyve::ioctl::set_regs(self.vcpu_fd, (&mut regs) as *mut kvm_regs as *mut u8)
+            uhyve::ioctl::set_regs(self.vcpu_fd, (&mut regs) as *mut kvm_regs)
                 .map_err(|x| Error::FailedIOCTL(x))?;
         }
 
@@ -123,7 +126,7 @@ impl VirtualCPU {
     pub fn get_supported_cpuid(&self) -> Result<kvm_cpuid2> {
         let mut cpuid = kvm_cpuid2::empty();
         unsafe {
-            uhyve::ioctl::get_supported_cpuid(self.vm_fd, (&mut cpuid) as *mut kvm_cpuid2 as *mut u8)
+            uhyve::ioctl::get_supported_cpuid(self.vm_fd, (&mut cpuid) as *mut kvm_cpuid2)
                 .map_err(|x| Error::FailedIOCTL(x))?;
         }
 
@@ -132,7 +135,7 @@ impl VirtualCPU {
 
     pub fn set_cpuid2(&self, mut cpuid: kvm_cpuid2) -> Result<()> {
         unsafe {
-            uhyve::ioctl::set_cpuid2(self.vm_fd, (&mut cpuid) as *mut kvm_cpuid2 as *mut u8)
+            uhyve::ioctl::set_cpuid2(self.vm_fd, (&mut cpuid) as *mut kvm_cpuid2)
                 .map_err(|x| Error::FailedIOCTL(x))?;
         }
 

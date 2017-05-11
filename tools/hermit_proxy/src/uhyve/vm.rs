@@ -115,8 +115,7 @@ impl VirtualMachine {
 
     pub fn set_user_memory_region(&self, mut region: kvm_userspace_memory_region) -> Result<()> {
         unsafe {
-            let p: *mut kvm_userspace_memory_region = &mut region;
-            uhyve::ioctl::set_user_memory_region(self.vm_fd, p as *mut u8)
+            uhyve::ioctl::set_user_memory_region(self.vm_fd, (&mut region) as *mut kvm_userspace_memory_region)
                 .map_err(|x| Error::FailedIOCTL(x)).map(|_| ())
         }
     }

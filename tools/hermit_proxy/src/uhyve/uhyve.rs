@@ -19,29 +19,30 @@ pub mod ioctl {
     
     ioctl!(get_version with io!(KVMIO,  0x00));
     ioctl!(create_vm with io!(KVMIO, 0x01));
-    ioctl!(get_msr_index_list with iorw!(KVMIO, 0x02, mem::size_of::<kvm_msr_list>()));
+    ioctl!(read get_msr_index_list with KVMIO, 0x02; kvm_msr_list);
     ioctl!(check_extension with io!(KVMIO, 0x03));
     ioctl!(get_vcpu_mmap_size with io!(KVMIO, 0x04));
-    ioctl!(get_supported_cpuid with iorw!(KVMIO, 0x05, mem::size_of::<kvm_cpuid2>()));
-    ioctl!(get_emulated_cpuid with iorw!(KVMIO, 0x09, mem::size_of::<kvm_cpuid2>()));
-    ioctl!(set_cpuid2 with iow!(KVMIO, 0x90, mem::size_of::<kvm_cpuid2>()));
+    
+    ioctl!(read get_supported_cpuid with KVMIO, 0x05; kvm_cpuid2);
+    ioctl!(read get_emulated_cpuid with KVMIO,0x09; kvm_cpuid2);
+    ioctl!(write set_cpuid2 with KVMIO, 0x90; kvm_cpuid2);
 
-
-    ioctl!(set_memory_region with iorw!(KVMIO, 0x40,mem::size_of::<kvm_memory_region>()));
     ioctl!(create_vcpu with io!(KVMIO, 0x41));
-    ioctl!(get_dirty_log with iow!(KVMIO, 0x42, mem::size_of::<kvm_dirty_log>()));
-    ioctl!(set_memory_alias with iow!(KVMIO, 0x43, mem::size_of::<kvm_memory_alias>()));
+    ioctl!(read get_dirty_log with KVMIO, 0x42;  kvm_dirty_log);
+    ioctl!(write set_memory_alias with KVMIO, 0x43; kvm_memory_alias);
     ioctl!(set_nr_mmu_pages with io!(KVMIO, 0x44));
     ioctl!(get_nr_mmu_pages with io!(KVMIO, 0x45));
-    ioctl!(set_user_memory_region with iow!(KVMIO, 0x46, mem::size_of::<kvm_userspace_memory_region>()));
+    
+    ioctl!(write set_memory_region with KVMIO, 0x40; kvm_memory_region);
+    ioctl!(write set_user_memory_region with KVMIO, 0x46; kvm_userspace_memory_region);
 
     ioctl!(create_irqchip with io!(KVMIO, 0x60));
 
     ioctl!(run with io!(KVMIO, 0x80));
-    ioctl!(get_regs with ior!(KVMIO, 0x81, mem::size_of::<kvm_regs>()));
-    ioctl!(set_regs with iow!(KVMIO, 0x82, mem::size_of::<kvm_regs>()));
-    ioctl!(get_sregs with ior!(KVMIO, 0x83, mem::size_of::<kvm_sregs>()));
-    ioctl!(set_sregs with iow!(KVMIO, 0x84, mem::size_of::<kvm_sregs>()));
+    ioctl!(read get_regs with KVMIO, 0x81; kvm_regs);
+    ioctl!(write set_regs with KVMIO, 0x82; kvm_regs);
+    ioctl!(read get_sregs with KVMIO, 0x83; kvm_sregs);
+    ioctl!(write set_sregs with KVMIO, 0x84; kvm_sregs);
 
 }
 
