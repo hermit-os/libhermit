@@ -12,7 +12,7 @@ use elf::types::{ELFCLASS64, OSABI, PT_LOAD};
 use utils;
 use uhyve;
 use uhyve::kvm_header::{kvm_userspace_memory_region };
-use uhyve::{Result, Error};
+use uhyve::{Result, Error, NameIOCTL};
 use uhyve::vcpu::VirtualCPU;
 
 //use byteorder::ByteOrder;
@@ -43,17 +43,17 @@ impl VirtualMachine {
         debug!("UHYVE - Load kernel from {}", path);
         
         // open the file in read only
-        let file = Mmap::open_path(path, Protection::Read).map_err(|_| Error::InvalidFile)?;
+        let file = Mmap::open_path(path, Protection::Read).map_err(|_| Error::InvalidFile(path.into()))?;
 
         // parse the header with ELF module
         let file_efi = {
             let mut data = unsafe { Cursor::new(file.as_slice()) };
             
-            elf::File::open_stream(&mut data).map_err(|_| Error::InvalidFile)
+            elf::File::open_stream(&mut data).map_err(|_| Error::InvalidFile(path.into()))
         }?;
 
         if file_efi.ehdr.class != ELFCLASS64 ||  file_efi.ehdr.osabi != OSABI(0x42) {
-            return Err(Error::InvalidFile);
+            return Err(Error::InvalidFile(path.into()));
         }
 
         self.elf_entry = Some(file_efi.ehdr.entry);
@@ -116,14 +116,14 @@ impl VirtualMachine {
     pub fn set_user_memory_region(&self, mut region: kvm_userspace_memory_region) -> Result<()> {
         unsafe {
             uhyve::ioctl::set_user_memory_region(self.vm_fd, (&mut region) as *mut kvm_userspace_memory_region)
-                .map_err(|x| Error::FailedIOCTL(x)).map(|_| ())
+                .map_err(|x| Error::IOCTL(NameIOCTL::SetUserMemoryRegion)).map(|_| ())
         }
     }
 
     pub fn create_irqchip(&self) -> Result<()> {
         unsafe {
             uhyve::ioctl::create_irqchip(self.vm_fd, ptr::null_mut())
-                .map_err(|x| Error::FailedIOCTL(x)).map(|_| ())
+                .map_err(|x| Error::IOCTL(NameIOCTL::CreateIRQChip)).map(|_| ())
         }
     }
 

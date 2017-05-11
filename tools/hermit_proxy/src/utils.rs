@@ -57,7 +57,7 @@ pub fn delete_tmp_file(name: &str) -> Result<()> {
         let res = libc::unlink(c_str.into_raw());
 
         if res < 0 {
-            return Err(Error::InvalidFile);
+            return Err(Error::InvalidFile(name.into()));
         } else {
             return Ok(());
         }

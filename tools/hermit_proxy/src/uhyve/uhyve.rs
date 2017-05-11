@@ -7,7 +7,7 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::os::unix::io::AsRawFd;
 use libc;
 
-use uhyve::{Error, Result};
+use uhyve::{Error, Result, NameIOCTL};
 use uhyve::vm::VirtualMachine;
 
 /// The normal way of defining a IOCTL interface is provided by C macros. In Rust we have our own
@@ -80,7 +80,7 @@ impl Uhyve {
             match ioctl::get_version(self.file.as_raw_fd(), ptr::null_mut()) {
                 Ok(12) => Ok(Version::Version12),
                 Ok(_)  => Ok(Version::Unsupported),
-                Err(_) => Err(Error::InternalError)
+                Err(_) => Err(Error::IOCTL(NameIOCTL::GetVersion))
             }
         }
     }

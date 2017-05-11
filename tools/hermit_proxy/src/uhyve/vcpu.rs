@@ -8,7 +8,7 @@ use errno::errno;
 
 use uhyve;
 use uhyve::kvm_header::{kvm_sregs, kvm_regs, kvm_segment, kvm_cpuid2};
-use uhyve::{Result, Error};
+use uhyve::{Result, Error, NameIOCTL};
 use uhyve::gdt;
 use uhyve::proto;
 
@@ -38,6 +38,7 @@ pub const X86_PDPT_RW: u64 = (1 << 1);
 pub const X86_PDPT_PS: u64 = (1 << 7);
 
 pub struct VirtualCPU {
+    kvm_fd: libc::c_int,
     vm_fd: libc::c_int,
     pub vcpu_fd: libc::c_int,
     id: u8,
@@ -62,7 +63,7 @@ impl VirtualCPU {
         }?;
        
         let cpu = VirtualCPU {
-            vm_fd: vm_fd, vcpu_fd: fd, id: id, file: file, run_mem: run_mem
+            kvm_fd: kvm_fd, vm_fd: vm_fd, vcpu_fd: fd, id: id, file: file, run_mem: run_mem
         };
 
         if id == 0 {
@@ -83,6 +84,8 @@ impl VirtualCPU {
 
         cpu.set_regs(regs)?;
 
+        debug!("Set the CPUID");
+
         cpu.setup_cpuid()?;
 
         Ok(cpu)
@@ -91,7 +94,7 @@ impl VirtualCPU {
     pub fn create_vcpu(fd: c_int) -> Result<c_int> {
         unsafe { 
             uhyve::ioctl::create_vcpu(fd, ptr::null_mut())
-                .map_err(|x| Error::FailedIOCTL(x))
+                .map_err(|_| Error::IOCTL(NameIOCTL::CreateVcpu))
         }
     }   
 
@@ -99,7 +102,7 @@ impl VirtualCPU {
         let mut sregs = kvm_sregs::empty();
         unsafe {
             uhyve::ioctl::get_sregs(self.vcpu_fd, (&mut sregs) as *mut kvm_sregs)
-                .map_err(|x| Error::FailedIOCTL(x))?;
+                .map_err(|x| Error::IOCTL(NameIOCTL::GetSRegs))?;
         }
 
         Ok(sregs)
@@ -108,7 +111,7 @@ impl VirtualCPU {
     pub fn set_sregs(&self, mut sregs: kvm_sregs) -> Result<()> {
         unsafe {
             uhyve::ioctl::set_sregs(self.vcpu_fd, (&mut sregs) as *mut kvm_sregs)
-                .map_err(|x| Error::FailedIOCTL(x))?;
+                .map_err(|x| Error::IOCTL(NameIOCTL::SetSRegs))?;
         }
 
         Ok(())
@@ -117,7 +120,7 @@ impl VirtualCPU {
     pub fn set_regs(&self, mut regs: kvm_regs) -> Result<()> {
         unsafe {
             uhyve::ioctl::set_regs(self.vcpu_fd, (&mut regs) as *mut kvm_regs)
-                .map_err(|x| Error::FailedIOCTL(x))?;
+                .map_err(|x| Error::IOCTL(NameIOCTL::SetSRegs))?;
         }
 
         Ok(())
@@ -125,9 +128,11 @@ impl VirtualCPU {
 
     pub fn get_supported_cpuid(&self) -> Result<kvm_cpuid2> {
         let mut cpuid = kvm_cpuid2::empty();
+        debug!("Size {}", mem::size_of::<kvm_cpuid2>());
+
         unsafe {
-            uhyve::ioctl::get_supported_cpuid(self.vm_fd, (&mut cpuid) as *mut kvm_cpuid2)
-                .map_err(|x| Error::FailedIOCTL(x))?;
+            uhyve::ioctl::get_supported_cpuid(self.kvm_fd, (&mut cpuid) as *mut kvm_cpuid2)
+                .map_err(|x| Error::IOCTL(NameIOCTL::GetSupportedCpuID))?;
         }
 
         Ok(cpuid)
@@ -136,7 +141,7 @@ impl VirtualCPU {
     pub fn set_cpuid2(&self, mut cpuid: kvm_cpuid2) -> Result<()> {
         unsafe {
             uhyve::ioctl::set_cpuid2(self.vm_fd, (&mut cpuid) as *mut kvm_cpuid2)
-                .map_err(|x| Error::FailedIOCTL(x))?;
+                .map_err(|x| Error::IOCTL(NameIOCTL::SetCpuID2))?;
         }
 
         Ok(())
@@ -145,14 +150,14 @@ impl VirtualCPU {
     pub fn get_mmap_size(vcpu_fd: libc::c_int) -> Result<usize> {
         unsafe {
             uhyve::ioctl::get_vcpu_mmap_size(vcpu_fd, ptr::null_mut())
-                .map_err(|x| Error::FailedIOCTL(x)).map(|x| { debug!("MMAP size {}", x); x as usize })
+                .map_err(|x| Error::IOCTL(NameIOCTL::GetVCPUMMAPSize)).map(|x| { x as usize})
         }
     }
 
     pub fn single_run(&self, guest_mem: &mut [u8]) -> Result<i32> {
         let ret = unsafe {
             uhyve::ioctl::run(self.vcpu_fd, ptr::null_mut())
-                .map_err(|x| Error::FailedIOCTL(x))
+                .map_err(|x| Error::IOCTL(NameIOCTL::Run))
         }?;
 
         if ret == -1 {
@@ -269,6 +274,8 @@ impl VirtualCPU {
 
     pub fn setup_cpuid(&self) -> Result<()> {
         let mut kvm_cpuid = self.get_supported_cpuid()?;
+
+        debug!("Supported CPUs {:?}", kvm_cpuid);
 
         for entry in kvm_cpuid.entries.iter_mut() {
             match entry.function {

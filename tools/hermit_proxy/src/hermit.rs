@@ -54,7 +54,7 @@ impl IsleKind {
             _ => File::open(format!("/sys/hermit/isle{}/log", self.get_num()))
         };
 
-        let mut file = file.map_err(|_| Error::InvalidFile)?;
+        let mut file = file.map_err(|x| Error::InvalidFile(format!("{:?}",x)))?;
         let mut reader = BufReader::new(file);
 
         //let mut result = String::new();
@@ -95,11 +95,13 @@ impl IsleKind {
     }
 
     pub fn stop(&self) -> Result<()> {
-        let mut cpus_file = File::create(format!("/sys/hermit/isle{}/cpus", self.get_num()))
-            .map_err(|_| Error::InvalidFile)?;
+        let cpu_path = format!("/sys/hermit/isle{}/cpus", self.get_num());
+
+        let mut cpus_file = File::create(&cpu_path)
+            .map_err(|_| Error::InvalidFile(cpu_path.clone()))?;
 
         cpus_file.write("-1".as_bytes())
-            .map_err(|_| Error::InvalidFile);
+            .map_err(|_| Error::InvalidFile(cpu_path));
     
         Ok(())
     }

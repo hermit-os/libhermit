@@ -1441,7 +1441,7 @@ impl kvm_cpuid_entry2 {
             ebx: 0,
             ecx: 0,
             edx: 0,
-            padding: [0; 3]
+            padding: [0u32; 3]
         }
     }
 }
@@ -1497,19 +1497,19 @@ impl Clone for kvm_cpuid_entry2 {
     fn clone(&self) -> Self { *self }
 }
 #[repr(C)]
-#[derive(Copy)]
+#[derive(Debug, Copy)]
 pub struct kvm_cpuid2 {
     pub nent: __u32,
     pub padding: __u32,
-    pub entries: [kvm_cpuid_entry2; 100]
+    pub entries: [kvm_cpuid_entry2; 4]
 }
 
 impl kvm_cpuid2 {
     pub fn empty() -> kvm_cpuid2 {
         kvm_cpuid2 {
-            nent: 100,
+            nent: 4,
             padding: 0,
-            entries: [kvm_cpuid_entry2::empty(); 100]
+            entries: [kvm_cpuid_entry2::empty(); 4]
         }
     }
 }
