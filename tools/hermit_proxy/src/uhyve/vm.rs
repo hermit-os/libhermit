@@ -110,6 +110,7 @@ impl VirtualMachine {
             slot: 0, guest_phys_addr: 0, flags: 0, memory_size: self.mem.len() as u64, userspace_addr: start_ptr
         };
 
+        debug!("Bla {}", self.mem.len());
         self.set_user_memory_region(kvm_region)?;
         self.create_irqchip()?;
         let vcpu = self.create_vcpu(0)?;

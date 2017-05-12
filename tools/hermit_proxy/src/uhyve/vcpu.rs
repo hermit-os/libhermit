@@ -131,7 +131,6 @@ impl VirtualCPU {
 
     pub fn get_supported_cpuid(&self) -> Result<kvm_cpuid2> {
         let mut cpuid = kvm_cpuid2::empty();
-        debug!("Size {}", mem::size_of::<kvm_cpuid2>());
 
         unsafe {
             uhyve::ioctl::get_supported_cpuid(self.kvm_fd, (&mut cpuid.header) as *mut kvm_cpuid2_header)
@@ -206,7 +205,7 @@ impl VirtualCPU {
         debug!("Set the system to 64bit");
         self.setup_system_64bit(&mut sregs)?;
 
-        debug!("SREGS {:?}", sregs);
+        debug!("SREGS {:#?}", sregs);
 
         self.set_sregs(sregs)?;
 
@@ -243,8 +242,6 @@ impl VirtualCPU {
         sregs.gs = data_seg;
         sregs.ss = data_seg;
 
-        debug!("Code: {:#?},\n Data: {:#?}", code_seg,data_seg);
-
         Ok(())
     }
     pub fn setup_system_page_table(&self, sregs: &mut kvm_sregs, mem: &mut [u8]) -> Result<()> {
@@ -264,8 +261,6 @@ impl VirtualCPU {
             *pml4 = (BOOT_PDPTE as u64) | (X86_PDPT_P | X86_PDPT_RW);
             *pdpte = (BOOT_PDE as u64) | (X86_PDPT_P | X86_PDPT_RW);
            
-            println!("\n{}\n", *pdpte);
-
             for i in 0..(GUEST_SIZE/GUEST_PAGE_SIZE) {
                 *(pde.offset(i as isize)) = (i*GUEST_PAGE_SIZE) as u64 | (X86_PDPT_P | X86_PDPT_RW | X86_PDPT_PS);
             }
@@ -288,13 +283,11 @@ impl VirtualCPU {
     pub fn setup_cpuid(&self) -> Result<()> {
         let mut kvm_cpuid = self.get_supported_cpuid()?;
 
-        debug!("Supported CPUs {:?}", kvm_cpuid.data.iter());
-
         for entry in kvm_cpuid.data.iter_mut() {
             match entry.function {
                 1 => {
                     entry.ecx |= 1u32 << 31; // propagate that we are running on a hypervisor
-                    entry.ecx = entry.ecx & !(1 << 21);
+                    //entry.ecx = entry.ecx & !(1 << 21);
                     entry.edx |= 1u32 << 5; // enable msr support
                 },
                 0x0A => {

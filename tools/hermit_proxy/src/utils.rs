@@ -7,7 +7,7 @@ use error::*;
 
 use libc;
 
-/// Returns the cpu frequency
+/// Returns the CPU frequency
 pub fn cpufreq() -> Result<u32> {
     let mut content = String::new();
    
@@ -44,7 +44,7 @@ pub fn create_tmp_file(name: &str) -> Result<String> {
 
         let new_name = CString::from_raw(raw).into_string().unwrap();
         
-        debug!("UTILS - Created tmp file with name {}", new_name);
+        debug!("Created tmp file with name {}", new_name);
         
         Ok(new_name)
     }
@@ -55,6 +55,8 @@ pub fn delete_tmp_file(name: &str) -> Result<()> {
     unsafe {
         let c_str = CString::new(name).unwrap();
         let res = libc::unlink(c_str.into_raw());
+
+        debug!("Deleted tmp file {}", name);
 
         if res < 0 {
             return Err(Error::InvalidFile(name.into()));

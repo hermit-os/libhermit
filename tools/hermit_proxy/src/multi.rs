@@ -5,7 +5,7 @@ use std::io::{Write, Read};
 use error::*;
 
 use hermit_env;
-use dedicate::socket::Socket;
+use socket::Socket;
 
 pub struct Multi {
     num: u8,

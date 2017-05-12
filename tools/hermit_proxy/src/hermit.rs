@@ -6,8 +6,8 @@ use inotify::INotify;
 use inotify::ffi::{IN_MODIFY, IN_CREATE};
 
 use hermit_env;
-use dedicate::qemu::QEmu;
-use dedicate::multi::Multi;
+use qemu::QEmu;
+use multi::Multi;
 use uhyve::Uhyve;
 use uhyve::vm::VirtualMachine;
 use error::*;

@@ -54,9 +54,9 @@ impl Syscall {
         unsafe {
             let ref run = *(mem.as_ptr() as *const kvm_run);
 
-            debug!("Exit reason {}", run.exit_reason);
+            debug!("{:?}", &mem[0..100]);
 
-            
+            debug!("Exit reason {}", run.exit_reason);
 
             if run.exit_reason != KVM_EXIT_IO {
                 return Syscall::Other(mem.as_ptr() as *const kvm_run);

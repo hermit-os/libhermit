@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::Read;
 
 use hermit_env;
-use dedicate::socket::Socket;
+use socket::Socket;
 
 const PIDNAME: &'static str = "/tmp/hpid-XXXXXX";
 const TMPNAME: &'static str = "/tmp/hermit-XXXXXX";

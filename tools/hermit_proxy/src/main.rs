@@ -21,8 +21,11 @@ mod error;
 mod utils;
 mod hermit;
 mod uhyve;
-mod dedicate;
 mod hermit_env;
+mod qemu;
+mod multi;
+mod proto;
+mod socket;
 
 use nix::sys::signal;
 use std::{env, process};
