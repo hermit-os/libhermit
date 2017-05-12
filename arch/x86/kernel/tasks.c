@@ -39,7 +39,7 @@
 #include <asm/page.h>
 #include <asm/multiboot.h>
 
-#define TLS_OFFSET	8
+#define TLS_OFFSET	0
 
 /*
  * Note that linker symbols are not variables, they have no memory allocated for
@@ -105,9 +105,9 @@ int is_proxy(void)
 		return 1;
 	if (mb_info && (mb_info->flags & MULTIBOOT_INFO_CMDLINE))
 	{
-		// search in the command line for cpu frequency
-		char* found = strstr((char*) (size_t)mb_info->cmdline, "-proxy");
-		if (!found)
+		// search in the command line for the "proxy" hint
+		char* found = strstr((char*) (size_t) mb_info->cmdline, "-proxy");
+		if (found)
 			return 1;
 	}
 	return 0;

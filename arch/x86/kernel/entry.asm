@@ -28,12 +28,11 @@
 ; perhaps setting up the GDT and segments. Please note that interrupts
 ; are disabled at this point: More on interrupts later!
 
-%include "config.inc"
+%include "hermit/config.asm"
 
 [BITS 64]
 
 extern kernel_start		; defined in linker script
-extern kernel_end
 
 MSR_FS_BASE equ 0xc0000100
 MSR_GS_BASE equ 0xc0000101
@@ -69,6 +68,7 @@ align 4
     global hbmem_base
     global hbmem_size
     global uhyve
+    global image_size
     base dq 0
     limit dq 0
     cpu_freq dd 0
@@ -134,11 +134,6 @@ start64:
     cmp eax, 0
     jne Lno_pml4_init
 
-    ; determine full image size
-    mov rax, kernel_end
-    sub rax, kernel_start
-    mov QWORD [image_size], rax
-
     ; relocate page tables
     mov rdi, boot_pml4
     mov rax, QWORD [rdi]
@@ -181,7 +176,7 @@ start64:
     mov rdi, rax
     shr rdi, 9                ; (edi >> 12) * 8 (index for boot_pgt)
     add rdi, boot_pgt
-    or rax, 0x103             ; set present, global and writable bits
+    or rax, 0x23              ; set present, accessed and writable bits
     mov QWORD [rdi], rax
 Lno_mbinfo:
     ; remap kernel
@@ -189,13 +184,18 @@ Lno_mbinfo:
     shr rdi, 18       ; (edi >> 21) * 8 (index for boot_pgd)
     add rdi, boot_pgd
     mov rax, [base]
-    or rax, 0x83      ; PG_GLOBAL isn't required because HermitCore is a single-address space OS
+    or rax, 0xA3      ; PG_GLOBAL isn't required because HermitCore is a single-address space OS
     xor rcx, rcx
+    mov rsi, 510*0x200000
+    sub rsi, kernel_start
 Lremap:
     mov QWORD [rdi], rax
     add rax, 0x200000
     add rcx, 0x200000
     add rdi, 8
+    ; note: the whole code segement muust fit in the first pgd
+    cmp rcx, rsi
+    jnb Lno_pml4_init
     cmp rcx, QWORD [image_size]
     jb Lremap
 
@@ -600,7 +600,7 @@ common_switch:
     call get_current_stack     ; get new rsp
     mov rsp, rax
 
-%ifdef SAVE_FPU
+%ifidn SAVE_FPU,ON
     ; set task switched flag
     mov rax, cr0
     or rax, 8
