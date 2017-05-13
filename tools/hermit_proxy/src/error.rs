@@ -13,7 +13,8 @@ pub enum Error {
     MissingFrequency,
     MultiIsleFailed,
     CannotCreateTmpFile(usize),
-    QEmu((String, String))
+    QEmu((String, String)),
+    MissingBinary
 }
 
 impl fmt::Debug for Error {
@@ -31,7 +32,8 @@ impl fmt::Debug for Error {
             Error::MissingFrequency => write!(f, "Couldn't get the CPU frequency from you system. (is /proc/cpuinfo missing?)"),
             Error::MultiIsleFailed => write!(f, "The Multi isle was selected on a system without supported, please load the kernel driver."),
             Error::CannotCreateTmpFile(_) => write!(f, "Couldn't create a tmp file in /tmp."),
-            Error::QEmu((_, ref stderr)) => write!(f, "The qemu binary has encountered an error: {}", stderr)
+            Error::QEmu((_, ref stderr)) => write!(f, "The qemu binary has encountered an error: {}", stderr),
+            Error::MissingBinary => write!(f, "Please specify a binary.")
         }
     }
 }

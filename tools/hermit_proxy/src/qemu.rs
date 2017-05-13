@@ -5,6 +5,7 @@ use std::process::{Stdio, Child, Command};
 use libc;
 use std::fs::File;
 use std::io::Read;
+use std::process::{ChildStdout, ChildStderr};
 
 use hermit_env;
 use socket::Socket;
@@ -16,6 +17,8 @@ const TMPNAME: &'static str = "/tmp/hermit-XXXXXX";
 pub struct QEmu {
     socket: Socket,
     child: Child,
+    stdout: ChildStdout,
+    stderr: ChildStderr,
     tmp_file: String,
     pid_file: String,
 }
@@ -26,10 +29,14 @@ impl QEmu {
         let pidf = utils::create_tmp_file(PIDNAME)?;
 
         let mut child = QEmu::start_with(path, &tmpf, &pidf)?.spawn().expect("Couldn't find qemu binary!");
+        let stdout = child.stdout.take().unwrap();
+        let stderr = child.stderr.take().unwrap();
 
         Ok(QEmu {
             socket: Socket::new_qemu(),
             child: child,
+            stdout: stdout,
+            stderr: stderr,
             tmp_file: tmpf,
             pid_file: pidf
         })
@@ -111,7 +118,18 @@ impl QEmu {
 
         cmd.args(args).stdout(Stdio::piped()).stderr(Stdio::piped());
 
+
         Ok(cmd)
+    }
+
+    pub fn output(&mut self) -> (String, String) {
+        let mut stderr = String::new();
+        let mut stdout = String::new();
+
+        self.stdout.read_to_string(&mut stdout);
+        self.stderr.read_to_string(&mut stderr);
+
+        (stdout, stderr)
     }
 }
 

@@ -37,17 +37,20 @@ extern fn exit(_:i32) {
 fn main() {
     env_logger::init().unwrap();
     
+    // register a signal
     let sig_action = signal::SigAction::new(signal::SigHandler::Handler(exit), signal::SaFlags::empty(), signal::SigSet::empty());
     unsafe {
         signal::sigaction(signal::SIGINT, &sig_action).unwrap();
         signal::sigaction(signal::SIGTERM, &sig_action).unwrap();
     }
 
-    if let Some(path) = env::args().skip(1).next() {
-        let isle = hermit::IsleKind::new(&path).unwrap();
+    // create the isle, wait to be available and start it
+    env::args().skip(1).next().ok_or(error::Error::MissingBinary)
+        .and_then(|path| hermit::IsleKind::new(&path))
+        .and_then(|mut isle| { 
+            isle.wait_available()?;
+            isle.run()?;
 
-        isle.wait_available();
-
-        isle.run();
-    }
+            Ok(())
+        }).unwrap();
 }

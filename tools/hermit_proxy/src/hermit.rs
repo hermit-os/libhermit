@@ -2,8 +2,7 @@ use std::env;
 use std::fs::File;
 use std::path::Path;
 use std::io::{Write, Read, BufReader, BufRead};
-use inotify::INotify;
-use inotify::ffi::{IN_MODIFY, IN_CREATE};
+use inotify::{Inotify, watch_mask};
 
 use hermit_env;
 use qemu::QEmu;
@@ -68,28 +67,38 @@ impl IsleKind {
         }
 
         Ok(false)
-
-        //debug!("HERMIT - isle log contains: {}", result);
-
-        //Ok(result == "TCP server is listening.")
     }
 
-    pub fn wait_available(&self) -> Result<()> {
+    pub fn wait_available(&mut self) -> Result<()> {
         debug!("HERMIT - wait to be available");
 
-        let mut ino = INotify::init().unwrap();
+        let mut ino = Inotify::init().unwrap();
 
         match *self {
-            IsleKind::QEMU(_) => ino.add_watch(Path::new("/tmp"), IN_MODIFY | IN_CREATE).unwrap(),
-            IsleKind::MULTI(_) => ino.add_watch(Path::new("/sys/hermit"), IN_MODIFY | IN_CREATE).unwrap(),
+            IsleKind::QEMU(_) => ino.add_watch(Path::new("/tmp"), watch_mask::MODIFY | watch_mask::CREATE).unwrap(),
+            IsleKind::MULTI(_) => ino.add_watch(Path::new("/sys/hermit"), watch_mask::MODIFY | watch_mask::CREATE).unwrap(),
             IsleKind::UHYVE(_) => return Ok(())
         };
 
+        let mut buffer = [0; 1024];
         loop {
-            let events = ino.wait_for_events().unwrap();
+            //debug!("Wait ... ");
+            if let Some(_) = ino.read_events(&mut buffer).unwrap().next() {
+                if self.is_available()? {
+                    return Ok(());
+                }
+            }
 
-            if self.is_available()? {
-                return Ok(());
+            if let IsleKind::QEMU(ref mut obj) = *self {
+                let (stdout,stderr) = obj.output();
+                
+                if stderr != "" {
+                    return Err(Error::QEmu((stdout, stderr)));
+                }
+
+                if stdout != "" {
+                    debug!("stdout: {}", stdout);
+                }
             }
         }
     }
