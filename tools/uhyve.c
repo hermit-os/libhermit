@@ -49,6 +49,7 @@
 #include <pthread.h>
 #include <elf.h>
 #include <err.h>
+#include <omp.h>
 #include <sys/wait.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
@@ -436,7 +437,7 @@ static int load_checkpoint(uint8_t* mem, char* path)
 	size_t paddr = elf_entry;
 	int ret;
 	struct timeval begin, end;
-	uint32_t i;
+	uint32_t i, j;
 
 	if (verbose)
 		gettimeofday(&begin, NULL);
@@ -462,49 +463,49 @@ static int load_checkpoint(uint8_t* mem, char* path)
 	i = full_checkpoint ? no_checkpoint : 0;
 	for(; i<=no_checkpoint; i++)
 	{
-		snprintf(fname, MAX_FNAME, "checkpoint/chk%u_mem.dat", i);
+		for(j=0; j<ncores; j++)
+		{
+			snprintf(fname, MAX_FNAME, "checkpoint/chk%u_core%u_mem.dat", i, j);
 
-		FILE* f = fopen(fname, "r");
-		if (f == NULL)
-			return -1;
+			FILE* f = fopen(fname, "r");
+			if (f == NULL)
+				return -1;
 
-		/*struct kvm_irqchip irqchip;
-		if (fread(&irqchip, sizeof(irqchip), 1, f) != 1)
-			err(1, "fread failed");
-		if (cap_irqchip && (i == no_checkpoint-1))
-			kvm_ioctl(vmfd, KVM_SET_IRQCHIP, &irqchip);*/
+			if (j == 0)
+			{
+				/*struct kvm_irqchip irqchip;
+				if (fread(&irqchip, sizeof(irqchip), 1, f) != 1)
+					err(1, "fread failed");
+				if (cap_irqchip && (i == no_checkpoint-1))
+					kvm_ioctl(vmfd, KVM_SET_IRQCHIP, &irqchip);*/
 
-		struct kvm_clock_data clock;
-		if (fread(&clock, sizeof(clock), 1, f) != 1)
-			err(1, "fread failed");
-		// only the last checkpoint has to set the clock
-		if (cap_adjust_clock_stable && (i == no_checkpoint)) {
-			struct kvm_clock_data data = {};
+				struct kvm_clock_data clock;
+				if (fread(&clock, sizeof(clock), 1, f) != 1)
+					err(1, "fread failed");
+				// only the last checkpoint has to set the clock
+				if (cap_adjust_clock_stable && (i == no_checkpoint)) {
+					struct kvm_clock_data data = {};
 
-			data.clock = clock.clock;
-			kvm_ioctl(vmfd, KVM_SET_CLOCK, &data);
-		}
-
-#if 0
-		if (fread(guest_mem, guest_size, 1, f) != 1)
-			err(1, "fread failed");
-#else
-
-		while (fread(&location, sizeof(location), 1, f) == 1) {
-			//printf("location 0x%zx\n", location);
-			if (location & PG_PSE)
-				ret = fread((size_t*) (mem + (location & PAGE_2M_MASK)), (1UL << PAGE_2M_BITS), 1, f);
-			else
-				ret = fread((size_t*) (mem + (location & PAGE_MASK)), (1UL << PAGE_BITS), 1, f);
-
-			if (ret != 1) {
-				fprintf(stderr, "Unable to read checkpoint: ret = %d", ret);
-				err(1, "fread failed");
+					data.clock = clock.clock;
+					kvm_ioctl(vmfd, KVM_SET_CLOCK, &data);
+				}
 			}
-		}
-#endif
 
-		fclose(f);
+			while (fread(&location, sizeof(location), 1, f) == 1) {
+				//printf("location 0x%zx\n", location);
+				if (location & PG_PSE)
+					ret = fread((size_t*) (mem + (location & PAGE_2M_MASK)), (1UL << PAGE_2M_BITS), 1, f);
+				else
+					ret = fread((size_t*) (mem + (location & PAGE_MASK)), (1UL << PAGE_BITS), 1, f);
+
+				if (ret != 1) {
+					fprintf(stderr, "Unable to read checkpoint: ret = %d", ret);
+					err(1, "fread failed");
+				}
+			}
+
+			fclose(f);
+		}
 	}
 
 	if (verbose) {
@@ -1071,6 +1072,7 @@ int uhyve_init(char *path)
 		restart = true;
 
 		fscanf(f, "number of cores: %u\n", &ncores);
+		omp_set_num_threads(ncores);
 		fscanf(f, "memory size: 0x%zx\n", &guest_size);
 		fscanf(f, "checkpoint number: %u\n", &no_checkpoint);
 		fscanf(f, "entry point: 0x%zx", &elf_entry);
@@ -1088,6 +1090,7 @@ int uhyve_init(char *path)
 		const char* hermit_cpus = getenv("HERMIT_CPUS");
 		if (hermit_cpus)
 			ncores = (uint32_t) atoi(hermit_cpus);
+		omp_set_num_threads(ncores);
 
 		const char* full_chk = getenv("HERMIT_FULLCHECKPOINT");
 		if (full_chk && (strcmp(full_chk, "0") != 0))
@@ -1214,11 +1217,20 @@ int uhyve_init(char *path)
 	return vcpu_init();
 }
 
+static FILE** __fmem = NULL;
+
+static void write_pageframe(size_t pgt_entry, size_t* addr, size_t sz)
+{
+	if (fwrite(&pgt_entry, sizeof(size_t), 1, __fmem[omp_get_thread_num()]) != 1)
+		err(1, "fwrite failed");
+	if (fwrite(addr, sz, 1, __fmem[omp_get_thread_num()]) != 1)
+		err(1, "fwrite failed");
+}
+
 static void timer_handler(int signum)
 {
 	struct stat st = {0};
 	const size_t flag = (!full_checkpoint && (no_checkpoint > 0)) ? PG_DIRTY : PG_ACCESSED;
-	char fname[MAX_FNAME];
 	struct timeval begin, end;
 
 	if (verbose)
@@ -1235,131 +1247,168 @@ static void timer_handler(int signum)
 
 	save_cpu_state();
 
-	snprintf(fname, MAX_FNAME, "checkpoint/chk%u_mem.dat", no_checkpoint);
-
-	FILE* f = fopen(fname, "w");
-	if (f == NULL) {
-		err(1, "fopen: unable to open file");
-	}
-
-	/*struct kvm_irqchip irqchip = {};
-	if (cap_irqchip)
-		kvm_ioctl(vmfd, KVM_GET_IRQCHIP, &irqchip);
-	else
-		memset(&irqchip, 0x00, sizeof(irqchip));
-	if (fwrite(&irqchip, sizeof(irqchip), 1, f) != 1)
-		err(1, "fwrite failed");*/
-
-	struct kvm_clock_data clock = {};
-	kvm_ioctl(vmfd, KVM_GET_CLOCK, &clock);
-	if (fwrite(&clock, sizeof(clock), 1, f) != 1)
-		err(1, "fwrite failed");
-
-#if 0
-	if (fwrite(guest_mem, guest_size, 1, f) != 1)
-		err(1, "fwrite failed");
-#elif defined(USE_DIRTY_LOG)
-	static struct kvm_dirty_log dlog = {
-		.slot = 0,
-		.dirty_bitmap = NULL
-	};
-	size_t dirty_log_size = (guest_size >> PAGE_BITS) / sizeof(size_t);
-
-	// do we create our first checkpoint
-	if (dlog.dirty_bitmap == NULL)
+#ifdef USE_DIRTY_LOG
 	{
-		// besure that all paddings are zero
-		memset(&dlog, 0x00, sizeof(dlog));
+		char fname[MAX_FNAME];
+		snprintf(fname, MAX_FNAME, "checkpoint/chk%u_mem.dat", no_checkpoint);
 
-		dlog.dirty_bitmap = malloc(dirty_log_size * sizeof(size_t));
+		FILE* f = fopen(fname, "w");
+		if (f == NULL) {
+			err(1, "fopen: unable to open file");
+		}
+
+		/*struct kvm_irqchip irqchip = {};
+		if (cap_irqchip)
+			kvm_ioctl(vmfd, KVM_GET_IRQCHIP, &irqchip);
+		else
+			memset(&irqchip, 0x00, sizeof(irqchip));
+		if (fwrite(&irqchip, sizeof(irqchip), 1, f) != 1)
+			err(1, "fwrite failed");*/
+
+		struct kvm_clock_data clock = {};
+		kvm_ioctl(vmfd, KVM_GET_CLOCK, &clock);
+		if (fwrite(&clock, sizeof(clock), 1, f) != 1)
+			err(1, "fwrite failed");
+
+		static struct kvm_dirty_log dlog = {
+			.slot = 0,
+			.dirty_bitmap = NULL
+		};
+		size_t dirty_log_size = (guest_size >> PAGE_BITS) / sizeof(size_t);
+
+		// do we create our first checkpoint
 		if (dlog.dirty_bitmap == NULL)
-			err(1, "malloc failed!\n");
-	}
-	memset(dlog.dirty_bitmap, 0x00, dirty_log_size * sizeof(size_t));
-
-	dlog.slot = 0;
-nextslot:
-	kvm_ioctl(vmfd, KVM_GET_DIRTY_LOG, &dlog);
-
-	for(size_t i=0; i<dirty_log_size; i++)
-	{
-		size_t value = ((size_t*) dlog.dirty_bitmap)[i];
-
-		if (value)
 		{
-			for(size_t j=0; j<sizeof(size_t)*8; j++)
+			// besure that all paddings are zero
+			memset(&dlog, 0x00, sizeof(dlog));
+
+			dlog.dirty_bitmap = malloc(dirty_log_size * sizeof(size_t));
+			if (dlog.dirty_bitmap == NULL)
+				err(1, "malloc failed!\n");
+		}
+		memset(dlog.dirty_bitmap, 0x00, dirty_log_size * sizeof(size_t));
+
+		dlog.slot = 0;
+nextslot:
+		kvm_ioctl(vmfd, KVM_GET_DIRTY_LOG, &dlog);
+
+		for(size_t i=0; i<dirty_log_size; i++)
+		{
+			size_t value = ((size_t*) dlog.dirty_bitmap)[i];
+
+			if (value)
 			{
-				size_t test = 1ULL << j;
-
-				if ((value & test) == test)
+				for(size_t j=0; j<sizeof(size_t)*8; j++)
 				{
-					size_t addr = (i*sizeof(size_t)*8+j)*PAGE_SIZE;
+					size_t test = 1ULL << j;
 
-					if (fwrite(&addr, sizeof(size_t), 1, f) != 1)
-						err(1, "fwrite failed");
-					if (fwrite((size_t*) (guest_mem + addr), PAGE_SIZE, 1, f) != 1)
-						err(1, "fwrite failed");
+					if ((value & test) == test)
+					{
+						size_t addr = (i*sizeof(size_t)*8+j)*PAGE_SIZE;
+
+						if (fwrite(&addr, sizeof(size_t), 1, f) != 1)
+							err(1, "fwrite failed");
+						if (fwrite((size_t*) (guest_mem + addr), PAGE_SIZE, 1, f) != 1)
+							err(1, "fwrite failed");
+					}
 				}
 			}
 		}
-	}
 
-	// do we have to check the second slot?
-	if ((dlog.slot == 0) && (guest_size > KVM_32BIT_GAP_START - GUEST_OFFSET)) {
-		dlog.slot = 1;
-		memset(dlog.dirty_bitmap, 0x00, dirty_log_size * sizeof(size_t));
-		goto nextslot;
+		// do we have to check the second slot?
+		if ((dlog.slot == 0) && (guest_size > KVM_32BIT_GAP_START - GUEST_OFFSET)) {
+			dlog.slot = 1;
+			memset(dlog.dirty_bitmap, 0x00, dirty_log_size * sizeof(size_t));
+			goto nextslot;
+		}
+
+		fclose(f);
 	}
 #else
-	size_t* pml4 = (size_t*) (guest_mem+elf_entry+PAGE_SIZE);
-	for(size_t i=0; i<(1 << PAGE_MAP_BITS); i++) {
-		if ((pml4[i] & PG_PRESENT) != PG_PRESENT)
-			continue;
-		//printf("pml[%zd] 0x%zx\n", i, pml4[i]);
-		size_t* pdpt = (size_t*) (guest_mem+(pml4[i] & PAGE_MASK));
-		for(size_t j=0; j<(1 << PAGE_MAP_BITS); j++) {
-			if ((pdpt[j] & PG_PRESENT) != PG_PRESENT)
-				continue;
-			//printf("\tpdpt[%zd] 0x%zx\n", j, pdpt[j]);
-			size_t* pgd = (size_t*) (guest_mem+(pdpt[j] & PAGE_MASK));
-			for(size_t k=0; k<(1 << PAGE_MAP_BITS); k++) {
-				if ((pgd[k] & PG_PRESENT) != PG_PRESENT)
+	if (__fmem == NULL)
+		__fmem = calloc(omp_get_max_threads(), sizeof(FILE*));
+
+	#pragma omp parallel
+	{
+
+		char fname[MAX_FNAME];
+		snprintf(fname, MAX_FNAME, "checkpoint/chk%u_core%u_mem.dat", no_checkpoint, omp_get_thread_num());
+
+		FILE* f = fopen(fname, "w");
+		if (f == NULL) {
+			err(1, "fopen: unable to open file");
+		}
+		__fmem[omp_get_thread_num()] = f;
+
+		#pragma omp barrier
+
+		#pragma omp master
+		{
+			/*struct kvm_irqchip irqchip = {};
+			if (cap_irqchip)
+				kvm_ioctl(vmfd, KVM_GET_IRQCHIP, &irqchip);
+			else
+				memset(&irqchip, 0x00, sizeof(irqchip));
+			if (fwrite(&irqchip, sizeof(irqchip), 1, f) != 1)
+				err(1, "fwrite failed");*/
+
+			struct kvm_clock_data clock = {};
+			kvm_ioctl(vmfd, KVM_GET_CLOCK, &clock);
+			if (fwrite(&clock, sizeof(clock), 1, f) != 1)
+				err(1, "fwrite failed");
+
+			size_t* pml4 = (size_t*) (guest_mem+elf_entry+PAGE_SIZE);
+			for(size_t i=0; i<(1 << PAGE_MAP_BITS); i++) {
+				if ((pml4[i] & PG_PRESENT) != PG_PRESENT)
 					continue;
-				//printf("\t\tpgd[%zd] 0x%zx\n", k, pgd[k] & ~PG_XD);
-				if ((pgd[k] & PG_PSE) != PG_PSE) {
-					size_t* pgt = (size_t*) (guest_mem+(pgd[k] & PAGE_MASK));
-					for(size_t l=0; l<(1 << PAGE_MAP_BITS); l++) {
-						if ((pgt[l] & (PG_PRESENT|flag)) == (PG_PRESENT|flag)) {
-							//printf("\t\t\t*pgt[%zd] 0x%zx, 4KB\n", l, pgt[l] & ~PG_XD);
+				//printf("pml[%zd] 0x%zx\n", i, pml4[i]);
+				size_t* pdpt = (size_t*) (guest_mem+(pml4[i] & PAGE_MASK));
+				for(size_t j=0; j<(1 << PAGE_MAP_BITS); j++) {
+					if ((pdpt[j] & PG_PRESENT) != PG_PRESENT)
+						continue;
+					//printf("\tpdpt[%zd] 0x%zx\n", j, pdpt[j]);
+					size_t* pgd = (size_t*) (guest_mem+(pdpt[j] & PAGE_MASK));
+					for(size_t k=0; k<(1 << PAGE_MAP_BITS); k++) {
+						if ((pgd[k] & PG_PRESENT) != PG_PRESENT)
+							continue;
+						//printf("\t\tpgd[%zd] 0x%zx\n", k, pgd[k] & ~PG_XD);
+						if ((pgd[k] & PG_PSE) != PG_PSE) {
+							size_t* pgt = (size_t*) (guest_mem+(pgd[k] & PAGE_MASK));
+							for(size_t l=0; l<(1 << PAGE_MAP_BITS); l++) {
+								if ((pgt[l] & (PG_PRESENT|flag)) == (PG_PRESENT|flag)) {
+									//printf("\t\t\t*pgt[%zd] 0x%zx, 4KB\n", l, pgt[l] & ~PG_XD);
+									if (!full_checkpoint)
+										pgt[l] = pgt[l] & ~(PG_DIRTY|PG_ACCESSED);
+									#pragma omp task
+									write_pageframe(pgt[l] & ~PG_PSE /* because PAT use the same bit as PSE */,
+										(size_t*) (guest_mem + (pgt[l] & PAGE_MASK)), (1UL << PAGE_BITS));
+								}
+							}
+						} else if ((pgd[k] & flag) == flag) {
+							//printf("\t\t*pgd[%zd] 0x%zx, 2MB\n", k, pgd[k] & ~PG_XD);
 							if (!full_checkpoint)
-								pgt[l] = pgt[l] & ~(PG_DIRTY|PG_ACCESSED);
-							size_t pgt_entry = pgt[l] & ~PG_PSE; // because PAT use the same bit as PSE
-							if (fwrite(&pgt_entry, sizeof(size_t), 1, f) != 1)
-								err(1, "fwrite failed");
-							if (fwrite((size_t*) (guest_mem + (pgt[l] & PAGE_MASK)), (1UL << PAGE_BITS), 1, f) != 1)
-								err(1, "fwrite failed");
+								pgd[k] = pgd[k] & ~(PG_DIRTY|PG_ACCESSED);
+							#pragma omp task
+							write_pageframe(pgd[k],
+								(size_t*) (guest_mem + (pgd[k] & PAGE_2M_MASK)), (1UL << PAGE_2M_BITS));
 						}
 					}
-				} else if ((pgd[k] & flag) == flag) {
-					//printf("\t\t*pgd[%zd] 0x%zx, 2MB\n", k, pgd[k] & ~PG_XD);
-					if (!full_checkpoint)
-						pgd[k] = pgd[k] & ~(PG_DIRTY|PG_ACCESSED);
-					if (fwrite(pgd+k, sizeof(size_t), 1, f) != 1)
-						err(1, "fwrite failed");
-					if (fwrite((size_t*) (guest_mem + (pgd[k] & PAGE_2M_MASK)), (1UL << PAGE_2M_BITS), 1, f) != 1)
-						err(1, "fwrite failed");
 				}
 			}
 		}
-	}
-#endif
 
-	fclose(f);
+		#pragma omp barrier
+		#pragma omp taskwait
+
+		fclose(f);
+
+	} // end of the parallel omp region
+#endif
 
 	pthread_barrier_wait(&barrier);
 
 	// update configuration file
-	f = fopen("checkpoint/chk_config.txt", "w");
+	FILE* f = fopen("checkpoint/chk_config.txt", "w");
 	if (f == NULL) {
 		err(1, "fopen: unable to open file");
 	}
