@@ -82,9 +82,8 @@ impl QEmu {
 
         let app_port = hermit_env::app_port();
         if app_port != "" {
-            port_str = format!("tcp:{}::{}", app_port, app_port);
-            args.push("-redir");
-            args.push(&port_str);
+            port_str = format!("{},hostfwd=tcp::{}-:{}", hostfwd,app_port, app_port);
+            args[12] = &port_str;
         }
 
         if hermit_env::use_kvm() != "0" {

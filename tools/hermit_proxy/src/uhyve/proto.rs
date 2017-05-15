@@ -1,5 +1,7 @@
 use libc::{write, read, lseek, exit, open, close, c_int, c_void};
 use uhyve::kvm_header::{kvm_run, KVM_EXIT_IO, KVM_EXIT_HLT, KVM_EXIT_MMIO,KVM_EXIT_FAIL_ENTRY, KVM_EXIT_INTERNAL_ERROR, KVM_EXIT_SHUTDOWN }; 
+use std::ffi::CStr;
+
 
 const PORT_WRITE: u16 = 0x499;
 const PORT_OPEN: u16 = 0x500;
@@ -8,37 +10,43 @@ const PORT_READ: u16 = 0x502;
 const PORT_EXIT: u16 = 0x503;
 const PORT_LSEEK: u16 = 0x504;
 
+#[repr(packed)]
 pub struct Write {
-    fd: c_int,
-    buf: *const u8,
-    length: usize
+    fd: i32,
+    buf: isize,
+    length: isize
 }
 
+#[repr(packed)]
 pub struct Open {
-    name: *const u8,
-    flags: c_int,
-    mode: c_int,
-    ret: c_int
+    name: isize,
+    flags: i32,
+    mode: i32,
+    ret: i32
 }
 
+#[repr(packed)]
 pub struct Close {
-    fd: c_int,
-    ret: c_int
+    fd: i32,
+    ret: i32
 }
 
+#[repr(packed)]
 pub struct Read {
-    fd: c_int,
-    buf: *mut u8,
+    fd: i32,
+    buf: isize,
     len: usize,
     ret: isize
 }
 
+#[repr(packed)]
 pub struct LSeek {
-    fd: c_int,
-    offset: usize,
-    whence: c_int
+    fd: i32,
+    whence: i32,
+    offset: i64,
 }
 
+#[derive(Debug)]
 pub enum Syscall {
     Write(*mut Write),
     Open(*mut Open),
@@ -54,16 +62,15 @@ impl Syscall {
         unsafe {
             let ref run = *(mem.as_ptr() as *const kvm_run);
 
-            debug!("{:?}", &mem[0..100]);
-
             debug!("Exit reason {}", run.exit_reason);
 
             if run.exit_reason != KVM_EXIT_IO {
                 return Syscall::Other(mem.as_ptr() as *const kvm_run);
             }
 
-            let offset = mem.as_ptr().offset(run.__bindgen_anon_1.io.data_offset as isize) as isize;
-        
+
+            let offset = *((mem.as_ptr().offset(run.__bindgen_anon_1.io.data_offset as isize) as *const isize));
+            
             match run.__bindgen_anon_1.io.port {
                 PORT_WRITE => { Syscall::Write(guest_mem.as_ptr().offset(offset) as *mut Write) },
                 PORT_READ  => { Syscall::Read (guest_mem.as_ptr().offset(offset) as *mut Read)  },
@@ -78,19 +85,20 @@ impl Syscall {
     }
 
     pub unsafe fn run(&self, guest_mem: *mut u8) {
+        debug!("{:?}", *self);
+        
         match *self {
             Syscall::Write(obj) => {
-                //let Write { fd, buf, length } = *write;
-                (*obj).length = write((*obj).fd, guest_mem.offset((*obj).buf as isize) as *const c_void, (*obj).length) as usize;
+                (*obj).length = write((*obj).fd, guest_mem.offset((*obj).buf) as *const c_void, (*obj).length as usize);
             },
             Syscall::Read(obj) => {
-                (*obj).ret = read((*obj).fd, guest_mem.offset((*obj).buf as isize) as *mut c_void, (*obj).len) as isize;
+                (*obj).ret = read((*obj).fd, guest_mem.offset((*obj).buf) as *mut c_void, (*obj).len);
             },
             Syscall::Exit(obj) => {
                 exit(*((guest_mem as *mut i32).offset((*obj) as isize)));
             },
             Syscall::Open(obj) => {
-                (*obj).ret = open((guest_mem as *const i8).offset((*obj).name as isize), (*obj).flags, (*obj).mode);
+                (*obj).ret = open(guest_mem.offset((*obj).name) as *const i8, (*obj).flags, (*obj).mode);
             },
             Syscall::Close(obj) => {
                 if (*obj).ret == 2 {
@@ -98,7 +106,7 @@ impl Syscall {
                 }
             },
             Syscall::LSeek(obj) => {
-                (*obj).offset = lseek((*obj).fd, (*obj).offset as i64, (*obj).whence) as usize;
+                (*obj).offset = lseek((*obj).fd, (*obj).offset as i64, (*obj).whence);
             },
             Syscall::Other(id) => { match (*id).exit_reason {
                 KVM_EXIT_HLT => panic!("Guest has halted the CPU, this is considered as a normal exit."),

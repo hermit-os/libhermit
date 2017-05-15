@@ -8,6 +8,10 @@ find_package(rustdoc)
 find_package(cargo)
 include(Rust)
 
+#cargo_dependency(cargo
+#    PACKAGE_NAMES memmap libc nix elf errno inotify byteorder log env_logger
+#    PACKAGE_VERSIONS =0.5.2 =0.2.22 =0.8 =0.0.10 =0.2.3 =0.4 =1 =0.3 =0.3)
+
 ExternalProject_Add(
     hermit_proxy
     DOWNLOAD_COMMAND ""
@@ -17,4 +21,4 @@ ExternalProject_Add(
     INSTALL_COMMAND ""
     LOG_BUILD ON)
 
-install(FILES target/debug/hermit_proxy DESTINATION ${CMAKE_CURRENT_SOURCE_DIR})
+install(PROGRAMS target/debug/hermit_proxy DESTINATION bin)

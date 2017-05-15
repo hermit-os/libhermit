@@ -90,12 +90,10 @@ impl VirtualMachine {
                 *(ptr.offset(0x18) as *mut u32) = utils::cpufreq()? / 1000; // CPU frequency
                 *(ptr.offset(0x24) as *mut u32) = 1;              // number of used CPUs
                 *(ptr.offset(0x30) as *mut u32) = 0;              // apicid (?)
-                *(ptr.offset(0x38) as *mut u64) = header.filesz;  // 
+                *(ptr.offset(0x38) as *mut u64) = header.memsz;  // 
                 *(ptr.offset(0x60) as *mut u32) = 1;              // NUMA nodes
                 *(ptr.offset(0x94) as *mut u32) = 1;              // announce uhyve
             }
-
-
         }
 
         debug!("Kernel loaded");
@@ -110,7 +108,6 @@ impl VirtualMachine {
             slot: 0, guest_phys_addr: 0, flags: 0, memory_size: self.mem.len() as u64, userspace_addr: start_ptr
         };
 
-        debug!("Bla {}", self.mem.len());
         self.set_user_memory_region(kvm_region)?;
         self.create_irqchip()?;
         let vcpu = self.create_vcpu(0)?;

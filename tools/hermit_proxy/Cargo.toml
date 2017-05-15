@@ -1,5 +1,5 @@
 [package]
-name = "hermit_proxy"
+name = "hermitcore_proxy"
 version = "0.0.1"
 authors = ["bytesnake <bytesnake@mailbox.org>"]
 
@@ -12,4 +12,7 @@ errno = "0.2.3"
 inotify = "0.4"
 byteorder = "1"
 log = "0.3"
-env_logger = "0.3"
+
+[dependencies.env_logger]
+version = "0.3"
+default-features = false

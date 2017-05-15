@@ -205,8 +205,6 @@ impl VirtualCPU {
         debug!("Set the system to 64bit");
         self.setup_system_64bit(&mut sregs)?;
 
-        debug!("SREGS {:#?}", sregs);
-
         self.set_sregs(sregs)?;
 
         Ok(())
@@ -227,8 +225,6 @@ impl VirtualCPU {
             *(ptr.offset(gdt::BOOT_CODE)) = gdt_code.as_u64();
             *(ptr.offset(gdt::BOOT_DATA)) = gdt_data.as_u64();
         }
-
-        debug!("{} {} {}", gdt_null.as_u64(), gdt_code.as_u64(), gdt_data.as_u64());
 
         gdt_code.apply_to_kvm(gdt::BOOT_CODE, &mut code_seg);
         gdt_data.apply_to_kvm(gdt::BOOT_DATA, &mut data_seg);
