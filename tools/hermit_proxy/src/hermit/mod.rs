@@ -32,14 +32,17 @@ pub fn new_isle(path: &str) -> Result<Box<Isle>> {
 
 pub trait Isle {
     fn num(&self) -> u8;
-    fn log_file(&self) -> Result<String>;
-    fn log_path(&self) -> Result<String>;
-    fn cpu_path(&self) -> Result<String>;
+    fn log_file(&self) -> Option<String>;
+    fn log_path(&self) -> Option<String>;
+    fn cpu_path(&self) -> Option<String>;
 
     fn run(&mut self) -> Result<()>;
 
     fn is_available(&self) -> Result<bool> {
-        let log = self.log_file()?;
+        let log = match self.log_file() {
+            Some(f) => f,
+            None => return Ok(false)
+        };
         
         // open the log file
         let mut file = File::open(log)
@@ -63,7 +66,11 @@ pub trait Isle {
         let mut ino = Inotify::init().unwrap();
 
         // watch on the log path
-        let log_path = self.log_path()?;
+        let log_path = match self.log_path() {
+            Some(f) => f,
+            None => return Ok(())
+        };
+
         ino.add_watch(Path::new(&log_path), watch_mask::MODIFY | watch_mask::CREATE).unwrap();
 
         let mut buffer = [0; 1024];
@@ -92,7 +99,10 @@ pub trait Isle {
     fn stop(&self) -> Result<()> {
         debug!("Stop the HermitIsle");
        
-        let cpu_path = self.cpu_path()?;
+        let cpu_path = match self.cpu_path() {
+            Some(f) => f,
+            None => return Ok(())
+        };
 
         let mut cpus_file = File::create(&cpu_path)
             .map_err(|_| Error::InvalidFile(cpu_path.clone()))?;

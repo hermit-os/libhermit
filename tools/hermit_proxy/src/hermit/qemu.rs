@@ -127,14 +127,14 @@ impl QEmu {
 
 impl Isle for QEmu {
     fn num(&self) -> u8 { 0 }
-    fn log_file(&self) -> Result<String> {
-        Ok(self.tmp_file.clone())
+    fn log_file(&self) -> Option<String> {
+        Some(self.tmp_file.clone())
     }
-    fn log_path(&self) -> Result<String> {
-        Ok("/tmp".into())
+    fn log_path(&self) -> Option<String> {
+        Some("/tmp".into())
     }
-    fn cpu_path(&self) -> Result<String> {
-        Err(Error::InternalError) 
+    fn cpu_path(&self) -> Option<String> {
+        None 
     }
 
     fn run(&mut self) -> Result<()> {

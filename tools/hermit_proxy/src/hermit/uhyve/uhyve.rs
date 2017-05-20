@@ -123,16 +123,16 @@ impl Isle for Uhyve {
         0
     }
 
-    fn log_file(&self) -> Result<String> {
-        Err(Error::InternalError)
+    fn log_file(&self) -> Option<String> {
+        None
     }
 
-    fn log_path(&self) -> Result<String> {
-        Err(Error::InternalError)
+    fn log_path(&self) -> Option<String> {
+        None
     }
 
-    fn cpu_path(&self) -> Result<String> {
-        Err(Error::InternalError)
+    fn cpu_path(&self) -> Option<String> {
+        None
     }
 
     fn run(&mut self) -> Result<()> {

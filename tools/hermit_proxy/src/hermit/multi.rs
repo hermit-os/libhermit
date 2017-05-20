@@ -56,16 +56,16 @@ impl Isle for Multi {
         self.num
     }
 
-    fn log_file(&self) -> Result<String> {
-        Ok(format!("/sys/hermit/isle{}/log", self.num))
+    fn log_file(&self) -> Option<String> {
+        Some(format!("/sys/hermit/isle{}/log", self.num))
     }
 
-    fn log_path(&self) -> Result<String> {
-        Ok("/sys/hermit/".into())
+    fn log_path(&self) -> Option<String> {
+        Some("/sys/hermit/".into())
     }
 
-    fn cpu_path(&self) -> Result<String> {
-        Ok(format!("/sys/hermit/isle{}/cpus", self.num))
+    fn cpu_path(&self) -> Option<String> {
+        Some(format!("/sys/hermit/isle{}/cpus", self.num))
     }
 
     fn run(&mut self) -> Result<()> {
