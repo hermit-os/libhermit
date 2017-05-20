@@ -101,10 +101,9 @@ impl QEmu {
         }
 
         if hermit_env::verbose() != "0" {
-            println!("{:#?}", args);
+            debug!("Execute {} with args {:#?}", hermit_env::qemu_binary(), args);
         }
 
-        debug!("Execute {} with args {:#?}", hermit_env::qemu_binary(), args);
 
         let mut cmd = Command::new(hermit_env::qemu_binary());
 
