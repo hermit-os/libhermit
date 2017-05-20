@@ -1,14 +1,15 @@
 use std::env;
-use utils;
-use error::*;
 use std::process::{Stdio, Child, Command};
 use libc;
 use std::fs::File;
 use std::io::Read;
 use std::process::{ChildStdout, ChildStderr};
 
-use hermit_env;
-use socket::Socket;
+use hermit::Isle;
+use hermit::utils;
+use hermit::error::*;
+use hermit::hermit_env;
+use hermit::socket::Socket;
 
 const PIDNAME: &'static str = "/tmp/hpid-XXXXXX";
 const TMPNAME: &'static str = "/tmp/hermit-XXXXXX";
@@ -40,14 +41,6 @@ impl QEmu {
             tmp_file: tmpf,
             pid_file: pidf
         })
-    }
-    
-    pub fn run(&self) {
-        self.socket.connect().run();
-    }
-
-    pub fn tmp_path(&self) -> &str {
-        &self.tmp_file
     }
     
     pub fn start_with(path: &str, tmp_file: &str, pid_file: &str) -> Result<Command> {
@@ -129,6 +122,25 @@ impl QEmu {
         self.stderr.read_to_string(&mut stderr);
 
         (stdout, stderr)
+    }
+}
+
+impl Isle for QEmu {
+    fn num(&self) -> u8 { 0 }
+    fn log_file(&self) -> Result<String> {
+        Ok(self.tmp_file.clone())
+    }
+    fn log_path(&self) -> Result<String> {
+        Ok("/tmp".into())
+    }
+    fn cpu_path(&self) -> Result<String> {
+        Err(Error::InternalError) 
+    }
+
+    fn run(&mut self) -> Result<()> {
+        self.socket.connect().run();
+
+        Ok(())
     }
 }
 

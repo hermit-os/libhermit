@@ -2,10 +2,10 @@ use std::fs::File;
 use std::env;
 use std::io::{Write, Read};
 
-use error::*;
-
-use hermit_env;
-use socket::Socket;
+use hermit::Isle;
+use hermit::error::*;
+use hermit::hermit_env;
+use hermit::socket::Socket;
 
 pub struct Multi {
     num: u8,
@@ -49,12 +49,28 @@ impl Multi {
 
         Ok(Multi { num: num, socket: Socket::new_multi(num) })
     }
+}
 
-    pub fn get_num(&self) -> u8 {
+impl Isle for Multi {
+    fn num(&self) -> u8 {
         self.num
     }
 
-    pub fn run(&self) {
+    fn log_file(&self) -> Result<String> {
+        Ok(format!("/sys/hermit/isle{}/log", self.num))
+    }
+
+    fn log_path(&self) -> Result<String> {
+        Ok("/sys/hermit/".into())
+    }
+
+    fn cpu_path(&self) -> Result<String> {
+        Ok(format!("/sys/hermit/isle{}/cpus", self.num))
+    }
+
+    fn run(&mut self) -> Result<()> {
         self.socket.connect().run();
+
+        Ok(())
     }
 }

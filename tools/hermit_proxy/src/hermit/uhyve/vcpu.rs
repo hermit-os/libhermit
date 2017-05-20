@@ -6,11 +6,11 @@ use std::os::unix::io::FromRawFd;
 use memmap::{Mmap, Protection};
 use errno::errno;
 
-use uhyve;
-use uhyve::kvm_header::{kvm_sregs, kvm_regs, kvm_segment, kvm_cpuid2,kvm_cpuid2_header};
-use uhyve::{Result, Error, NameIOCTL};
-use uhyve::gdt;
-use uhyve::proto;
+use hermit::uhyve;
+use super::kvm_header::{kvm_sregs, kvm_regs, kvm_segment, kvm_cpuid2,kvm_cpuid2_header};
+use super::{Result, Error, NameIOCTL};
+use super::gdt;
+use super::proto;
 
 pub const GUEST_OFFSET: usize = 0x0;
 pub const CPUID_FUNC_PERFMON: usize = 0x0A;

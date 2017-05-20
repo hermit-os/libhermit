@@ -1,5 +1,5 @@
 [package]
-name = "hermitcore_proxy"
+name = "hermit_proxy"
 version = "0.0.1"
 authors = ["bytesnake <bytesnake@mailbox.org>"]
 

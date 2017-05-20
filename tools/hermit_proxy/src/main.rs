@@ -17,18 +17,11 @@ extern crate byteorder;
 #[macro_use]
 extern crate nix;
 
-mod error;
-mod utils;
 mod hermit;
-mod uhyve;
-mod hermit_env;
-mod qemu;
-mod multi;
-mod proto;
-mod socket;
 
 use nix::sys::signal;
 use std::{env, process};
+use hermit::error;
 
 extern fn exit(_:i32) {
     panic!("Aborting ..");
@@ -46,9 +39,9 @@ fn main() {
 
     // create the isle, wait to be available and start it
     env::args().skip(1).next().ok_or(error::Error::MissingBinary)
-        .and_then(|path| hermit::IsleKind::new(&path))
+        .and_then(|path| hermit::new_isle(&path))
         .and_then(|mut isle| { 
-            isle.wait_available()?;
+            isle.wait_until_available()?;
             isle.run()?;
 
             Ok(())

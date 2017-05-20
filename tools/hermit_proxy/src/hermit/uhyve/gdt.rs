@@ -2,7 +2,7 @@
 //! GDT. The Global Descriptor Table contains information about the memory structure used by the
 //! X86 family.
 
-use uhyve::kvm_header::kvm_segment;
+use super::kvm_header::kvm_segment;
 
 /// Used segments in order
 pub const BOOT_NULL: isize = 0;

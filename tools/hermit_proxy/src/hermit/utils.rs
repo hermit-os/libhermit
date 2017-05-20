@@ -3,7 +3,7 @@ use std::os::unix::io::FromRawFd;
 use std::ffi::CString;
 use std::io::Read;
 
-use error::*;
+use hermit::error::*;
 
 use libc;
 

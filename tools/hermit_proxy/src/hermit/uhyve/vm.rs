@@ -8,12 +8,13 @@ use std::io::{Read, Cursor};
 use memmap::{Mmap, Protection};
 use elf;
 use elf::types::{ELFCLASS64, OSABI, PT_LOAD};
+use std::ffi::CStr;
 
-use utils;
-use uhyve;
-use uhyve::kvm_header::{kvm_userspace_memory_region };
-use uhyve::{Result, Error, NameIOCTL};
-use uhyve::vcpu::VirtualCPU;
+use hermit::utils;
+use hermit::uhyve;
+use super::kvm_header::{kvm_userspace_memory_region };
+use super::{Result, Error, NameIOCTL};
+use super::vcpu::VirtualCPU;
 
 //use byteorder::ByteOrder;
 // guest offset?
@@ -23,7 +24,8 @@ pub struct VirtualMachine {
     kvm_fd: libc::c_int,
     vm_fd: libc::c_int,
     mem: Mmap,
-    elf_entry: Option<u64>,
+    elf_header: Option<elf::types::FileHeader>,
+    klog: Option<*const i8>,
     vcpus: Vec<VirtualCPU>,
     size: usize
 }
@@ -35,7 +37,7 @@ impl VirtualMachine {
         // create a new memory region to map the memory of our guest
         Mmap::anonymous(size, Protection::ReadWrite)
             .map_err(|_| Error::NotEnoughMemory)
-            .map(|mem| VirtualMachine { kvm_fd: kvm_fd, vm_fd: fd, mem: mem, elf_entry: None, vcpus: Vec::new(), size: size })
+            .map(|mem| VirtualMachine { kvm_fd: kvm_fd, vm_fd: fd, mem: mem, elf_header: None, klog: None, vcpus: Vec::new(), size: size })
     }
 
     /// Loads a kernel from path and initialite mem and elf_entry
@@ -56,7 +58,7 @@ impl VirtualMachine {
             return Err(Error::InvalidFile(path.into()));
         }
 
-        self.elf_entry = Some(file_efi.ehdr.entry);
+        self.elf_header = Some(file_efi.ehdr);
 
         // acquire the slices of the user memory and kernel file
         let vm_mem_length = self.mem.len() as u64;
@@ -93,6 +95,8 @@ impl VirtualMachine {
                 *(ptr.offset(0x38) as *mut u64) = header.memsz;  // 
                 *(ptr.offset(0x60) as *mut u32) = 1;              // NUMA nodes
                 *(ptr.offset(0x94) as *mut u32) = 1;              // announce uhyve
+            
+                self.klog = Some(vm_mem.as_ptr().offset(header.paddr as isize + 0x5000) as *const i8);
             }
         }
 
@@ -132,11 +136,18 @@ impl VirtualMachine {
     }
 
     pub fn create_vcpu(&mut self, id: u8) -> Result<VirtualCPU> {
-        let entry = self.elf_entry.ok_or(Error::KernelNotLoaded)?;
+        let entry = self.elf_header.ok_or(Error::KernelNotLoaded)?.entry;
 
         let cpu = VirtualCPU::new(self.kvm_fd, self.vm_fd, id, entry, &mut self.mem)?;
 
         Ok(cpu)
+    }
+
+    pub fn output(&self) -> Result<String> {
+        let paddr = self.klog.ok_or(Error::KernelNotLoaded)?;
+        let c_str = unsafe { CStr::from_ptr(paddr).to_str().map_err(|_| Error::KernelNotLoaded)? };
+        
+        Ok(c_str.into())
     }
 
     pub fn run(&mut self) -> Result<()> {
@@ -147,5 +158,13 @@ impl VirtualMachine {
         }
 
         Ok(())
+    }
+}
+
+impl Drop for VirtualMachine {
+    fn drop(&mut self) {
+        if let Ok(output) = self.output() {
+            debug!("{}", output);
+        }
     }
 }

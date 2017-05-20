@@ -6,8 +6,8 @@ use std::ffi::CString;
 use std::process;
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 
-use proto;
-use proto::Packet;
+use hermit::proto;
+use hermit::proto::Packet;
 
 use libc;
 
