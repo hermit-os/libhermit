@@ -8,7 +8,9 @@ order: 3
 
 ## A lightweight unikernel for a scalable and predictable runtime behavior
 
-![HermitCore Demo](img/demo.gif)
+<div style="width:100%; margin:0; auto" align="center">
+<script type="text/javascript" src="https://asciinema.org/a/42857.js" id="asciicast-42857" async=""></script>
+</div>
 
 The project [HermitCore](http://www.hermitcore.org) is a novel [unikernel](http://www.unikernel.org) targeting at a scalable and predictable runtime behavior for HPC and cloud environments.
 HermitCore could be used a classical unikernel within a virtual machine.
