@@ -8,6 +8,8 @@ order: 3
 
 ## A lightweight unikernel for a scalable and predictable runtime behavior
 
+![HermitCore Demo](img/demo.gif)
+
 The project [HermitCore](http://www.hermitcore.org) is a novel [unikernel](http://www.unikernel.org) targeting at a scalable and predictable runtime behavior for HPC and cloud environments.
 HermitCore could be used a classical unikernel within a virtual machine.
 In addition, it extends the [multi-kernel approach](http://dx.doi.org/10.1145/2931088.2931092) (like [McKernel](http://www-sys-aics.riken.jp/ResearchTopics/os/mckernel.html)) with unikernel features to provide better programmability and scalability for hierarchical systems.
@@ -26,8 +28,6 @@ This reduces the demand on resources and improves the boot time, which is an exc
 
 HermitCore is the result of a research project at RWTH Aachen University and is currently an experimental approach, i.e., not production ready.
 Please use it carefully.
-
-![HermitCore Demo](img/demo.gif)
 
 The first [paper](https://dl.acm.org/authorize?N04880), which sketchs the design of HermitCore, was presented at the [International Workshop on Runtime and Operating Systems for Supercomputers (ROSS 2016)](http://www.mcs.anl.gov/events/workshops/ross/2016/program.php).
 The [slides](/pdf/ross2016.pdf) summarize the design and present the first performance results.
