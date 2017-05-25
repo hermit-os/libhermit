@@ -35,6 +35,11 @@ The first [paper](https://dl.acm.org/authorize?N04880), which sketchs the design
 The [slides](/pdf/ross2016.pdf) summarize the design and present the first performance results.
 At the [30th International Conference on Architecture of Computing Systems](http://arcs2017.itec.kit.edu) the migration from a pure multi-kernel to a kernel, which supports a multi-kernel and also a unikernel mode, was [presented](http://dx.doi.org/10.1007/978-3-319-54999-6_6).
 
+## Contributing
+
+HermitCore is being developed on [GitHub](https://github.com/RWTH-OS/HermitCore).
+Create your own fork, send us a pull request, and chat with us on [Slack](https://radiant-ridge-95061.herokuapp.com).
+
 ## Requirements
 
 The build process works currently only on **x86-based Linux** systems. To build
