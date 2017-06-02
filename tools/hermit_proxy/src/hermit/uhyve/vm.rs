@@ -12,7 +12,7 @@ use std::ffi::CStr;
 
 use hermit::utils;
 use hermit::uhyve;
-use super::kvm_header::{kvm_userspace_memory_region };
+use super::kvm_header::{kvm_userspace_memory_region, KVM_CAP_SYNC_MMU, KVM_32BIT_GAP_START, KVM_32BIT_GAP_SIZE};
 use super::{Result, Error, NameIOCTL};
 use super::vcpu::VirtualCPU;
 
@@ -26,32 +26,43 @@ pub struct VirtualMachine {
     mem: Mmap,
     elf_header: Option<elf::types::FileHeader>,
     klog: Option<*const i8>,
-    vcpus: Vec<VirtualCPU>,
-    size: usize
+    mboot: Option<*mut u8>,
+    vcpus: Vec<VirtualCPU>
 }
 
 impl VirtualMachine {
     pub fn new(kvm_fd: libc::c_int, fd: libc::c_int, size: usize) -> Result<VirtualMachine> {
-        debug!("UHYVE - New virtual machine with memory size {}", size);
+        debug!("New virtual machine with memory size {}", size);
 
         // create a new memory region to map the memory of our guest
-        Mmap::anonymous(size, Protection::ReadWrite)
-            .map_err(|_| Error::NotEnoughMemory)
-            .map(|mem| VirtualMachine { kvm_fd: kvm_fd, vm_fd: fd, mem: mem, elf_header: None, klog: None, vcpus: Vec::new(), size: size })
+        let mut mem;
+        if size < KVM_32BIT_GAP_START {
+            mem = Mmap::anonymous(size, Protection::ReadWrite)
+                .map_err(|_| Error::NotEnoughMemory)?;
+        } else {
+            mem = Mmap::anonymous(size + KVM_32BIT_GAP_START, Protection::ReadWrite)
+                .map_err(|_| Error::NotEnoughMemory)?;
+            
+            unsafe { libc::mprotect((mem.mut_ptr() as *mut libc::c_void).offset(KVM_32BIT_GAP_START as isize), KVM_32BIT_GAP_START, libc::PROT_NONE); }
+        }
+        
+        Ok(VirtualMachine { kvm_fd: kvm_fd, vm_fd: fd, mem: mem, elf_header: None, klog: None, vcpus: Vec::new(), mboot: None })
     }
 
     /// Loads a kernel from path and initialite mem and elf_entry
     pub fn load_kernel(&mut self, path: &str) -> Result<()> {
-        debug!("UHYVE - Load kernel from {}", path);
-        
+        debug!("Load kernel from {}", path);
+
         // open the file in read only
-        let file = Mmap::open_path(path, Protection::Read).map_err(|_| Error::InvalidFile(path.into()))?;
+        let file = Mmap::open_path(path, Protection::Read)
+            .map_err(|_| Error::InvalidFile(path.into()))?;
 
         // parse the header with ELF module
         let file_efi = {
             let mut data = unsafe { Cursor::new(file.as_slice()) };
             
-            elf::File::open_stream(&mut data).map_err(|_| Error::InvalidFile(path.into()))
+            elf::File::open_stream(&mut data)
+                .map_err(|_| Error::InvalidFile(path.into()))
         }?;
 
         if file_efi.ehdr.class != ELFCLASS64 ||  file_efi.ehdr.osabi != OSABI(0x42) {
@@ -97,6 +108,7 @@ impl VirtualMachine {
                 *(ptr.offset(0x94) as *mut u32) = 1;              // announce uhyve
             
                 self.klog = Some(vm_mem.as_ptr().offset(header.paddr as isize + 0x5000) as *const i8);
+                self.mboot = Some(vm_mem.as_mut_ptr().offset(header.paddr as isize) as *mut u8);
             }
         }
 
@@ -107,18 +119,35 @@ impl VirtualMachine {
 
     /// Initialize the virtual machine
     pub fn init(&mut self) -> Result<()> {
+        let mut identity_base: u64 = 0xfffbc000;
+        if let Ok(true) = self.check_extension(KVM_CAP_SYNC_MMU) {
+            identity_base = 0xfeffc000;
+
+            self.set_tss_identity(identity_base)?;
+        }
+        
+        self.set_tss_addr(identity_base+0x1000)?;
+
         let start_ptr = unsafe { self.mem.as_slice().as_ptr() as u64 };
-        let kvm_region = kvm_userspace_memory_region {
-            slot: 0, guest_phys_addr: 0, flags: 0, memory_size: self.mem.len() as u64, userspace_addr: start_ptr
+        let mut kvm_region = kvm_userspace_memory_region {
+            slot: 0, guest_phys_addr: 0, flags: 0, memory_size: self.mem_size() as u64, userspace_addr: start_ptr
         };
 
-        self.set_user_memory_region(kvm_region)?;
+        if self.mem_size() <= KVM_32BIT_GAP_START {
+            self.set_user_memory_region(kvm_region)?;
+        } else {
+            kvm_region.memory_size = KVM_32BIT_GAP_START as u64;
+            self.set_user_memory_region(kvm_region)?;
+
+            kvm_region.slot = 1;
+            kvm_region.guest_phys_addr = (KVM_32BIT_GAP_START+KVM_32BIT_GAP_SIZE) as u64;
+            kvm_region.memory_size = (self.mem_size() - KVM_32BIT_GAP_SIZE - KVM_32BIT_GAP_START) as u64;
+            self.set_user_memory_region(kvm_region)?;
+        }
+
         self.create_irqchip()?;
-        let vcpu = self.create_vcpu(0)?;
 
-        self.vcpus.push(vcpu);
-
-        Ok(())
+        self.create_vcpu(0)
     }
 
     pub fn set_user_memory_region(&self, mut region: kvm_userspace_memory_region) -> Result<()> {
@@ -135,12 +164,46 @@ impl VirtualMachine {
         }
     }
 
-    pub fn create_vcpu(&mut self, id: u8) -> Result<VirtualCPU> {
+    pub fn check_extension(&self, mut extension: u32) -> Result<bool> {
+        unsafe {
+            uhyve::ioctl::check_extension(self.vm_fd, (&mut extension) as *mut u32 as *mut u8)
+                .map_err(|x| Error::IOCTL(NameIOCTL::CheckExtension)).map(|x| x == 1)
+        }
+    }
+
+    pub fn set_tss_identity(&self, identity_base: u64) -> Result<()> {
+        unsafe {
+            uhyve::ioctl::set_identity_map_addr(self.kvm_fd, (&identity_base) as *const u64)
+                .map_err(|x| Error::IOCTL(NameIOCTL::SetTssIdentity)).map(|_| ())
+        }
+    }
+
+    pub fn set_tss_addr(&self, mut identity_base: u64) -> Result<()> {
+        unsafe {
+            uhyve::ioctl::set_tss_addr(self.vm_fd, identity_base as *mut u8)
+                .map_err(|x| Error::IOCTL(NameIOCTL::SetTssAddr)).map(|_| ())
+        }
+    }
+
+    pub fn create_vcpu(&mut self, id: u8) -> Result<()> {
         let entry = self.elf_header.ok_or(Error::KernelNotLoaded)?.entry;
 
-        let cpu = VirtualCPU::new(self.kvm_fd, self.vm_fd, id, entry, &mut self.mem)?;
+        let cpu = VirtualCPU::new(self.kvm_fd, self.vm_fd, id, entry, &mut self.mem, self.mboot.unwrap())?;
 
-        Ok(cpu)
+        let id = id as usize;
+
+        /*
+        let len = self.vcpus.len();
+        if len < id+1 {
+            debug!("Reserve one!");
+            self.vcpus.reserve(id - len + 1);
+        }
+
+        self.vcpus[id] = cpu;
+*/
+        self.vcpus.insert(id, cpu);
+
+        Ok(())
     }
 
     pub fn output(&self) -> Result<String> {
@@ -153,11 +216,19 @@ impl VirtualMachine {
     pub fn run(&mut self) -> Result<()> {
         let mut guest_mem = unsafe { self.mem.as_mut_slice() };
         
-        for vcpu in &self.vcpus {
-            vcpu.run(&mut guest_mem)?;
+        loop {
+            if let Some(vcpu)  = self.vcpus.pop() {
+                vcpu.run()?;
+            } else {
+                break;
+            }
         }
 
         Ok(())
+    }
+
+    pub fn mem_size(&self) -> usize {
+        self.mem.len()
     }
 }
 

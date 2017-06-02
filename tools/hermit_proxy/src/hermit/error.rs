@@ -58,5 +58,8 @@ pub enum NameIOCTL {
     GetRegs,
     SetRegs,
     GetSRegs,
-    SetSRegs
+    SetSRegs,
+    SetTssIdentity,
+    SetTssAddr,
+    SetMPState
 }

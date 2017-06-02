@@ -58,26 +58,26 @@ pub enum Syscall {
 }
 
 impl Syscall {
-    pub fn from_mem(mem: &[u8], guest_mem: &[u8]) -> Syscall {
+    pub fn from_mem(mem: *const u8, guest_mem: *const u8) -> Syscall {
         unsafe {
-            let ref run = *(mem.as_ptr() as *const kvm_run);
+            let ref run = *(mem as *const kvm_run);
 
             debug!("Exit reason {}", run.exit_reason);
 
             if run.exit_reason != KVM_EXIT_IO {
-                return Syscall::Other(mem.as_ptr() as *const kvm_run);
+                return Syscall::Other(mem as *const kvm_run);
             }
 
 
-            let offset = *((mem.as_ptr().offset(run.__bindgen_anon_1.io.data_offset as isize) as *const isize));
+            let offset = *((mem.offset(run.__bindgen_anon_1.io.data_offset as isize) as *const isize));
             
             match run.__bindgen_anon_1.io.port {
-                PORT_WRITE => { Syscall::Write(guest_mem.as_ptr().offset(offset) as *mut Write) },
-                PORT_READ  => { Syscall::Read (guest_mem.as_ptr().offset(offset) as *mut Read)  },
-                PORT_CLOSE => { Syscall::Close(guest_mem.as_ptr().offset(offset) as *mut Close) },
-                PORT_OPEN  => { Syscall::Open (guest_mem.as_ptr().offset(offset) as *mut Open ) },
-                PORT_LSEEK => { Syscall::LSeek(guest_mem.as_ptr().offset(offset) as *mut LSeek) },
-                PORT_EXIT  => { Syscall::Exit( guest_mem.as_ptr().offset(offset) as *mut isize) },
+                PORT_WRITE => { Syscall::Write(guest_mem.offset(offset) as *mut Write) },
+                PORT_READ  => { Syscall::Read (guest_mem.offset(offset) as *mut Read)  },
+                PORT_CLOSE => { Syscall::Close(guest_mem.offset(offset) as *mut Close) },
+                PORT_OPEN  => { Syscall::Open (guest_mem.offset(offset) as *mut Open ) },
+                PORT_LSEEK => { Syscall::LSeek(guest_mem.offset(offset) as *mut LSeek) },
+                PORT_EXIT  => { Syscall::Exit( guest_mem.offset(offset) as *mut isize) },
                 _ => { panic!("KVM: unhandled KVM_EXIT_IO at port 0x{}, direction {}", run.__bindgen_anon_1.io.port, run.__bindgen_anon_1.io.direction); }
             }
         }

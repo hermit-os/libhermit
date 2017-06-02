@@ -16,12 +16,11 @@ use super::vm::VirtualMachine;
 /// ioctl! macro and need to be wrapped further to provide a safe interface.
 pub mod ioctl {
     use std::mem;
-    use hermit::uhyve::kvm_header::{KVMIO, kvm_msr_list, kvm_cpuid2_header, kvm_memory_region, kvm_dirty_log, kvm_memory_alias, kvm_userspace_memory_region, kvm_regs,kvm_sregs};
+    use hermit::uhyve::kvm_header::{KVMIO, kvm_msr_list, kvm_cpuid2_header, kvm_memory_region, kvm_dirty_log, kvm_memory_alias, kvm_userspace_memory_region, kvm_regs,kvm_sregs, kvm_enable_cap, kvm_mp_state};
     
     ioctl!(get_version with io!(KVMIO,  0x00));
     ioctl!(create_vm with io!(KVMIO, 0x01));
     ioctl!(read get_msr_index_list with KVMIO, 0x02; kvm_msr_list);
-    ioctl!(check_extension with io!(KVMIO, 0x03));
     ioctl!(get_vcpu_mmap_size with io!(KVMIO, 0x04));
     
     ioctl!(readwrite get_supported_cpuid with KVMIO, 0x05; kvm_cpuid2_header);
@@ -45,6 +44,12 @@ pub mod ioctl {
     ioctl!(read get_sregs with KVMIO, 0x83; kvm_sregs);
     ioctl!(write set_sregs with KVMIO, 0x84; kvm_sregs);
 
+    ioctl!(check_extension with io!(KVMIO, 0x03));
+    ioctl!(set_tss_addr with io!(KVMIO, 0x47));
+    ioctl!(write set_identity_map_addr with KVMIO, 0x48; u64);
+    ioctl!(write enable_cap with KVMIO, 0xa3; kvm_enable_cap);
+
+    ioctl!(write set_mp_state with KVMIO, 0x99; kvm_mp_state);
 }
 
 /// KVM is freezed at version 12, so all others are invalid
@@ -70,7 +75,7 @@ impl KVM {
             .custom_flags(libc::O_CLOEXEC)
             .open("/dev/kvm").unwrap();
   
-        debug!("UHYVE - The connection to KVM was established.");
+        debug!("Connection to KVM is established.");
         
         KVM { file: kvm_file }
     }

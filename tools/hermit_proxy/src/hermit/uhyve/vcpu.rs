@@ -3,11 +3,17 @@ use libc::{c_void, c_int};
 use std::{mem, ptr};
 use std::fs::File;
 use std::os::unix::io::FromRawFd;
+use std::intrinsics::{volatile_load,volatile_store};
+use std::thread;
+use std::thread::current;
+use std::ptr::Unique;
+use std::sync::Arc;
+
 use memmap::{Mmap, Protection};
 use errno::errno;
 
 use hermit::uhyve;
-use super::kvm_header::{kvm_sregs, kvm_regs, kvm_segment, kvm_cpuid2,kvm_cpuid2_header};
+use super::kvm_header::{kvm_sregs, kvm_regs, kvm_segment, kvm_cpuid2,kvm_cpuid2_header, KVM_MP_STATE_RUNNABLE, kvm_mp_state};
 use super::{Result, Error, NameIOCTL};
 use super::gdt;
 use super::proto;
@@ -43,11 +49,13 @@ pub struct VirtualCPU {
     pub vcpu_fd: libc::c_int,
     id: u8,
     file: File,
-    run_mem: Mmap
+    run_mem: Mmap,
+    mboot:*mut u8,
+    guest_mem: *mut u8
 }
 
 impl VirtualCPU {
-    pub fn new(kvm_fd: libc::c_int, vm_fd: libc::c_int, id: u8, entry: u64, mem: &mut Mmap) -> Result<VirtualCPU> {
+    pub fn new(kvm_fd: libc::c_int, vm_fd: libc::c_int, id: u8, entry: u64, mem: &mut Mmap, mboot: *mut u8) -> Result<VirtualCPU> {
         debug!("UHYVE - New virtual CPU with id {}", id);
         
         // create a new VCPU and save the file descriptor
@@ -61,10 +69,12 @@ impl VirtualCPU {
             Mmap::open_with_offset(&file, Protection::ReadWrite, 0, VirtualCPU::get_mmap_size(kvm_fd)?)
                 .map_err(|x| panic!("{:?}", x) )//Error::InvalidFile)
         }?;
-       
+      
         let cpu = VirtualCPU {
-            kvm_fd: kvm_fd, vm_fd: vm_fd, vcpu_fd: fd, id: id, file: file, run_mem: run_mem
+            kvm_fd: kvm_fd, vm_fd: vm_fd, vcpu_fd: fd, id: id, file: file, run_mem: run_mem, mboot: mboot, guest_mem: mem.mut_ptr()
         };
+
+        cpu.set_mp_state(kvm_mp_state { mp_state: KVM_MP_STATE_RUNNABLE })?;
 
         if id == 0 {
             debug!("Setup the first processor");
@@ -91,6 +101,12 @@ impl VirtualCPU {
 
         cpu.setup_cpuid()?;
 
+        unsafe {
+            while volatile_load(mboot.offset(0x20)) < id {}
+
+            volatile_store(mboot.offset(0x30), id);
+        }
+        
         Ok(cpu)
     }
 
@@ -155,10 +171,16 @@ impl VirtualCPU {
                 .map_err(|x| Error::IOCTL(NameIOCTL::GetVCPUMMAPSize)).map(|x| { x as usize})
         }
     }
+    
+    pub fn set_mp_state(&self, mp_state: kvm_mp_state) -> Result<()> {
+        unsafe {
+            uhyve::ioctl::set_mp_state(self.vcpu_fd, (&mp_state) as *const kvm_mp_state).map_err(|x| Error::IOCTL(NameIOCTL::SetMPState)).map(|_| ())
+        }
+    }
 
-    pub fn single_run(&self, guest_mem: &mut [u8]) -> Result<i32> {
+    pub fn single_run(obj: &VirtualCPU) -> Result<i32> {
         let ret = unsafe {
-            uhyve::ioctl::run(self.vcpu_fd, ptr::null_mut())
+            uhyve::ioctl::run(obj.vcpu_fd, ptr::null_mut())
                 .map_err(|x| Error::IOCTL(NameIOCTL::Run))
         }?;
 
@@ -178,16 +200,32 @@ impl VirtualCPU {
         }
 
         unsafe {
-            proto::Syscall::from_mem(self.run_mem.as_slice(), guest_mem).run(guest_mem.as_mut_ptr());
+            proto::Syscall::from_mem(obj.run_mem.ptr(), obj.guest_mem).run(obj.guest_mem);
         }
 
         Ok(ret)
     }
 
-    pub fn run(&self, guest_mem: &mut [u8]) -> Result<u32> {
-        loop {
-            self.single_run(guest_mem)?;
+    pub fn run(self) -> Result<u32> {
+        
+        if self.id == 0 {
+            let wrapped = Arc::new(self);
+            loop {
+                VirtualCPU::single_run(&wrapped)?;
+            }
+        } else {
+            let wrapped = Arc::new(self);
+            
+            let child = thread::spawn(move || { 
+                loop {
+                    VirtualCPU::single_run(&wrapped);
+                }
+            });
+
+            child.join();
         }
+
+        Ok(0)
     }
 
     pub fn setup_first(&self, mem: &mut [u8]) -> Result<()> {
@@ -299,3 +337,6 @@ impl VirtualCPU {
         Ok(())
     }
 }
+
+unsafe impl Sync for VirtualCPU { }
+unsafe impl Send for VirtualCPU {}
