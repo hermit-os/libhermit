@@ -2,6 +2,7 @@ use libc::{write, read, lseek, exit, open, close, c_int, c_void};
 use super::kvm_header::{kvm_run, KVM_EXIT_IO, KVM_EXIT_HLT, KVM_EXIT_MMIO,KVM_EXIT_FAIL_ENTRY, KVM_EXIT_INTERNAL_ERROR, KVM_EXIT_SHUTDOWN }; 
 use std::ffi::CStr;
 
+use super::{Error, Result};
 
 const PORT_WRITE: u16 = 0x499;
 const PORT_OPEN: u16 = 0x500;
@@ -57,6 +58,11 @@ pub enum Syscall {
     Other(*const kvm_run)
 }
 
+pub enum Return {
+    Continue,
+    Exit(i32)
+}
+
 impl Syscall {
     pub fn from_mem(mem: *const u8, guest_mem: *const u8) -> Syscall {
         unsafe {
@@ -84,7 +90,7 @@ impl Syscall {
 
     }
 
-    pub unsafe fn run(&self, guest_mem: *mut u8) {
+    pub unsafe fn run(&self, guest_mem: *mut u8) -> Result<Return> {
         debug!("{:?}", *self);
         
         match *self {
@@ -95,7 +101,7 @@ impl Syscall {
                 (*obj).ret = read((*obj).fd, guest_mem.offset((*obj).buf) as *mut c_void, (*obj).len);
             },
             Syscall::Exit(obj) => {
-                exit(*((guest_mem as *mut i32).offset((*obj) as isize)));
+                return Ok(Return::Exit(*((guest_mem as *mut i32).offset((*obj) as isize))));
             },
             Syscall::Open(obj) => {
                 (*obj).ret = open(guest_mem.offset((*obj).name) as *const i8, (*obj).flags, (*obj).mode);
@@ -108,16 +114,22 @@ impl Syscall {
             Syscall::LSeek(obj) => {
                 (*obj).offset = lseek((*obj).fd, (*obj).offset as i64, (*obj).whence);
             },
-            Syscall::Other(id) => { match (*id).exit_reason {
-                KVM_EXIT_HLT => panic!("Guest has halted the CPU, this is considered as a normal exit."),
-                KVM_EXIT_MMIO =>panic!("KVM: unhandled KVM_EXIT_MMIO at 0x{}", (*id).__bindgen_anon_1.mmio.phys_addr ),
-                KVM_EXIT_FAIL_ENTRY => panic!("KVM: entry failure: hw_entry_failure_reason=0x{}", (*id).__bindgen_anon_1.fail_entry.hardware_entry_failure_reason),
-                KVM_EXIT_INTERNAL_ERROR => panic!("KVM: internal error exit: suberror = 0x{}", (*id).__bindgen_anon_1.internal.suberror),
-                KVM_EXIT_SHUTDOWN => panic!("KVM: receive shutdown command"),
-                _ => {
-                    panic!("KVM: unhandled exit: exit_reason = 0x{}", (*id).exit_reason);
-                }  
-            }}
+            Syscall::Other(id) => { 
+                let err = match (*id).exit_reason {
+                    KVM_EXIT_HLT => format!("Guest has halted the CPU, this is considered as a normal exit."),
+                    KVM_EXIT_MMIO => panic!("KVM: unhandled KVM_EXIT_MMIO at 0x{}", (*id).__bindgen_anon_1.mmio.phys_addr ),
+                    KVM_EXIT_FAIL_ENTRY => panic!("KVM: entry failure: hw_entry_failure_reason=0x{}", (*id).__bindgen_anon_1.fail_entry.hardware_entry_failure_reason),
+                    KVM_EXIT_INTERNAL_ERROR => panic!("KVM: internal error exit: suberror = 0x{}", (*id).__bindgen_anon_1.internal.suberror),
+                    KVM_EXIT_SHUTDOWN => format!("KVM: receive shutdown command"),
+                    _ => {
+                        panic!("KVM: unhandled exit: exit_reason = 0x{}", (*id).exit_reason)
+                    }  
+                };
+
+                return Err(Error::Protocol(err));
+            }
         }
+
+        return Ok(Return::Continue);
     }
 }

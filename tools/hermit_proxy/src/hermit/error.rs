@@ -14,7 +14,9 @@ pub enum Error {
     MultiIsleFailed,
     CannotCreateTmpFile(usize),
     QEmu((String, String)),
-    MissingBinary
+    MissingBinary,
+    Protocol(String),
+    ParseMemory
 }
 
 impl fmt::Debug for Error {
@@ -33,7 +35,9 @@ impl fmt::Debug for Error {
             Error::MultiIsleFailed => write!(f, "The Multi isle was selected on a system without supported, please load the kernel driver."),
             Error::CannotCreateTmpFile(_) => write!(f, "Couldn't create a tmp file in /tmp."),
             Error::QEmu((_, ref stderr)) => write!(f, "The qemu binary has encountered an error: {}", stderr),
-            Error::MissingBinary => write!(f, "Please specify a binary.")
+            Error::MissingBinary => write!(f, "Please specify a binary."),
+            Error::Protocol(ref err) => write!(f, "{}", err),
+            Error::ParseMemory => write!(f, "Couldn't parse the guest memory size from the environment")
         }
     }
 }

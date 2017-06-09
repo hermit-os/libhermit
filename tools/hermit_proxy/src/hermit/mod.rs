@@ -73,6 +73,7 @@ pub trait Isle {
 
         ino.add_watch(Path::new(&log_path), watch_mask::MODIFY | watch_mask::CREATE).unwrap();
 
+
         let mut buffer = [0; 1024];
         loop {
             if let Some(_) = ino.read_events(&mut buffer).unwrap().next() {

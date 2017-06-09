@@ -10,6 +10,7 @@ use elf;
 use elf::types::{ELFCLASS64, OSABI, PT_LOAD};
 use std::ffi::CStr;
 
+use hermit::hermit_env;
 use hermit::utils;
 use hermit::uhyve;
 use super::kvm_header::{kvm_userspace_memory_region, KVM_CAP_SYNC_MMU, KVM_32BIT_GAP_START, KVM_32BIT_GAP_SIZE};
@@ -27,11 +28,12 @@ pub struct VirtualMachine {
     elf_header: Option<elf::types::FileHeader>,
     klog: Option<*const i8>,
     mboot: Option<*mut u8>,
-    vcpus: Vec<VirtualCPU>
+    vcpus: Vec<VirtualCPU>,
+    num_cpus: u32
 }
 
 impl VirtualMachine {
-    pub fn new(kvm_fd: libc::c_int, fd: libc::c_int, size: usize) -> Result<VirtualMachine> {
+    pub fn new(kvm_fd: libc::c_int, fd: libc::c_int, size: usize, num_cpus: u32) -> Result<VirtualMachine> {
         debug!("New virtual machine with memory size {}", size);
 
         // create a new memory region to map the memory of our guest
@@ -46,7 +48,7 @@ impl VirtualMachine {
             unsafe { libc::mprotect((mem.mut_ptr() as *mut libc::c_void).offset(KVM_32BIT_GAP_START as isize), KVM_32BIT_GAP_START, libc::PROT_NONE); }
         }
         
-        Ok(VirtualMachine { kvm_fd: kvm_fd, vm_fd: fd, mem: mem, elf_header: None, klog: None, vcpus: Vec::new(), mboot: None })
+        Ok(VirtualMachine { kvm_fd: kvm_fd, vm_fd: fd, mem: mem, elf_header: None, klog: None, vcpus: Vec::new(), mboot: None, num_cpus: num_cpus})
     }
 
     /// Loads a kernel from path and initialite mem and elf_entry
@@ -147,7 +149,11 @@ impl VirtualMachine {
 
         self.create_irqchip()?;
 
-        self.create_vcpu(0)
+        for i in 0..self.num_cpus {
+            self.create_vcpu(i as u8)?;
+        }
+
+        Ok(())
     }
 
     pub fn set_user_memory_region(&self, mut region: kvm_userspace_memory_region) -> Result<()> {
@@ -192,15 +198,6 @@ impl VirtualMachine {
 
         let id = id as usize;
 
-        /*
-        let len = self.vcpus.len();
-        if len < id+1 {
-            debug!("Reserve one!");
-            self.vcpus.reserve(id - len + 1);
-        }
-
-        self.vcpus[id] = cpu;
-*/
         self.vcpus.insert(id, cpu);
 
         Ok(())
@@ -215,13 +212,22 @@ impl VirtualMachine {
 
     pub fn run(&mut self) -> Result<()> {
         let mut guest_mem = unsafe { self.mem.as_mut_slice() };
-        
+       
+        unsafe { *(self.mboot.unwrap().offset(0x24) as *mut u32) = self.num_cpus; }
+
+        let mut handles = vec![];
         loop {
             if let Some(vcpu)  = self.vcpus.pop() {
-                vcpu.run()?;
+                handles.push(vcpu.run());
             } else {
                 break;
             }
+        }
+
+        for handle in handles {
+            let code = handle.join().unwrap()?;
+
+            debug!("Exited with {}", code);
         }
 
         Ok(())
@@ -234,7 +240,9 @@ impl VirtualMachine {
 
 impl Drop for VirtualMachine {
     fn drop(&mut self) {
+        debug!("Drop the Virtual Machine");
         if let Ok(output) = self.output() {
+            debug!("-------- Output --------");
             debug!("{}", output);
         }
     }

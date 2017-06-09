@@ -31,6 +31,23 @@ pub fn cpufreq() -> Result<u32> {
     Err(Error::MissingFrequency)
 }
 
+pub fn parse_mem(mem: &str) -> Result<usize> {
+    let (num, postfix): (String, String) = mem.chars().partition(|&x| x.is_numeric());
+    let num = num.parse::<usize>().map_err(|_| Error::ParseMemory)?;
+
+    let factor = match postfix.as_str() {
+        "E" | "e" => 1 << 60,
+        "P" | "p" => 1 << 50,
+        "T" | "t" => 1 << 40,
+        "G" | "g" => 1 << 30,
+        "M" | "m" => 1 << 20,
+        "K" | "k" => 1 << 10,
+        _ => return Err(Error::ParseMemory)
+    };
+   
+    Ok(num*factor)
+}
+
 /// Creates a temporary file /tmp/<name>-XXXX, the X will be replaced by an arbitrary sequence
 pub fn create_tmp_file(name: &str) -> Result<String> {
     unsafe {

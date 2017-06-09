@@ -8,6 +8,7 @@ use std::thread;
 use std::thread::current;
 use std::ptr::Unique;
 use std::sync::Arc;
+use std::thread::JoinHandle;
 
 use memmap::{Mmap, Protection};
 use errno::errno;
@@ -59,7 +60,7 @@ impl VirtualCPU {
         debug!("UHYVE - New virtual CPU with id {}", id);
         
         // create a new VCPU and save the file descriptor
-        let fd = VirtualCPU::create_vcpu(vm_fd)?;
+        let fd = VirtualCPU::create_vcpu(vm_fd, id as u32)?;
 
         debug!("Got fd {}", fd);
 
@@ -87,32 +88,27 @@ impl VirtualCPU {
         }
 
 
+        debug!("Initialize the register of {} with start address {:?}", id, entry);
+
+
+        debug!("Set the CPUID");
+        
+        cpu.setup_cpuid()?;
+
         let mut regs = kvm_regs::empty();
         regs.rip = entry;
         regs.rflags = 0x2;
-        regs.rax = 2;
-        regs.rbx = 2;
-        
-        debug!("Initialize the register of {} with start address {:?}", id, entry);
-
         cpu.set_regs(regs)?;
 
-        debug!("Set the CPUID");
-
-        cpu.setup_cpuid()?;
-
-        unsafe {
-            while volatile_load(mboot.offset(0x20)) < id {}
-
-            volatile_store(mboot.offset(0x30), id);
-        }
         
         Ok(cpu)
     }
 
-    pub fn create_vcpu(fd: c_int) -> Result<c_int> {
+    pub fn create_vcpu(fd: c_int, mut id: u32) -> Result<c_int> {
+        let a = (&mut id) as *mut u32 as *mut u8;
+        
         unsafe { 
-            uhyve::ioctl::create_vcpu(fd, ptr::null_mut())
+            uhyve::ioctl::create_vcpu(fd, id as *mut u8)
                 .map_err(|_| Error::IOCTL(NameIOCTL::CreateVcpu))
         }
     }   
@@ -178,17 +174,17 @@ impl VirtualCPU {
         }
     }
 
-    pub fn single_run(obj: &VirtualCPU) -> Result<i32> {
+    pub fn single_run(obj: &VirtualCPU) -> Result<proto::Return> {
         let ret = unsafe {
             uhyve::ioctl::run(obj.vcpu_fd, ptr::null_mut())
                 .map_err(|x| Error::IOCTL(NameIOCTL::Run))
         }?;
 
-        debug!("Run with {}", ret);
+        debug!("Single Run CPU {}", obj.id);
 
         if ret == -1 {
             match errno().0 {
-                libc::EINTR => { return Ok(ret); },
+                libc::EINTR => { return Ok(proto::Return::Continue); },
                 libc::EFAULT => {
                     // TODO
                     panic!("translation fault!");
@@ -200,32 +196,35 @@ impl VirtualCPU {
         }
 
         unsafe {
-            proto::Syscall::from_mem(obj.run_mem.ptr(), obj.guest_mem).run(obj.guest_mem);
+            proto::Syscall::from_mem(obj.run_mem.ptr(), obj.guest_mem).run(obj.guest_mem)
         }
-
-        Ok(ret)
     }
 
-    pub fn run(self) -> Result<u32> {
-        
-        if self.id == 0 {
-            let wrapped = Arc::new(self);
-            loop {
-                VirtualCPU::single_run(&wrapped)?;
-            }
-        } else {
-            let wrapped = Arc::new(self);
+    pub fn run(self) -> JoinHandle<Result<i32>> {
+        debug!("Run CPU {}", self.id);
+
+        let wrapped = Arc::new(self);
             
-            let child = thread::spawn(move || { 
-                loop {
-                    VirtualCPU::single_run(&wrapped);
+        let child = thread::spawn(move || { 
+            unsafe {
+                while volatile_load(wrapped.mboot.offset(0x20)) < wrapped.id {
+                    thread::yield_now();
+                    debug!("{} - {}", wrapped.id, volatile_load(wrapped.mboot.offset(0x20)));
                 }
-            });
 
-            child.join();
-        }
+                volatile_store(wrapped.mboot.offset(0x30), wrapped.id);
+            }
 
-        Ok(0)
+            loop {
+                match VirtualCPU::single_run(&wrapped) {
+                    Ok(proto::Return::Exit(code)) => return Ok(code),
+                    Err(err) => return Err(err),
+                    _ => {}
+                }
+            }
+        });
+    
+        child
     }
 
     pub fn setup_first(&self, mem: &mut [u8]) -> Result<()> {
