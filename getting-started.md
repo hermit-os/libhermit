@@ -80,7 +80,7 @@ $ git clone git@github.com:RWTH-OS/HermitCore.git
 $ cd HermitCore
 $ git submodule init
 $ git submodule update
-``
+```
 
 We require a fairly recent version of CMake (`3.7`) which is not yet present in
 most Linux distributions. We therefore provide a helper script that fetches the
