@@ -58,6 +58,7 @@ pub enum Syscall {
     Other(*const kvm_run)
 }
 
+#[derive(Debug)]
 pub enum Return {
     Continue,
     Exit(i32)

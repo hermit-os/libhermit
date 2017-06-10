@@ -75,38 +75,25 @@ impl VirtualCPU {
             kvm_fd: kvm_fd, vm_fd: vm_fd, vcpu_fd: fd, id: id, file: file, run_mem: run_mem, mboot: mboot, guest_mem: mem.mut_ptr()
         };
 
-        cpu.set_mp_state(kvm_mp_state { mp_state: KVM_MP_STATE_RUNNABLE })?;
-
-        if id == 0 {
-            debug!("Setup the first processor");
-
-            let mut mem = unsafe {
-                mem.as_mut_slice()
-            };
-
-            cpu.setup_first(&mut mem)?;
-        }
-
-
-        debug!("Initialize the register of {} with start address {:?}", id, entry);
-
-
         debug!("Set the CPUID");
         
         cpu.setup_cpuid()?;
+       
+        debug!("Set MP state");
+
+        cpu.set_mp_state(kvm_mp_state { mp_state: KVM_MP_STATE_RUNNABLE })?;
+
+        debug!("Initialize the register of {} with start address {:?}", id, entry);
 
         let mut regs = kvm_regs::empty();
         regs.rip = entry;
         regs.rflags = 0x2;
         cpu.set_regs(regs)?;
-
         
         Ok(cpu)
     }
 
     pub fn create_vcpu(fd: c_int, mut id: u32) -> Result<c_int> {
-        let a = (&mut id) as *mut u32 as *mut u8;
-        
         unsafe { 
             uhyve::ioctl::create_vcpu(fd, id as *mut u8)
                 .map_err(|_| Error::IOCTL(NameIOCTL::CreateVcpu))
@@ -196,7 +183,10 @@ impl VirtualCPU {
         }
 
         unsafe {
-            proto::Syscall::from_mem(obj.run_mem.ptr(), obj.guest_mem).run(obj.guest_mem)
+            let a = proto::Syscall::from_mem(obj.run_mem.ptr(), obj.guest_mem).run(obj.guest_mem);
+        
+            debug!("{:?}", a);
+            a
         }
     }
 
@@ -209,7 +199,7 @@ impl VirtualCPU {
             unsafe {
                 while volatile_load(wrapped.mboot.offset(0x20)) < wrapped.id {
                     thread::yield_now();
-                    debug!("{} - {}", wrapped.id, volatile_load(wrapped.mboot.offset(0x20)));
+                    //debug!("{} - {}", wrapped.id, volatile_load(wrapped.mboot.offset(0x20)));
                 }
 
                 volatile_store(wrapped.mboot.offset(0x30), wrapped.id);
@@ -226,28 +216,21 @@ impl VirtualCPU {
     
         child
     }
-
-    pub fn setup_first(&self, mem: &mut [u8]) -> Result<()> {
-        // This is a fatal fault, so we will abort here
-        if self.id != 0 {
-            panic!("Shouldn't be called by any other processor than the first!");
-        }
-
+    
+    pub fn init_sregs(&self) -> Result<kvm_sregs> {
         let mut sregs = self.get_sregs()?;
 
         debug!("Setup GDT");
-        self.setup_system_gdt(&mut sregs, mem, 0)?;
+        self.setup_system_gdt(&mut sregs, 0)?;
         debug!("Setup the page table");
-        self.setup_system_page_table(&mut sregs, mem)?;
+        self.setup_system_page_table(&mut sregs)?;
         debug!("Set the system to 64bit");
         self.setup_system_64bit(&mut sregs)?;
 
-        self.set_sregs(sregs)?;
-
-        Ok(())
+        Ok(sregs)
     }
 
-    pub fn setup_system_gdt(&self, sregs: &mut kvm_sregs, mem: &mut [u8], offset: u64) -> Result<()> {
+    pub fn setup_system_gdt(&self, sregs: &mut kvm_sregs, offset: u64) -> Result<()> {
         let (mut data_seg, mut code_seg) = (kvm_segment::empty(), kvm_segment::empty());               
         
         // create the GDT entries
@@ -256,8 +239,9 @@ impl VirtualCPU {
         let gdt_data = gdt::Entry::new(0xC093, 0, 0xFFFFF);
 
         // apply the new GDTs to our guest memory
-        let ptr = mem[offset as usize..].as_ptr() as *mut u64;
         unsafe {
+            let ptr = self.guest_mem.offset(offset as isize) as *mut u64;
+            
             *(ptr.offset(gdt::BOOT_NULL)) = gdt_null.as_u64();
             *(ptr.offset(gdt::BOOT_CODE)) = gdt_code.as_u64();
             *(ptr.offset(gdt::BOOT_DATA)) = gdt_data.as_u64();
@@ -277,16 +261,20 @@ impl VirtualCPU {
 
         Ok(())
     }
-    pub fn setup_system_page_table(&self, sregs: &mut kvm_sregs, mem: &mut [u8]) -> Result<()> {
-        let pml4 =  mem[BOOT_PML4..].as_ptr() as *mut u64;
+    pub fn setup_system_page_table(&self, sregs: &mut kvm_sregs) -> Result<()> {
+        /*let pml4 =  mem[BOOT_PML4..].as_ptr() as *mut u64;
         let pdpte = mem[BOOT_PDPTE..].as_ptr() as *mut u64;
-        let pde =   mem[BOOT_PDE..].as_ptr() as *mut u64;
+        let pde =   mem[BOOT_PDE..].as_ptr() as *mut u64;*/
 
         // TODO
         //assert!((guest_size & (GUEST_PAGE_SIZE - 1)) == 0);
         //assert!(guest_size <= (GUEST_PAGE_SIZE * 512));
 
         unsafe {
+            let pml4 = self.guest_mem.offset(BOOT_PML4 as isize) as *mut u64;
+            let pdpte = self.guest_mem.offset(BOOT_PDPTE as isize) as *mut u64;
+            let pde = self.guest_mem.offset(BOOT_PDE as isize) as *mut u64;
+            
             libc::memset(pml4 as *mut c_void, 0x00, 4096);
             libc::memset(pdpte as *mut c_void, 0x00, 4096);
             libc::memset(pde as *mut c_void, 0x00, 4096);

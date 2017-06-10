@@ -22,7 +22,7 @@ pub fn mem_size() -> String {
 }
 
 pub fn mem_size_parsed() -> usize {
-    env::var("HERMIT_MEM").map(|x| utils::parse_mem(&x).unwrap_or(2*1000*1000)).unwrap_or(2*1000*1000)
+    env::var("HERMIT_MEM").map(|x| utils::parse_mem(&x).unwrap_or(512*1024*1024)).unwrap_or(512*1024*1024)
 }
 
 pub fn use_kvm() -> String {

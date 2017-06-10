@@ -13,7 +13,7 @@ use std::ffi::CStr;
 use hermit::hermit_env;
 use hermit::utils;
 use hermit::uhyve;
-use super::kvm_header::{kvm_userspace_memory_region, KVM_CAP_SYNC_MMU, KVM_32BIT_GAP_START, KVM_32BIT_GAP_SIZE};
+use super::kvm_header::{kvm_userspace_memory_region, KVM_CAP_SYNC_MMU, KVM_32BIT_GAP_START, KVM_32BIT_GAP_SIZE, kvm_sregs};
 use super::{Result, Error, NameIOCTL};
 use super::vcpu::VirtualCPU;
 
@@ -29,7 +29,8 @@ pub struct VirtualMachine {
     klog: Option<*const i8>,
     mboot: Option<*mut u8>,
     vcpus: Vec<VirtualCPU>,
-    num_cpus: u32
+    num_cpus: u32,
+    sregs: kvm_sregs
 }
 
 impl VirtualMachine {
@@ -48,7 +49,7 @@ impl VirtualMachine {
             unsafe { libc::mprotect((mem.mut_ptr() as *mut libc::c_void).offset(KVM_32BIT_GAP_START as isize), KVM_32BIT_GAP_START, libc::PROT_NONE); }
         }
         
-        Ok(VirtualMachine { kvm_fd: kvm_fd, vm_fd: fd, mem: mem, elf_header: None, klog: None, vcpus: Vec::new(), mboot: None, num_cpus: num_cpus})
+        Ok(VirtualMachine { kvm_fd: kvm_fd, vm_fd: fd, mem: mem, elf_header: None, klog: None, vcpus: Vec::new(), mboot: None, num_cpus: num_cpus, sregs: kvm_sregs::default()})
     }
 
     /// Loads a kernel from path and initialite mem and elf_entry
@@ -122,6 +123,7 @@ impl VirtualMachine {
     /// Initialize the virtual machine
     pub fn init(&mut self) -> Result<()> {
         let mut identity_base: u64 = 0xfffbc000;
+        
         if let Ok(true) = self.check_extension(KVM_CAP_SYNC_MMU) {
             identity_base = 0xfeffc000;
 
@@ -155,7 +157,7 @@ impl VirtualMachine {
 
         Ok(())
     }
-
+    
     pub fn set_user_memory_region(&self, mut region: kvm_userspace_memory_region) -> Result<()> {
         unsafe {
             uhyve::ioctl::set_user_memory_region(self.vm_fd, (&mut region) as *mut kvm_userspace_memory_region)
@@ -172,14 +174,14 @@ impl VirtualMachine {
 
     pub fn check_extension(&self, mut extension: u32) -> Result<bool> {
         unsafe {
-            uhyve::ioctl::check_extension(self.vm_fd, (&mut extension) as *mut u32 as *mut u8)
-                .map_err(|x| Error::IOCTL(NameIOCTL::CheckExtension)).map(|x| x == 1)
+            uhyve::ioctl::check_extension(self.vm_fd, extension as *mut u8)
+                .map_err(|x| Error::IOCTL(NameIOCTL::CheckExtension)).map(|x| x > 0)
         }
     }
 
     pub fn set_tss_identity(&self, identity_base: u64) -> Result<()> {
         unsafe {
-            uhyve::ioctl::set_identity_map_addr(self.kvm_fd, (&identity_base) as *const u64)
+            uhyve::ioctl::set_identity_map_addr(self.vm_fd, (&identity_base) as *const u64)
                 .map_err(|x| Error::IOCTL(NameIOCTL::SetTssIdentity)).map(|_| ())
         }
     }
@@ -194,8 +196,14 @@ impl VirtualMachine {
     pub fn create_vcpu(&mut self, id: u8) -> Result<()> {
         let entry = self.elf_header.ok_or(Error::KernelNotLoaded)?.entry;
 
-        let cpu = VirtualCPU::new(self.kvm_fd, self.vm_fd, id, entry, &mut self.mem, self.mboot.unwrap())?;
+        let cpu = VirtualCPU::new(self.kvm_fd, self.vm_fd, id, entry, &mut self.mem,self.mboot.unwrap())?;
 
+        if id == 0 {
+            self.sregs = cpu.init_sregs()?;
+        }
+
+        cpu.set_sregs(self.sregs)?;
+        
         let id = id as usize;
 
         self.vcpus.insert(id, cpu);
