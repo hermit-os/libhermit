@@ -7,7 +7,7 @@ url: "http://www.hermitcore.org"
 #baseurl: ""
 header-img: img/home-bg.jpg
 headercolor: "#FFFFFF"
-#logo:
+logo: img/logos/hermitcore_logo.png
 
 # Tertiary Parameters
 github_username:  RWTH-OS
