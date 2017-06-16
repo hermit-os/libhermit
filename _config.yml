@@ -14,7 +14,7 @@ github_username:  RWTH-OS
 #twitter_username:
 #facebook_username:
 project_repository: HermitCore
-#disqus_shortname:
+disqus_shortname: hermitcore
 #g-analytics:
 altmetric: true
 
