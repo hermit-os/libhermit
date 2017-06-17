@@ -148,4 +148,19 @@ Finally, we have to create a VM and to boot from this disk.
 gcloud compute --project "[PROJECT_ID]" instances create "[VM_NAME]" --zone "us-central1-c" --machine-type "f1-micro" --subnet "default" --maintenance-policy "MIGRATE" --service-account "966551718477-compute@developer.gserviceaccount.com" --scopes "https://www.googleapis.com/auth/devstorage.read_only","https://www.googleapis.com/auth/logging.write","https://www.googleapis.com/auth/monitoring.write","https://www.googleapis.com/auth/servicecontrol","https://www.googleapis.com/auth/service.management.readonly","https://www.googleapis.com/auth/trace.append" --tags "http-server" --image "hermit" --image-project "[PROJECT_ID]" --boot-disk-size "10" --boot-disk-type "pd-standard" --boot-disk-device-name "[VM_NAME]"
 ```
 
+The server is listening on port 8000 (tcp).
+Consequently, we have to open this port and to create appropriate firewall rule
+
+```bash
+gcloud beta compute --project "[PROJECT_ID]" firewall-rules create "allow-echo" --allow tcp:8000 --description "echo server" --direction "INGRESS" --priority "1000" --network "default" --source-ranges "0.0.0.0/0"
+```
+
+Afterwards we are able to send requests to this web server:
+
+```bash
+$ curl http://XX.XX.XX.XX:8000/hello
+```
+
+In this example, we assume that your server has the IP `XX.XX.XX.XX`.
+
 ![HermitCore demo on Google Compute Engine](http://www.hermitcore.org/img/google_compute.jpeg)
