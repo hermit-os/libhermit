@@ -25,14 +25,15 @@ In the last year, the HermitCore is continuously improved and supports also clou
 We have integrated a network interface, which based on the [Virtio PCI Specification](http://ozlabs.org/%7Erusty/virtio-spec/virtio-0.9.5.pdf).
 Hereby, we are able to boot HermitCore applications on [OpenStack](https://github.com/RWTH-OS/HermitCore/wiki/Booting-HermitCore-from-an-ISO-image) and [Google Compute Platform](https://github.com/RWTH-OS/HermitCore/wiki/Boot-HermitCore-from-a-raw-image) because both platforms base on this interface.
 
-In this tutorial, an image will be created for the application [_server_](https://github.com/RWTH-OS/HermitCore/blob/master/usr/tests/server.go).
-The server is completely written in Go and response any requests with its http request message.
+In this tutorial, an image will be created for the application [_server_](https://github.com/RWTH-OS/HermitCore/blob/master/usr/tests/server.go) and boot it on Google Compute Platform.
+In principle, the image is also bootable on OpenStack.
+The demo application is completely written in Go and response any http requests with its http request message.
 This Go example was developed by Alan A. A. Donovan and Brian W. Kernighan for their book _The Go Programming Language_ and published at [http://www.gopl.io](http://www.gopl.io).
 
-[Google Compute Platform](https://cloud.google.com/compute/docs/images/import-existing-image) supports only the raw image format as virtual hard disk.
-Consequently, we have to create with `qemu-img` a 1 GB file in raw format.
+The [Google Compute Platform](https://cloud.google.com/compute/docs/images/import-existing-image) supports only the raw image format as virtual hard disk.
+Consequently, we have to create with `qemu-img` a 1 GB file in the raw format.
 A size of 1 Gb is the smallest possible size for the Google Compute Platform and *large* enough for our web server.
-(The file size of the server is ~20Mb).
+(The file size of the server is  about 20 Mb).
 
 ```bash
 $ qemu-img create -f raw disk.raw 1G
@@ -72,6 +73,7 @@ Syncing disks.
 ```
 
 Now, we are able to format our partition.
+Please use `ext2` as filesystem because our bootloader depends on this filesystem.
 
 ```bash
 $ sudo mkfs.ext2 /dev/nbd0p1
@@ -111,8 +113,7 @@ menuentry "echo server" {
 }
 ```
 
-Sometimes it is useful to define the IO port for the UART device as kernel parameter because HermitCore is currently not able to detect all existing UART devices.
-In this example, we define 0x3f8 as IO port.
+As kernel parameter (`-uart=io:0x3f8`), we define the serial IO port for all output messages.
 
 Please unmount all devices to be sure that all changes are written the disk:
 
@@ -137,7 +138,7 @@ gsutil cp disk.tar.gz gs://[BUCKET_NAME]/
 Create from this file an image, which we want to use as boot disk for the virtual machine.
 
 ```bash
-gcloud compute --project "[PROJECT_ID]" images create "[IMAGE_NAME]" --description "Image Description" --source-uri "https://storage.googleapis.com/[BUCKET_NAME]/disk.tar.gz"
+gcloud compute --project "[PROJECT_ID]" images create "[IMAGE_NAME]" --description "echo server" --source-uri "https://storage.googleapis.com/[BUCKET_NAME]/disk.tar.gz"
 ```
 
 Please, replace `[BUCKET_NAME]`, `[PROJECT_ID]` and `[IMAGE_NAME]` with an appropriate names of your Google Compute project.
