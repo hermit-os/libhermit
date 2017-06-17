@@ -147,4 +147,4 @@ Finally, we have to create a VM and to boot from this disk.
 gcloud compute --project "[PROJECT_ID]" instances create "[VM_NAME]" --zone "us-central1-c" --machine-type "f1-micro" --subnet "default" --maintenance-policy "MIGRATE" --service-account "966551718477-compute@developer.gserviceaccount.com" --scopes "https://www.googleapis.com/auth/devstorage.read_only","https://www.googleapis.com/auth/logging.write","https://www.googleapis.com/auth/monitoring.write","https://www.googleapis.com/auth/servicecontrol","https://www.googleapis.com/auth/service.management.readonly","https://www.googleapis.com/auth/trace.append" --tags "http-server" --image "hermit" --image-project "[PROJECT_ID]" --boot-disk-size "10" --boot-disk-type "pd-standard" --boot-disk-device-name "[VM_NAME]"
 ```
 
-![HermitCore demo on Google Compute Engine](img/google_compute.jpeg)
+![HermitCore demo on Google Compute Engine](http://www.hermitcore.org/img/google_compute.jpeg)
