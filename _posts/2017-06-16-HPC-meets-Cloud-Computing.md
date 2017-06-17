@@ -17,7 +17,7 @@ Im such an multi-kernel environment, light-weight kernels are running side-by-si
 Like in other the multi-kernel approaches (e.g. [McKernel](http://www-sys-aics.riken.jp/ResearchTopics/os/mckernel.html)), a subset of cores will be isolated by starting HPC applications from the Linux system and run bare-metal these cores.
 
 HermitCore is a completely 64 bit multi-processor kernel and provides a comprehensive toolchain, which is based on the GCC and supports C/C++, Fortran, Go, Pthreads, and OpenMP.
-For an improvement of the performance, it supports latest hardware feature (AVX512) and Intel’s OpenMP runtime is used instead of GCC’ per default.
+For an improvement of the performance, it supports latest hardware feature (e.g. AVX512) and Intel’s OpenMP runtime is used instead of GCC’ per default.
 Therefore, Intel’s C-Compiler icc could be used as well to build HermitCore applications.
 A short tutorial is published in our [wiki](https://github.com/RWTH-OS/HermitCore/wiki/Using-Intel's-C--compiler).
 
@@ -25,7 +25,7 @@ In the last year, the HermitCore is continuously improved and supports also clou
 We have integrated a network interface, which based on the [Virtio PCI Specification](http://ozlabs.org/%7Erusty/virtio-spec/virtio-0.9.5.pdf).
 Hereby, we are able to boot HermitCore applications on [OpenStack](https://github.com/RWTH-OS/HermitCore/wiki/Booting-HermitCore-from-an-ISO-image) and [Google Compute Platform](https://github.com/RWTH-OS/HermitCore/wiki/Boot-HermitCore-from-a-raw-image) because both platforms base on this interface.
 
-In this tutorial, an image will be created for the application [_server_](https://github.com/RWTH-OS/HermitCore/blob/master/usr/tests/server.go) and boot it on Google Compute Platform.
+In this tutorial, an image will be created for a minimal [web server](https://github.com/RWTH-OS/HermitCore/blob/master/usr/tests/server.go) and boot it on Google Compute Platform.
 In principle, the image is also bootable on OpenStack.
 The demo application is completely written in Go and response any http requests with its http request message.
 This Go example was developed by Alan A. A. Donovan and Brian W. Kernighan for their book _The Go Programming Language_ and published at [http://www.gopl.io](http://www.gopl.io).
@@ -113,8 +113,7 @@ menuentry "echo server" {
 }
 ```
 
-As kernel parameter (`-uart=io:0x3f8`), we define the serial IO port for all output messages.
-
+The kernel parameter (`-uart=io:0x3f8`) defines the serial IO port for all kernel messages.
 Please unmount all devices to be sure that all changes are written the disk:
 
 ```bash
@@ -129,7 +128,7 @@ To use this file on the Google Compute Platform, you have to create [Cloud Stora
 gsutil mb gs://[BUCKET_NAME]/
 ```
 
-Please, replace `[BUCKET_NAME]` with an appropriate name and upload the tar file to the cloud storage.
+Please, replace `[BUCKET_NAME]` with an appropriate name and upload as follows the tar file to the cloud storage.
 
 ```bash
 gsutil cp disk.tar.gz gs://[BUCKET_NAME]/
@@ -149,7 +148,7 @@ gcloud compute --project "[PROJECT_ID]" instances create "[VM_NAME]" --zone "us-
 ```
 
 The server is listening on port 8000 (tcp).
-Consequently, we have to open this port and to create appropriate firewall rule
+Consequently, we have to open this port and to create appropriate firewall rules.
 
 ```bash
 gcloud beta compute --project "[PROJECT_ID]" firewall-rules create "allow-echo" --allow tcp:8000 --description "echo server" --direction "INGRESS" --priority "1000" --network "default" --source-ranges "0.0.0.0/0"
@@ -161,6 +160,6 @@ Afterwards we are able to send requests to this web server:
 $ curl http://XX.XX.XX.XX:8000/hello
 ```
 
-In this example, we assume that your server has the IP `XX.XX.XX.XX`.
+In this example, we assume that your server has the IP address `XX.XX.XX.XX`.
 
 ![HermitCore demo on Google Compute Engine](http://www.hermitcore.org/img/google_compute.jpeg)
