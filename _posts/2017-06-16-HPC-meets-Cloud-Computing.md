@@ -76,8 +76,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 The [Google Compute Platform](https://cloud.google.com/compute/docs/images/import-existing-image) supports only the raw image format as virtual hard disk.
 Consequently, we have to create with `qemu-img` a 1 GB file in the raw format.
-A size of 1 Gb is the smallest possible size for the Google Compute Platform and *large* enough for our web server.
-(The file size of the server is  about 20 Mb).
+A size of 1 Gb is the smallest possible size for the Google Compute Platform and *large* enough for our web server
+(the file size of the server is  about 20 MB).
 
 ```bash
 $ qemu-img create -f raw disk.raw 1G
@@ -133,7 +133,7 @@ Writing inode tables: done
 Writing superblocks and filesystem accounting information: done
 ```
 
-HermitCore adheres the [Multiboot specification](https://www.gnu.org/software/grub/manual/multiboot/multiboot.html) whereby the bootloader grub is able to boot HermitCore applications.
+HermitCore adheres the [Multiboot specification](https://www.gnu.org/software/grub/manual/multiboot/multiboot.html) whereby the bootloader grub is able to load HermitCore applications and to initiate the startup code.
 Consequently, we have to mount the partition, to install grub and our application on the virtual hard disk.
 
 ```bash
@@ -157,7 +157,8 @@ menuentry "echo server" {
 }
 ```
 
-The kernel parameter (`-uart=io:0x3f8`) defines the serial IO port for all kernel messages.
+The kernel parameter `-uart=io:0x3f8` defines the serial IO port for all kernel messages.
+
 Please unmount all devices to be sure that all changes are written the disk:
 
 ```bash
