@@ -49,15 +49,16 @@ extern void* Lpatch0;
 extern void* Lpatch1;
 extern void* Lpatch2;
 extern atomic_int32_t current_boot_id;
-extern islelock_t* rcce_lock = NULL;
-extern rcce_mpb_t* rcce_mpb = NULL;
+
+islelock_t* rcce_lock = NULL;
+rcce_mpb_t* rcce_mpb = NULL;
 
 extern void isrsyscall(void);
 
 const char* get_cmdline(void)
 {
 	if (mb_info)
-		return (char*) (size_t) mb_info->cmdline);
+		return (char*) (size_t) mb_info->cmdline;
 
 	return NULL;
 }
