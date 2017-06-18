@@ -30,6 +30,50 @@ In principle, the image is also bootable on OpenStack.
 The demo application is completely written in Go and response any http requests with its http request message.
 This Go example was developed by Alan A. A. Donovan and Brian W. Kernighan for their book _The Go Programming Language_ and published at [http://www.gopl.io](http://www.gopl.io).
 
+```go
+// Copyright © 2016 Alan A. A. Donovan & Brian W. Kernighan.
+// License: https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+// The original code was published at http://www.gopl.io, see page 21.
+
+// This is an "echo" server that displays request parameters.
+
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+)
+
+func main() {
+	fmt.Println("This is an \"echo\" server that displays request parameters.")
+	fmt.Println("Start the server and send a http request to it (e.g.")
+	fmt.Println("curl http://localhost:8000/help). The server uses port 8000.")
+	fmt.Println("If KVM is implicitly started by our proxy, please open the port by")
+	fmt.Println("setting the environment variable HERMIT_APP_PORT to 8000.")
+
+	http.HandleFunc("/", handler)
+	log.Fatal(http.ListenAndServe(":8000", nil))
+}
+
+// handler echoes the HTTP request.
+func handler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "%s %s %s\n", r.Method, r.URL, r.Proto)
+	for k, v := range r.Header {
+		fmt.Fprintf(w, "Header[%q] = %q\n", k, v)
+	}
+	fmt.Fprintf(w, "Host = %q\n", r.Host)
+	fmt.Fprintf(w, "RemoteAddr = %q\n", r.RemoteAddr)
+	if err := r.ParseForm(); err != nil {
+		log.Print(err)
+	}
+	for k, v := range r.Form {
+		fmt.Fprintf(w, "Form[%q] = %q\n", k, v)
+	}
+}
+```
+
 The [Google Compute Platform](https://cloud.google.com/compute/docs/images/import-existing-image) supports only the raw image format as virtual hard disk.
 Consequently, we have to create with `qemu-img` a 1 GB file in the raw format.
 A size of 1 Gb is the smallest possible size for the Google Compute Platform and *large* enough for our web server.
@@ -161,5 +205,3 @@ $ curl http://XX.XX.XX.XX:8000/hello
 ```
 
 In this example, we assume that your server has the IP address `XX.XX.XX.XX`.
-
-![HermitCore demo on Google Compute Engine](http://www.hermitcore.org/img/google_compute.jpeg)
