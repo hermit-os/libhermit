@@ -34,6 +34,7 @@
 #include <hermit/logging.h>
 #include <hermit/spinlock.h>
 #include <hermit/rcce.h>
+#include <hermit/islelock.h>
 #include <asm/page.h>
 #include <asm/multiboot.h>
 
@@ -83,7 +84,7 @@ int init_rcce(void)
 	return 0;
 }
 
-void print_status(void)
+void print_status(int isle)
 {
 	static spinlock_t status_lock = SPINLOCK_INIT;
 
