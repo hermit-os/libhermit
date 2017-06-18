@@ -50,7 +50,7 @@ foreach(MODULE ${KERNEL_MODULES})
 
 endforeach()
 
-if("${HERMIT_ARCH}" STREQUAL "aarch64")
+if("${HERMIT_ARCH}" STREQUAL "aarch64-hermit")
 # add arch/aarch64 and its objects
 add_subdirectory(arch/aarch64)
 list(APPEND KERNEL_OBJECTS
@@ -70,7 +70,7 @@ set_target_properties(hermit-bootstrap PROPERTIES
 
 # after compiling ASM sources, we need to post-process them. Adding this
 # dependency makes sure that this is done before hermit is linked
-if("${HERMIT_ARCH}" STREQUAL "aarch64")
+if("${HERMIT_ARCH}" STREQUAL "aarch64-hermit")
 add_dependencies(hermit-bootstrap ${AARCH64_KERNEL_TARGET})
 else()
 add_dependencies(hermit-bootstrap ${X86_KERNEL_TARGET})
@@ -145,7 +145,7 @@ add_custom_target(hermit
 ## HermitCore's own tools such as Qemu/KVM proxy
 build_external(tools ${HERMIT_ROOT}/tools "")
 
-if("${HERMIT_ARCH}" STREQUAL "x86_64")
+if("${HERMIT_ARCH}" STREQUAL "x86_64-hermit")
 
 build_external(arch_x86_loader ${HERMIT_ROOT}/arch/x86/loader "")
 
@@ -172,7 +172,7 @@ endif()
 
 ## Tests and benchmarks
 build_external(tests ${HERMIT_ROOT}/usr/tests hermit)
-if("${HERMIT_ARCH}" STREQUAL "x86_64")
+if("${HERMIT_ARCH}" STREQUAL "x86_64-hermit")
 build_external(benchmarks ${HERMIT_ROOT}/usr/benchmarks hermit)
 build_external(openmpbench ${HERMIT_ROOT}/usr/openmpbench hermit)
 endif()
