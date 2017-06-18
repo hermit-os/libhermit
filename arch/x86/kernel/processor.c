@@ -32,6 +32,9 @@
 #include <hermit/processor.h>
 #include <hermit/tasks.h>
 #include <hermit/logging.h>
+#include <hermit/spinlock.h>
+#include <hermit/rcce.h>
+#include <asm/page.h>
 #include <asm/multiboot.h>
 
 /*
@@ -45,6 +48,8 @@ extern void* Lpatch0;
 extern void* Lpatch1;
 extern void* Lpatch2;
 extern atomic_int32_t current_boot_id;
+extern islelock_t* rcce_lock = NULL;
+extern rcce_mpb_t* rcce_mpb = NULL;
 
 extern void isrsyscall(void);
 

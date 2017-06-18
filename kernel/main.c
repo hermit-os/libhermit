@@ -34,8 +34,6 @@
 #include <hermit/tasks.h>
 #include <hermit/syscall.h>
 #include <hermit/memory.h>
-#include <hermit/spinlock.h>
-#include <hermit/rcce.h>
 #include <hermit/logging.h>
 #include <asm/irq.h>
 #include <asm/page.h>
@@ -93,9 +91,6 @@ extern int32_t isle;
 extern int32_t possible_isles;
 extern uint32_t boot_processor;
 extern volatile int libc_sd;
-
-islelock_t* rcce_lock = NULL;
-rcce_mpb_t* rcce_mpb = NULL;
 
 extern void signal_init();
 
