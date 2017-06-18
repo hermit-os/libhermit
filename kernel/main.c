@@ -40,7 +40,6 @@
 #include <asm/irq.h>
 #include <asm/page.h>
 #include <asm/uart.h>
-#include <asm/multiboot.h>
 
 #include <lwip/init.h>
 #include <lwip/sys.h>
@@ -121,15 +120,6 @@ static int hermit_init(void)
 	signal_init();
 
 	return 0;
-}
-
-static void print_status(void)
-{
-	static spinlock_t status_lock = SPINLOCK_INIT;
-
-	spinlock_lock(&status_lock);
-	LOG_INFO("CPU %d of isle %d is now online (CR0 0x%zx, CR4 0x%zx)\n", CORE_ID, isle, read_cr0(), read_cr4());
-	spinlock_unlock(&status_lock);
 }
 
 static void tcpip_init_done(void* arg)
@@ -288,28 +278,6 @@ int smp_main(void)
 	return 0;
 }
 #endif
-
-static int init_rcce(void)
-{
-	size_t addr, flags = PG_GLOBAL|PG_RW;
-
-	addr = vma_alloc(PAGE_SIZE, VMA_READ|VMA_WRITE|VMA_CACHEABLE);
-	if (BUILTIN_EXPECT(!addr, 0))
-		return -ENOMEM;
-	if (has_nx())
-		flags |= PG_XD;
-	if (page_map(addr, phy_rcce_internals, 1, flags)) {
-		vma_free(addr, addr + PAGE_SIZE);
-		return -ENOMEM;
-	}
-
-	rcce_lock = (islelock_t*) addr;
-	rcce_mpb = (rcce_mpb_t*) (addr + CACHE_LINE*(RCCE_MAXNP+1));
-
-	LOG_INFO("Map rcce_lock at %p and rcce_mpb at %p\n", rcce_lock, rcce_mpb);
-
-	return 0;
-}
 
 int libc_start(int argc, char** argv, char** env);
 
@@ -533,8 +501,8 @@ int hermit_main(void)
 	LOG_INFO("Current available memory: %zd MiB\n", atomic_int64_read(&total_available_pages) * PAGE_SIZE / (1024ULL*1024ULL));
 	LOG_INFO("Core %d is the boot processor\n", boot_processor);
 	LOG_INFO("System is able to use %d processors\n", possible_cpus);
-	if (mb_info)
-		LOG_INFO("Kernel cmdline: %s\n", (char*) (size_t) mb_info->cmdline);
+	if (get_cmdline())
+		LOG_INFO("Kernel cmdline: %s\n", get_cmdline());
 	if (hbmem_base)
 		LOG_INFO("Found high bandwidth memory at 0x%zx (size 0x%zx)\n", hbmem_base, hbmem_size);
 

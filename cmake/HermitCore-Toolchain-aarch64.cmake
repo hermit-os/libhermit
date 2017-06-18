@@ -4,23 +4,21 @@ include_guard()
 # let user provide a different path to the toolchain
 set_default(TOOLCHAIN_BIN_DIR /opt/hermit/bin)
 
-set(TARGET_ARCH x86_64-hermit)
+set(TARGET_ARCH aarch64-hermit)
 set(HERMIT_KERNEL_FLAGS
-					-m64 -Wall -O2 -mno-red-zone
+					-Wall -O2
 					-fno-var-tracking-assignments -fstrength-reduce
 					-fomit-frame-pointer -finline-functions -ffreestanding
-					-nostdinc -fno-stack-protector -mno-sse -mno-mmx
-					-mno-sse2 -mno-3dnow -mno-avx
+					-nostdinc -fno-stack-protector
 					-fno-delete-null-pointer-checks
 					-falign-jumps=1 -falign-loops=1
-					-mno-80387 -mno-fp-ret-in-387 -mskip-rax-setup
 					-fno-common -Wframe-larger-than=1024
 					-fno-strict-aliasing -fno-asynchronous-unwind-tables
-					-fno-strict-overflow -maccumulate-outgoing-args)
+					-fno-strict-overflow)
 
 set(HERMIT_APP_FLAGS
-					-m64 -mtls-direct-seg-refs -O3 -ftree-vectorize)
-					
+					-O3 -ftree-vectorize)
+
 set(CMAKE_SYSTEM_NAME Generic)
 
 # point CMake to our toolchain
@@ -34,8 +32,8 @@ set(CMAKE_Go_COMPILER ${TOOLCHAIN_BIN_DIR}/${TARGET_ARCH}-gccgo)
 set(_CMAKE_TOOLCHAIN_PREFIX "${TARGET_ARCH}-")
 set(_CMAKE_TOOLCHAIN_LOCATION ${TOOLCHAIN_BIN_DIR})
 
-option(HAVE_ARCH_MEMSET	 "Use machine specific version of memset" ON)
-option(HAVE_ARCH_MEMCPY	 "Use machine specific version of memcpy" ON)
-option(HAVE_ARCH_STRLEN	 "Use machine specific version of strlen" ON)
-option(HAVE_ARCH_STRCPY	 "Use machine specific version of strcpy" ON)
-option(HAVE_ARCH_STRNCPY "Use machine specific version of strncpy" ON)
+#option(HAVE_ARCH_MEMSET	 "Use machine specific version of memset" ON)
+#option(HAVE_ARCH_MEMCPY	 "Use machine specific version of memcpy" ON)
+#option(HAVE_ARCH_STRLEN	 "Use machine specific version of strlen" ON)
+#option(HAVE_ARCH_STRCPY	 "Use machine specific version of strcpy" ON)
+#option(HAVE_ARCH_STRNCPY "Use machine specific version of strncpy" ON)

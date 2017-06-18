@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Stefan Lankes, RWTH Aachen University
+ * Copyright (c) 2017, Stefan Lankes, RWTH Aachen University
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@
 
 /**
  * @author Stefan Lankes
- * @file arch/x86/include/asm/stddef.h
+ * @file arch/arm64/include/asm/stddef.h
  * @brief Standard datatypes
  *
  * This file contains typedefs for standard datatypes for numerical and character values.
@@ -40,41 +40,9 @@
 extern "C" {
 #endif
 
-#define per_core(var) ({ \
-	typeof(var) ptr; \
-	switch (sizeof(var)) { \
-	case 4: \
-		asm volatile ("movl %%gs:(" #var "), %0" : "=r"(ptr)); \
-		break; \
-	case 8: \
-		asm volatile ("movq %%gs:(" #var "), %0" : "=r"(ptr)); \
-		break; \
-	} \
-	ptr; })
+#define per_core(var) (var)
 
-#define set_per_core(var, value) ({ \
-	switch (sizeof(var)) { \
-	case 4: asm volatile ("movl %0, %%gs:(" #var ")" :: "r"(value)); \
-		break; \
-	case 8: \
-		asm volatile ("movq %0, %%gs:(" #var ")" :: "r"(value)); \
-		break; \
-	} \
-	})
-
-#if __SIZEOF_POINTER__ == 4
-
-#define KERNEL_SPACE	(1UL << 30) /*  1 GiB */
-
-/// This type is used to represent the size of an object.
-typedef unsigned long size_t;
-/// Pointer differences
-typedef long ptrdiff_t;
-/// It is similar to size_t, but must be a signed type.
-typedef long ssize_t;
-/// The type represents an offset and is similar to size_t, but must be a signed type.
-typedef long off_t;
-#elif __SIZEOF_POINTER__ == 8
+#define set_per_core(var, value) (var = value)
 
 #define KERNEL_SPACE (1ULL << 30)
 
@@ -85,9 +53,6 @@ typedef long long ptrdiff_t;
 #ifdef __KERNEL__
 typedef long long ssize_t;
 typedef long long off_t;
-#endif
-#else
-#error unsupported architecture
 #endif
 
 /// Unsigned 64 bit integer
@@ -114,103 +79,21 @@ typedef unsigned short wchar_t;
 typedef wchar_t wint_t;
 #endif
 
-/// This defines registers, which are saved for a "user-level" context swicth
-typedef struct mregs {
-	/// R15 register
-	uint64_t r15;
-	/// R14 register
-	uint64_t r14;
-	/// R13 register
-	uint64_t r13;
-	/// R12 register
-	uint64_t r12;
-	/// R9 register
-	uint64_t r9;
-	/// R8 register
-	uint64_t r8;
-	/// RDI register
-	uint64_t rdi;
-	/// RSI register
-	uint64_t rsi;
-	/// RBP register
-	uint64_t rbp;
-	/// RBX register
-	uint64_t rbx;
-	/// RDX register
-	uint64_t rdx;
-	/// RCX register
-	uint64_t rcx;
-	/// RSP register
-	uint64_t rsp;
-	/// RIP
-	uint64_t rip;
-	/// MXCSR
-	uint32_t mxcsr;
-} mregs_t;
-
 /// This defines what the stack looks like after the task context is saved
 struct state {
-	/// GS register
-	uint64_t gs;
-	/// FS regsiter for TLS support
-	uint64_t fs;
-	/// R15 register
-	uint64_t r15;
-	/// R14 register
-	uint64_t r14;
-	/// R13 register
-	uint64_t r13;
-	/// R12 register
-	uint64_t r12;
-	/// R11 register
-	uint64_t r11;
-	/// R10 register
-	uint64_t r10;
-	/// R9 register
-	uint64_t r9;
-	/// R8 register
-	uint64_t r8;
-	/// RDI register
-	uint64_t rdi;
-	/// RSI register
-	uint64_t rsi;
-	/// RBP register
-	uint64_t rbp;
-	/// (pseudo) RSP register
-	uint64_t rsp;
-	/// RBX register
-	uint64_t rbx;
-	/// RDX register
-	uint64_t rdx;
-	/// RCX register
-	uint64_t rcx;
-	/// RAX register
-	uint64_t rax;
-
 	/// Interrupt number
 	uint64_t int_no;
-
-	// pushed by the processor automatically
-	uint64_t error;
-	uint64_t rip;
-	uint64_t cs;
-	uint64_t rflags;
-	uint64_t userrsp;
-	uint64_t ss;
 };
 
 typedef struct {
 	void	*ss_sp;		/* Stack base or pointer.  */
-	int	ss_flags;	/* Flags.  */
-	size_t	ss_size;	/* Stack size.  */
 } stack_t;
 
-const int32_t is_uhyve(void);
-const int32_t is_single_kernel(void);
-
-const char* get_cmdline(void);
-int init_rcce(void);
-void print_status(void);
+static inline const int32_t is_uhyve(void) { return 0; }
+static inline const int32_t is_single_kernel(void) { return 1; }
+static inline const char* get_cmdline(void) { return 0; }
+static inline int init_rcce(void) { return 0; }
+static inline void print_status(void) {}
 
 #ifdef __cplusplus
 }

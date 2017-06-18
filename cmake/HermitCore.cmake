@@ -47,22 +47,6 @@ enable_language(ASM_NASM)
 set(CMAKE_ASM_NASM_FLAGS
 	"${CMAKE_ASM_NASM_FLAGS} -I ${CMAKE_BINARY_DIR}/include/")
 
-set(HERMIT_KERNEL_FLAGS
-					-m64 -Wall -O2 -mno-red-zone
-					-fno-var-tracking-assignments -fstrength-reduce
-					-fomit-frame-pointer -finline-functions -ffreestanding
-					-nostdinc -fno-stack-protector -mno-sse -mno-mmx
-					-mno-sse2 -mno-3dnow -mno-avx
-					-fno-delete-null-pointer-checks
-					-falign-jumps=1 -falign-loops=1
-					-mno-80387 -mno-fp-ret-in-387 -mskip-rax-setup
-					-fno-common -Wframe-larger-than=1024
-					-fno-strict-aliasing -fno-asynchronous-unwind-tables
-					-fno-strict-overflow -maccumulate-outgoing-args)
-
-set(HERMIT_APP_FLAGS
-					-m64 -mtls-direct-seg-refs -O3 -ftree-vectorize)
-
 if(MTUNE)
 	set(HERMIT_KERNEL_FLAGS ${HERMIT_KERNEL_FLAGS} -mtune=${MTUNE})
 	set(HERMIT_APP_FLAGS    ${HERMIT_APP_FLAGS}    -mtune=${MTUNE})

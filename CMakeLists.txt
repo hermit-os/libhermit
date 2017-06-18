@@ -50,12 +50,18 @@ foreach(MODULE ${KERNEL_MODULES})
 
 endforeach()
 
+if("${HERMIT_ARCH}" STREQUAL "aarch64")
+# add arch/aarch64 and its objects
+add_subdirectory(arch/aarch64)
+list(APPEND KERNEL_OBJECTS
+	$<TARGET_OBJECTS:${AARCH64_KERNEL_C_TARGET}>)
+else()
 # add arch/x86 and its objects
-# TODO: make this conditional when new architectures are implemented
 add_subdirectory(arch/x86)
 list(APPEND KERNEL_OBJECTS
 	$<TARGET_OBJECTS:${X86_KERNEL_ASM_TARGET}>
 	$<TARGET_OBJECTS:${X86_KERNEL_C_TARGET}>)
+endif()
 
 # finally build libhermit.a
 add_library(hermit-bootstrap STATIC ${KERNEL_OBJECTS})
@@ -64,7 +70,11 @@ set_target_properties(hermit-bootstrap PROPERTIES
 
 # after compiling ASM sources, we need to post-process them. Adding this
 # dependency makes sure that this is done before hermit is linked
+if("${HERMIT_ARCH}" STREQUAL "aarch64")
+add_dependencies(hermit-bootstrap ${AARCH64_KERNEL_TARGET})
+else()
 add_dependencies(hermit-bootstrap ${X86_KERNEL_TARGET})
+endif()
 
 add_custom_command(
 	TARGET
@@ -134,6 +144,9 @@ add_custom_target(hermit
 
 ## HermitCore's own tools such as Qemu/KVM proxy
 build_external(tools ${HERMIT_ROOT}/tools "")
+
+if("${HERMIT_ARCH}" STREQUAL "x86_64")
+
 build_external(arch_x86_loader ${HERMIT_ROOT}/arch/x86/loader "")
 
 ## Intel's OpenMP runtime for x86 (libomp)
@@ -154,10 +167,15 @@ add_dependencies(hermit ircce)
 build_external(xray ${HERMIT_ROOT}/usr/xray "")
 add_dependencies(hermit xray)
 
+## end of x86 specific part
+endif()
+
 ## Tests and benchmarks
 build_external(tests ${HERMIT_ROOT}/usr/tests hermit)
+if("${HERMIT_ARCH}" STREQUAL "x86_64")
 build_external(benchmarks ${HERMIT_ROOT}/usr/benchmarks hermit)
 build_external(openmpbench ${HERMIT_ROOT}/usr/openmpbench hermit)
+endif()
 
 ## relocate the local prefix to our install destination
 install(DIRECTORY ${LOCAL_PREFIX_DIR}/
