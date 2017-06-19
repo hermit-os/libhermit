@@ -232,12 +232,7 @@ inline static int mmnif_trigger_irq(int dest_ip)
 		dest = 0;
 	else
 		dest = 0;	// TODO: determine physical apic id of the destination
-#if __x86_64__
 	return apic_send_ipi(dest, MMNIF_IRQ);
-#else
-#warning IPIs are missing
-	return 0;
-#endif
 }
 
 /* mmnif_print_stats(): Print the devices stats of the

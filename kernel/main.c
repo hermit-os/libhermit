@@ -150,6 +150,7 @@ static int init_netifs(void)
 		return -ENODEV;
 	}
 
+#if __x86_64__
 	if (!is_single_kernel())
 	{
 		LOG_INFO("HermitCore is running side-by-side to Linux!\n");
@@ -230,6 +231,9 @@ success:
 
 		if (!ip_2_ip4(&default_netif.ip_addr)->addr)
 			return -ENODEV;
+#else
+		return -ENODEV;
+#endif
 	}
 
 	return 0;
