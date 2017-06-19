@@ -63,7 +63,7 @@ const char* get_cmdline(void)
 	return NULL;
 }
 
-int init_cpu_rcce(void)
+int init_rcce(void)
 {
 	size_t addr, flags = PG_GLOBAL|PG_RW;
 
@@ -85,7 +85,7 @@ int init_cpu_rcce(void)
 	return 0;
 }
 
-void print_status(int isle)
+void print_cpu_status(int isle)
 {
 	static spinlock_t status_lock = SPINLOCK_INIT;
 
