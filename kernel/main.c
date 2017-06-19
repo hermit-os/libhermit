@@ -231,12 +231,12 @@ success:
 
 		if (!ip_2_ip4(&default_netif.ip_addr)->addr)
 			return -ENODEV;
-#else
-		return -ENODEV;
-#endif
 	}
 
 	return 0;
+#else
+	return -ENODEV;
+#endif
 }
 
 int network_shutdown(void)
