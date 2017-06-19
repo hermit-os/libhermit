@@ -210,7 +210,7 @@ const int32_t is_single_kernel(void);
 
 const char* get_cmdline(void);
 int init_rcce(void);
-void print_status(int isle);
+void print_cpu_status(int isle);
 
 #ifdef __cplusplus
 }

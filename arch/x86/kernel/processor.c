@@ -63,7 +63,7 @@ const char* get_cmdline(void)
 	return NULL;
 }
 
-int init_rcce(void)
+int init_cpu_rcce(void)
 {
 	size_t addr, flags = PG_GLOBAL|PG_RW;
 

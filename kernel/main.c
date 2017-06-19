@@ -259,7 +259,7 @@ int smp_main(void)
 	enable_dynticks();
 #endif
 
-	print_status(isle);
+	print_cpu_status(isle);
 
 	/* wait for the other cpus */
 	while(atomic_int32_read(&cpu_online) < atomic_int32_read(&possible_cpus))
@@ -513,7 +513,7 @@ int hermit_main(void)
 	while(atomic_int32_read(&cpu_online) < atomic_int32_read(&possible_cpus))
 		PAUSE;
 
-	print_status(isle);
+	print_cpu_status(isle);
 	//vma_dump();
 
 	create_kernel_task_on_core(NULL, initd, NULL, NORMAL_PRIO, boot_processor);

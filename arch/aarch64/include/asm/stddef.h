@@ -93,7 +93,7 @@ static inline const int32_t is_uhyve(void) { return 0; }
 static inline const int32_t is_single_kernel(void) { return 1; }
 static inline const char* get_cmdline(void) { return 0; }
 static inline int init_rcce(void) { return 0; }
-static inline void print_status(void) {}
+static inline void print_cpu_status(int isle) {}
 
 #ifdef __cplusplus
 }
