@@ -1,14 +1,15 @@
 use libc;
-use libc::{c_void, c_int};
+use libc::c_void;
 use std::{mem, ptr};
 use std::fs::File;
-use std::os::unix::io::FromRawFd;
+use std::os::unix::io::{FromRawFd, RawFd};
 use std::intrinsics::{volatile_load,volatile_store};
 use std::thread;
 use std::thread::current;
 use std::ptr::Unique;
 use std::sync::Arc;
 use std::thread::JoinHandle;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use memmap::{Mmap, Protection};
 use errno::errno;
@@ -44,25 +45,33 @@ pub const X86_PDPT_P:  u64 = (1 << 0);
 pub const X86_PDPT_RW: u64 = (1 << 1);
 pub const X86_PDPT_PS: u64 = (1 << 7);
 
-pub struct VirtualCPU {
-    kvm_fd: libc::c_int,
-    vm_fd: libc::c_int,
-    pub vcpu_fd: libc::c_int,
-    id: u8,
-    file: File,
+pub enum ExitCode {
+    Cause(Result<i32>),
+    Innocent
+}
+
+pub struct SharedState {
     run_mem: Mmap,
     mboot:*mut u8,
-    guest_mem: *mut u8
+    guest_mem: *mut u8,
+    running_state: Arc<AtomicBool>
+}
+
+pub struct VirtualCPU {
+    id: u32,
+    kvm_fd: RawFd,
+    vm_fd: RawFd,
+    vcpu_fd: RawFd,
+    state: Arc<SharedState>
 }
 
 impl VirtualCPU {
-    pub fn new(kvm_fd: libc::c_int, vm_fd: libc::c_int, id: u8, entry: u64, mem: &mut Mmap, mboot: *mut u8) -> Result<VirtualCPU> {
-        debug!("UHYVE - New virtual CPU with id {}", id);
+    pub fn new(kvm_fd: RawFd, vm_fd: RawFd, id: u32, entry: u64, mem: &mut Mmap, mboot: *mut u8, running_state: Arc<AtomicBool>) -> Result<VirtualCPU> {
         
         // create a new VCPU and save the file descriptor
         let fd = VirtualCPU::create_vcpu(vm_fd, id as u32)?;
 
-        debug!("Got fd {}", fd);
+        debug!("New virtual CPU with id {} and FD {}", id, fd);
 
         let file = unsafe { File::from_raw_fd(fd) };
 
@@ -71,8 +80,22 @@ impl VirtualCPU {
                 .map_err(|x| panic!("{:?}", x) )//Error::InvalidFile)
         }?;
       
+        // forget the file, we don't want to close the file descriptor
+        mem::forget(file);
+
+        let state = SharedState {
+            run_mem: run_mem,
+            mboot: mboot,
+            guest_mem: mem.mut_ptr(),
+            running_state: running_state
+        };
+
         let cpu = VirtualCPU {
-            kvm_fd: kvm_fd, vm_fd: vm_fd, vcpu_fd: fd, id: id, file: file, run_mem: run_mem, mboot: mboot, guest_mem: mem.mut_ptr()
+            kvm_fd: kvm_fd, 
+            vm_fd: vm_fd, 
+            vcpu_fd: fd, 
+            id: id, 
+            state: Arc::new(state)
         };
 
         debug!("Set the CPUID");
@@ -93,7 +116,7 @@ impl VirtualCPU {
         Ok(cpu)
     }
 
-    pub fn create_vcpu(fd: c_int, mut id: u32) -> Result<c_int> {
+    pub fn create_vcpu(fd: RawFd, mut id: u32) -> Result<RawFd> {
         unsafe { 
             uhyve::ioctl::create_vcpu(fd, id as *mut u8)
                 .map_err(|_| Error::IOCTL(NameIOCTL::CreateVcpu))
@@ -148,7 +171,7 @@ impl VirtualCPU {
         Ok(())
     }
    
-    pub fn get_mmap_size(vcpu_fd: libc::c_int) -> Result<usize> {
+    pub fn get_mmap_size(vcpu_fd: RawFd) -> Result<usize> {
         unsafe {
             uhyve::ioctl::get_vcpu_mmap_size(vcpu_fd, ptr::null_mut())
                 .map_err(|x| Error::IOCTL(NameIOCTL::GetVCPUMMAPSize)).map(|x| { x as usize})
@@ -157,17 +180,18 @@ impl VirtualCPU {
     
     pub fn set_mp_state(&self, mp_state: kvm_mp_state) -> Result<()> {
         unsafe {
-            uhyve::ioctl::set_mp_state(self.vcpu_fd, (&mp_state) as *const kvm_mp_state).map_err(|x| Error::IOCTL(NameIOCTL::SetMPState)).map(|_| ())
+            uhyve::ioctl::set_mp_state(self.vcpu_fd, (&mp_state) as *const kvm_mp_state)
+                .map_err(|x| Error::IOCTL(NameIOCTL::SetMPState)).map(|_| ())
         }
     }
 
-    pub fn single_run(obj: &VirtualCPU) -> Result<proto::Return> {
+    pub fn single_run(fd: RawFd, state: &Arc<SharedState>) -> Result<proto::Return> {
         let ret = unsafe {
-            uhyve::ioctl::run(obj.vcpu_fd, ptr::null_mut())
+            uhyve::ioctl::run(fd, ptr::null_mut())
                 .map_err(|x| Error::IOCTL(NameIOCTL::Run))
         }?;
 
-        debug!("Single Run CPU {}", obj.id);
+        debug!("Single Run CPU {}", fd);
 
         if ret == -1 {
             match errno().0 {
@@ -183,35 +207,45 @@ impl VirtualCPU {
         }
 
         unsafe {
-            let a = proto::Syscall::from_mem(obj.run_mem.ptr(), obj.guest_mem).run(obj.guest_mem);
+            let a = proto::Syscall::from_mem(state.run_mem.ptr(), state.guest_mem).run(state.guest_mem);
         
-            debug!("{:?}", a);
             a
         }
     }
 
-    pub fn run(self) -> JoinHandle<Result<i32>> {
+    pub fn run(&self) -> JoinHandle<ExitCode> {
         debug!("Run CPU {}", self.id);
 
-        let wrapped = Arc::new(self);
-            
+        let state = self.state.clone();
+        let id = self.id;
+        let fd = self.vcpu_fd;
+
         let child = thread::spawn(move || { 
             unsafe {
-                while volatile_load(wrapped.mboot.offset(0x20)) < wrapped.id {
+                while volatile_load(state.mboot.offset(0x20)) < id as u8 {
                     thread::yield_now();
-                    //debug!("{} - {}", wrapped.id, volatile_load(wrapped.mboot.offset(0x20)));
                 }
 
-                volatile_store(wrapped.mboot.offset(0x30), wrapped.id);
+                volatile_store(state.mboot.offset(0x30), id as u8);
             }
 
-            loop {
-                match VirtualCPU::single_run(&wrapped) {
-                    Ok(proto::Return::Exit(code)) => return Ok(code),
-                    Err(err) => return Err(err),
+            while state.running_state.load(Ordering::Relaxed) {
+                match VirtualCPU::single_run(fd, &state) {
+                    Ok(proto::Return::Exit(code)) => {
+                        state.running_state.store(false, Ordering::Relaxed);
+                    
+                        return ExitCode::Cause(Ok(code));
+                    },
+                    Err(err) => {
+                        state.running_state.store(false, Ordering::Relaxed);
+
+                        return ExitCode::Cause(Err(err));
+                    },
                     _ => {}
                 }
             }
+
+            ExitCode::Innocent
         });
     
         child
@@ -240,7 +274,7 @@ impl VirtualCPU {
 
         // apply the new GDTs to our guest memory
         unsafe {
-            let ptr = self.guest_mem.offset(offset as isize) as *mut u64;
+            let ptr = self.state.guest_mem.offset(offset as isize) as *mut u64;
             
             *(ptr.offset(gdt::BOOT_NULL)) = gdt_null.as_u64();
             *(ptr.offset(gdt::BOOT_CODE)) = gdt_code.as_u64();
@@ -262,18 +296,10 @@ impl VirtualCPU {
         Ok(())
     }
     pub fn setup_system_page_table(&self, sregs: &mut kvm_sregs) -> Result<()> {
-        /*let pml4 =  mem[BOOT_PML4..].as_ptr() as *mut u64;
-        let pdpte = mem[BOOT_PDPTE..].as_ptr() as *mut u64;
-        let pde =   mem[BOOT_PDE..].as_ptr() as *mut u64;*/
-
-        // TODO
-        //assert!((guest_size & (GUEST_PAGE_SIZE - 1)) == 0);
-        //assert!(guest_size <= (GUEST_PAGE_SIZE * 512));
-
         unsafe {
-            let pml4 = self.guest_mem.offset(BOOT_PML4 as isize) as *mut u64;
-            let pdpte = self.guest_mem.offset(BOOT_PDPTE as isize) as *mut u64;
-            let pde = self.guest_mem.offset(BOOT_PDE as isize) as *mut u64;
+            let pml4 = self.state.guest_mem.offset(BOOT_PML4 as isize) as *mut u64;
+            let pdpte = self.state.guest_mem.offset(BOOT_PDPTE as isize) as *mut u64;
+            let pde = self.state.guest_mem.offset(BOOT_PDE as isize) as *mut u64;
             
             libc::memset(pml4 as *mut c_void, 0x00, 4096);
             libc::memset(pdpte as *mut c_void, 0x00, 4096);
@@ -325,5 +351,5 @@ impl VirtualCPU {
     }
 }
 
-unsafe impl Sync for VirtualCPU { }
-unsafe impl Send for VirtualCPU {}
+unsafe impl Sync for SharedState { }
+unsafe impl Send for SharedState {}

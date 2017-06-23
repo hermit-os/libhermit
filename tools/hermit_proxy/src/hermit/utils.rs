@@ -31,9 +31,9 @@ pub fn cpufreq() -> Result<u32> {
     Err(Error::MissingFrequency)
 }
 
-pub fn parse_mem(mem: &str) -> Result<usize> {
+pub fn parse_mem(mem: &str) -> Result<u64> {
     let (num, postfix): (String, String) = mem.chars().partition(|&x| x.is_numeric());
-    let num = num.parse::<usize>().map_err(|_| Error::ParseMemory)?;
+    let num = num.parse::<u64>().map_err(|_| Error::ParseMemory)?;
 
     let factor = match postfix.as_str() {
         "E" | "e" => 1 << 60,

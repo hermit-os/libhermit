@@ -9,13 +9,15 @@ use memmap::{Mmap, Protection};
 use elf;
 use elf::types::{ELFCLASS64, OSABI, PT_LOAD};
 use std::ffi::CStr;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread::JoinHandle;
 
-use hermit::hermit_env;
 use hermit::utils;
 use hermit::uhyve;
 use super::kvm_header::{kvm_userspace_memory_region, KVM_CAP_SYNC_MMU, KVM_32BIT_GAP_START, KVM_32BIT_GAP_SIZE, kvm_sregs};
 use super::{Result, Error, NameIOCTL};
-use super::vcpu::VirtualCPU;
+use super::vcpu::{ExitCode, VirtualCPU};
 
 //use byteorder::ByteOrder;
 // guest offset?
@@ -30,7 +32,9 @@ pub struct VirtualMachine {
     mboot: Option<*mut u8>,
     vcpus: Vec<VirtualCPU>,
     num_cpus: u32,
-    sregs: kvm_sregs
+    sregs: kvm_sregs,
+    running_state: Arc<AtomicBool>,
+    thread_handles: Vec<JoinHandle<ExitCode>>
 }
 
 impl VirtualMachine {
@@ -49,7 +53,7 @@ impl VirtualMachine {
             unsafe { libc::mprotect((mem.mut_ptr() as *mut libc::c_void).offset(KVM_32BIT_GAP_START as isize), KVM_32BIT_GAP_START, libc::PROT_NONE); }
         }
         
-        Ok(VirtualMachine { kvm_fd: kvm_fd, vm_fd: fd, mem: mem, elf_header: None, klog: None, vcpus: Vec::new(), mboot: None, num_cpus: num_cpus, sregs: kvm_sregs::default()})
+        Ok(VirtualMachine { kvm_fd: kvm_fd, vm_fd: fd, mem: mem, elf_header: None, klog: None, vcpus: Vec::new(), mboot: None, num_cpus: num_cpus, sregs: kvm_sregs::default(), running_state: Arc::new(AtomicBool::new(false)), thread_handles: Vec::new() })
     }
 
     /// Loads a kernel from path and initialite mem and elf_entry
@@ -152,7 +156,7 @@ impl VirtualMachine {
         self.create_irqchip()?;
 
         for i in 0..self.num_cpus {
-            self.create_vcpu(i as u8)?;
+            self.create_vcpu(i as u32)?;
         }
 
         Ok(())
@@ -193,10 +197,10 @@ impl VirtualMachine {
         }
     }
 
-    pub fn create_vcpu(&mut self, id: u8) -> Result<()> {
+    pub fn create_vcpu(&mut self, id: u32) -> Result<()> {
         let entry = self.elf_header.ok_or(Error::KernelNotLoaded)?.entry;
 
-        let cpu = VirtualCPU::new(self.kvm_fd, self.vm_fd, id, entry, &mut self.mem,self.mboot.unwrap())?;
+        let cpu = VirtualCPU::new(self.kvm_fd, self.vm_fd, id, entry, &mut self.mem,self.mboot.unwrap(), self.running_state.clone())?;
 
         if id == 0 {
             self.sregs = cpu.init_sregs()?;
@@ -222,23 +226,50 @@ impl VirtualMachine {
         let mut guest_mem = unsafe { self.mem.as_mut_slice() };
        
         unsafe { *(self.mboot.unwrap().offset(0x24) as *mut u32) = self.num_cpus; }
+        self.running_state.store(true, Ordering::Relaxed);
 
-        let mut handles = vec![];
-        loop {
-            if let Some(vcpu)  = self.vcpus.pop() {
-                handles.push(vcpu.run());
-            } else {
-                break;
-            }
-        }
-
-        for handle in handles {
-            let code = handle.join().unwrap()?;
-
-            debug!("Exited with {}", code);
+        for vcpu in &self.vcpus {
+            self.thread_handles.push(vcpu.run());
         }
 
         Ok(())
+    }
+
+    pub fn stop(&mut self) -> Result<i32> {
+        self.running_state.store(false, Ordering::Relaxed);
+
+        let mut reason = Ok(0);
+        while let Some(handle) = self.thread_handles.pop() {
+            if let Ok(ret) = handle.join() {
+                match ret {
+                    ExitCode::Innocent => continue,
+                    ExitCode::Cause(cause) => {
+                        reason = cause;
+                    }
+                }
+            }
+        }
+
+        reason
+    }
+
+    pub fn is_running(&mut self) -> Result<bool> {
+        if self.running_state.load(Ordering::Relaxed) {
+            return Ok(true);
+        } else {
+            /*while let Some(handle) = self.thread_handles.pop() {
+                if let Ok(ret) = handle.join() {
+                    match ret {
+                        ExitCode::Innocent => continue,
+                        ExitCode::Cause(cause) => {
+                            cause?;
+                        }
+                    }
+                }
+            }*/
+
+            return Ok(false);
+        }
     }
 
     pub fn mem_size(&self) -> usize {

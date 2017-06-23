@@ -3,6 +3,7 @@ use std::env;
 use std::mem::transmute;
 use std::io::{Write, Read, Cursor};
 use std::ffi::CString;
+use std::ffi::CStr;
 use std::process;
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 
@@ -17,7 +18,7 @@ const HERMIT_MAGIC: u32 = 0x7E317;
 pub enum Socket {
     QEmu,
     Multi(u8),
-    Connected { stream: TcpStream }
+    Connected { stream: TcpStream, stdout: String, stderr: String }
 }
 
 impl Socket {
@@ -62,14 +63,14 @@ impl Socket {
 
         debug!("Transmitted environment and arguments with length {}", length);
 
-        Socket::Connected { stream: stream }
+        Socket::Connected { stream: stream, stdout: String::new(), stderr: String::new() }
     }
 
     pub fn run(&mut self) {
         debug!("Initializing protocol state machine");
         let mut state = proto::State::Id;
-        let mut stream = match self {
-            &mut Socket::Connected { ref mut stream } => stream,
+        let (mut stream, mut stdout, mut stderr) = match self {
+            &mut Socket::Connected { ref mut stream, ref  mut stdout, ref mut stderr } => (stream, stdout, stderr),
             _ => return
         };
 
@@ -100,7 +101,11 @@ impl Socket {
                         Packet::Write { fd, buf } => {
                             let buf_ret: [u8;8] = transmute(libc::write(fd as i32, buf.as_ptr() as *const libc::c_void, buf.len()).to_le());
                             
-                            if fd > 2 {
+                            if fd == 1 {
+                                stdout.push_str(&String::from_utf8_unchecked(buf));
+                            } else if fd == 2 {
+                                stderr.push_str(&String::from_utf8_unchecked(buf));
+                            } else {
                                 stream.write(&buf_ret);
                             }
                         },
@@ -109,7 +114,6 @@ impl Socket {
                             debug!("got {:?}", buf);
                             
                             let written = stream.write(&buf).unwrap();
-                            //let written = stream.write(&[0,0,0,1]).unwrap();
                                 
                             debug!("Written {}", written);
                         },

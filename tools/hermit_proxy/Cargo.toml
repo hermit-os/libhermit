@@ -13,6 +13,10 @@ inotify = "0.4"
 byteorder = "1"
 log = "0.3"
 clap = "2.24.2"
+serde = "1.*.*"
+chrono = { version = "0.4", features = ["serde"] }
+bincode = "0.8"
+serde_derive = "1.*.*"
 
 [dependencies.env_logger]
 version = "0.3"

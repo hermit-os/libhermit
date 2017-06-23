@@ -4,7 +4,6 @@ use std::io::{Write, Read};
 
 use hermit::Isle;
 use hermit::error::*;
-use hermit::hermit_env;
 use hermit::socket::Socket;
 
 pub struct Multi {
@@ -13,7 +12,7 @@ pub struct Multi {
 }
 
 impl Multi {
-    pub fn new(num: u8, path: &str) -> Result<Multi> {
+    pub fn new(num: u8, path: &str, mem_size: u64, num_cpus: u32) -> Result<Multi> {
         let cpu_path = format!("/sys/hermit/isle{}/path", num);
         let bin_path= format!("/sys/hermit/isle{}/cpus", num);
 
@@ -25,7 +24,7 @@ impl Multi {
             let mut cpus_file = File::create(&cpu_path)
             .map_err(|_| Error::InvalidFile(cpu_path.clone()))?;
             
-            let cpus = hermit_env::num_cpus();
+            let cpus = num_cpus.to_string();
 
             path_file.write_all(path.as_bytes())
                 .map_err(|_| Error::InvalidFile(cpu_path.clone()))?;
@@ -72,5 +71,29 @@ impl Isle for Multi {
         self.socket.connect().run();
 
         Ok(())
+    }
+
+    fn output(&self) -> Result<String> {
+        Ok("".into())
+    }
+    fn stop(&mut self) -> Result<i32> {
+        debug!("Stop the HermitIsle");
+       
+        let cpu_path = match self.cpu_path() {
+            Some(f) => f,
+            None => return Ok(0)
+        };
+
+        let mut cpus_file = File::create(&cpu_path)
+            .map_err(|_| Error::InvalidFile(cpu_path.clone()))?;
+
+        cpus_file.write("-1".as_bytes())
+            .map_err(|_| Error::InvalidFile(cpu_path));
+    
+        Ok(0)
+    }
+
+    fn is_running(&mut self) -> Result<bool> {
+        Ok(true)
     }
 }

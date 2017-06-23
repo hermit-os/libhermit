@@ -4,11 +4,11 @@ use libc;
 use std::fs::File;
 use std::io::Read;
 use std::process::{ChildStdout, ChildStderr};
+use std::thread;
 
-use hermit::Isle;
+use hermit::{Isle, IsleParameterQEmu};
 use hermit::utils;
 use hermit::error::*;
-use hermit::hermit_env;
 use hermit::socket::Socket;
 
 const PIDNAME: &'static str = "/tmp/hpid-XXXXXX";
@@ -16,7 +16,7 @@ const TMPNAME: &'static str = "/tmp/hermit-XXXXXX";
 
 #[derive(Debug)]
 pub struct QEmu {
-    socket: Socket,
+    socket: Option<Socket>,
     child: Child,
     stdout: ChildStdout,
     stderr: ChildStderr,
@@ -25,16 +25,16 @@ pub struct QEmu {
 }
 
 impl QEmu {
-    pub fn new(path: &str) -> Result<QEmu> {
+    pub fn new(path: &str, mem_size: u64, num_cpus: u32, additional: IsleParameterQEmu) -> Result<QEmu> {
         let tmpf = utils::create_tmp_file(TMPNAME)?;
         let pidf = utils::create_tmp_file(PIDNAME)?;
 
-        let mut child = QEmu::start_with(path, &tmpf, &pidf)?.spawn().expect("Couldn't find qemu binary!");
+        let mut child = QEmu::start_with(path, mem_size, num_cpus, additional, &tmpf, &pidf)?.spawn().expect("Couldn't find qemu binary!");
         let stdout = child.stdout.take().unwrap();
         let stderr = child.stderr.take().unwrap();
 
         Ok(QEmu {
-            socket: Socket::new_qemu(),
+            socket: Some(Socket::new_qemu()),
             child: child,
             stdout: stdout,
             stderr: stderr,
@@ -43,13 +43,13 @@ impl QEmu {
         })
     }
     
-    pub fn start_with(path: &str, tmp_file: &str, pid_file: &str) -> Result<Command> {
-        let hostfwd = format!("user,hostfwd=tcp:127.0.0.1:{}-:{}", hermit_env::port(), hermit_env::port());
-        let monitor_str = format!("telnet:127.0.0.1:{},server,nowait", (hermit_env::port().parse::<u32>().unwrap()+1).to_string());
+    pub fn start_with(path: &str, mem_size: u64, num_cpus: u32, add: IsleParameterQEmu, tmp_file: &str, pid_file: &str) -> Result<Command> {
+        let hostfwd = format!("user,hostfwd=tcp:127.0.0.1:{}-:{}", add.port, add.port);
+        let monitor_str = format!("telnet:127.0.0.1:{},server,nowait", add.port+1);
         let chardev = format!("file,id=gnc0,path={}",&tmp_file);
         let freq = format!("\"-freq{} -proxy\"",(utils::cpufreq().unwrap()/1000).to_string());
-        let cpus = hermit_env::num_cpus();
-        let mem_size = hermit_env::mem_size();
+        let num_cpus = num_cpus.to_string();
+        let mem_size = mem_size.to_string();
 
         let exe = env::current_exe().unwrap();
         let name = exe.to_str().unwrap();
@@ -62,7 +62,7 @@ impl QEmu {
         let mut args: Vec<&str> = vec![
             "-daemonize",
             "-display", "none",
-            "-smp", &cpus,
+            "-smp", &num_cpus,
             "-m", &mem_size,
             "-pidfile", pid_file,
             "-net", "nic,model=rtl8139",
@@ -73,39 +73,40 @@ impl QEmu {
             "-initrd", path,
             "-append", &freq];
 
-        let app_port = hermit_env::app_port();
-        if app_port != "" {
+        let app_port = add.app_port;
+        if app_port != 0 {
             port_str = format!("{},hostfwd=tcp::{}-:{}", hostfwd,app_port, app_port);
             args[12] = &port_str;
         }
 
-        if hermit_env::use_kvm() != "0" {
+        if add.use_kvm {
             args.push("-machine");
             args.push("accel=kvm");
             args.push("-cpu");
             args.push("host");
         }
 
-        if hermit_env::monitor() != "0" {
+        //if add.monitor {
             args.push("-monitor");
             args.push(&monitor_str);
-        }
+        //}
 
-        if hermit_env::should_debug() != "0" {
+        if add.should_debug {
             args.push("-s");
         }
 
-        if hermit_env::capture_net() != "0" {
+        if add.capture_net {
             args.push("-net");
             args.push("dump");
         }
 
+        /*
         if hermit_env::verbose() != "0" {
             debug!("Execute {} with args {:#?}", hermit_env::qemu_binary(), args);
-        }
+        }*/
 
 
-        let mut cmd = Command::new(hermit_env::qemu_binary());
+        let mut cmd = Command::new(add.binary);
 
         cmd.args(args).stdout(Stdio::piped()).stderr(Stdio::piped());
 
@@ -113,7 +114,7 @@ impl QEmu {
         Ok(cmd)
     }
 
-    pub fn output(&mut self) -> (String, String) {
+    pub fn qemu_log(&mut self) -> (String, String) {
         let mut stderr = String::new();
         let mut stdout = String::new();
 
@@ -137,9 +138,31 @@ impl Isle for QEmu {
     }
 
     fn run(&mut self) -> Result<()> {
-        self.socket.connect().run();
+        let socket = self.socket.take();
+
+        thread::spawn(|| {
+            socket.unwrap().connect().run();
+        });
 
         Ok(())
+    }
+
+    fn output(&self) -> Result<String> {
+        /*if let &Socket::Connected { ref stdout, ref stderr, .. } = &self.socket.unwrap() {
+            Ok(stdout.clone())
+        } else {
+            Err(Error::InternalError)
+        }*/
+
+        Err(Error::InternalError)
+    }
+
+    fn stop(&mut self) -> Result<i32> {
+        Ok(0)
+    }
+
+    fn is_running(&mut self) -> Result<bool> {
+        Ok(true)
     }
 }
 

@@ -96,6 +96,9 @@ impl Syscall {
         
         match *self {
             Syscall::Write(obj) => {
+                if (*obj).fd == 1 {
+                } else if (*obj).fd == 2 {
+                }
                 (*obj).length = write((*obj).fd, guest_mem.offset((*obj).buf) as *const c_void, (*obj).length as usize);
             },
             Syscall::Read(obj) => {
