@@ -126,7 +126,7 @@ install(DIRECTORY include/hermit
 # needed during the compilation of the cross toolchain
 add_custom_target(hermit-bootstrap-install
 	DEPENDS
-		hermit-bootstrap
+		hermit-bootstrap ${ARCH_KERNEL_TARGET}
 	COMMAND
 		${CMAKE_COMMAND}
 			-DCMAKE_INSTALL_COMPONENT=bootstrap

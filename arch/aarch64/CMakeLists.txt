@@ -4,6 +4,7 @@ include(../../cmake/HermitCore.cmake)
 project(arch_aarch64_kernel C)
 
 set_parent(AARCH64_KERNEL_TARGET		${PROJECT_NAME})
+set_parent(ARCH_KERNEL_TARGET			${PROJECT_NAME})
 set_parent(AARCH64_KERNEL_ASM_TARGET	${AARCH64_KERNEL_TARGET}_asm)
 set_parent(AARCH64_KERNEL_C_TARGET		${AARCH64_KERNEL_TARGET}_c)
 

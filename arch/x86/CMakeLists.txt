@@ -4,6 +4,7 @@ include(../../cmake/HermitCore.cmake)
 project(arch_x86_kernel C ASM_NASM)
 
 set_parent(X86_KERNEL_TARGET		${PROJECT_NAME})
+set_parent(ARCH_KERNEL_TARGET		${PROJECT_NAME})
 set_parent(X86_KERNEL_ASM_TARGET	${X86_KERNEL_TARGET}_asm)
 set_parent(X86_KERNEL_C_TARGET		${X86_KERNEL_TARGET}_c)
 
