@@ -42,10 +42,7 @@
  * has been running for
  */
 DEFINE_PER_CORE(uint64_t, timer_ticks, 0);
-int timer_wait(unsigned int ticks)
-{
-  return 0;
-}
+
 #if 0
 extern uint32_t cpu_freq;
 extern int32_t boot_processor;
@@ -53,9 +50,12 @@ extern int32_t boot_processor;
 #ifdef DYNAMIC_TICKS
 DEFINE_PER_CORE(uint64_t, last_rdtsc, 0);
 uint64_t boot_tsc = 0;
+#endif
+#endif
 
 void check_ticks(void)
 {
+#if 0
 	// do we already know the cpu frequency? => if not, ignore this check
 	if (!cpu_freq)
 		return;
@@ -72,8 +72,8 @@ void check_ticks(void)
 		set_per_core(last_rdtsc, curr_rdtsc);
 		rmb();
 	}
-}
 #endif
+}
 
 static void wakeup_handler(struct state *s)
 {
@@ -86,6 +86,7 @@ static void wakeup_handler(struct state *s)
  */
 static void timer_handler(struct state *s)
 {
+#if 0
 #ifndef DYNAMIC_TICKS
 	/* Increment our 'tick counter' */
 	set_per_core(timer_ticks, per_core(timer_ticks)+1);
@@ -104,10 +105,12 @@ static void timer_handler(struct state *s)
 		LOG_INFO("One second has passed %d\n", CORE_ID);
 	}
 #endif
+#endif
 }
 
 int timer_wait(unsigned int ticks)
 {
+#if 0
 	uint64_t eticks = per_core(timer_ticks) + ticks;
 
 	task_t* curr_task = per_core(current_task);
@@ -137,8 +140,10 @@ int timer_wait(unsigned int ticks)
 	}
 
 	return 0;
+#endif
 }
 
+#if 0
 #define LATCH(f)	((CLOCK_TICK_RATE + f/2) / f)
 #define WAIT_SOME_TIME() do { uint64_t start = rdtsc(); mb(); \
 			      while(rdtsc() - start < 1000000) ; \
@@ -171,6 +176,7 @@ static int pit_init(void)
 
 	return 0;
 }
+#endif
 
 /*
  * Sets up the system clock by installing the timer handler
@@ -178,6 +184,7 @@ static int pit_init(void)
  */
 int timer_init(void)
 {
+#if 0
 #ifdef DYNAMIC_TICKS
 	if (boot_tsc)
 	{
@@ -203,5 +210,5 @@ int timer_init(void)
 		return 0;
 
 	return pit_init();
-}
 #endif
+}

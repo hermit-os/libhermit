@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Stefan Lankes, RWTH Aachen University
+ * Copyright (c) 2014-2017, Stefan Lankes, Daniel Krebs, RWTH Aachen University
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,23 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <hermit/stdio.h>
 #include <hermit/stdlib.h>
 
-int is_proxy(void)
+uint32_t get_cpu_frequency(void)
 {
 	return 0;
-}
-
-void wait_for_task(void)
-{
-
-}
-
-void wakeup_core(uint32_t core_id)
-{
-}
-
-void shutdown_system(void)
-{
 }
