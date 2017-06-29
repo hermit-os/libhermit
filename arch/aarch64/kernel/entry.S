@@ -32,18 +32,28 @@
 
 #include <hermit/config.h>
 
-.section startup
+.section .mboot
 
 .global _start
 _start:
 b start64
 
 .global boot_processor
-boot_processor: .word 0
+boot_processor: .dword -1
+.global cpu_online
+cpu_online: .dword 0
+.global possible_cpus
+possible_cpus: .dword 0
 .global hbmem_base
 hbmem_base: .quad 0
 .global hbmem_size
 hbmem_size: .quad 0
+.global isle
+isle: .dword -1
+.global image_size
+image_size: .quad 0
+.global possible_isles
+possible_isles: .dword 1
 
 start64:
 /* Pointer to stack base  */
