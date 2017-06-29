@@ -249,7 +249,7 @@ int network_shutdown(void)
 		lwip_close(s);
 	}
 
-	mmnif_shutdown();
+	//mmnif_shutdown();
 	//stats_display();
 
 	return 0;
@@ -502,8 +502,8 @@ int hermit_main(void)
 	LOG_INFO("System is able to use %d processors\n", possible_cpus);
 	if (get_cmdline())
 		LOG_INFO("Kernel cmdline: %s\n", get_cmdline());
-	if (hbmem_base)
-		LOG_INFO("Found high bandwidth memory at 0x%zx (size 0x%zx)\n", hbmem_base, hbmem_size);
+	//if (hbmem_base)
+	//	LOG_INFO("Found high bandwidth memory at 0x%zx (size 0x%zx)\n", hbmem_base, hbmem_size);
 
 #if 0
 	print_pci_adapters();
