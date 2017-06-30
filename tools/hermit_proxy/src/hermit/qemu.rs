@@ -86,10 +86,10 @@ impl QEmu {
             args.push("host");
         }
 
-        //if add.monitor {
+        if add.monitor {
             args.push("-monitor");
             args.push(&monitor_str);
-        //}
+        }
 
         if add.should_debug {
             args.push("-s");
@@ -100,10 +100,7 @@ impl QEmu {
             args.push("dump");
         }
 
-        /*
-        if hermit_env::verbose() != "0" {
-            debug!("Execute {} with args {:#?}", hermit_env::qemu_binary(), args);
-        }*/
+        debug!("Execute {} with args {:#?}", add.binary, args);
 
 
         let mut cmd = Command::new(add.binary);

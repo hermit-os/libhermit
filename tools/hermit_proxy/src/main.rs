@@ -6,10 +6,6 @@
 #![allow(non_upper_case_globals)]
 
 #[macro_use]
-extern crate log;
-extern crate env_logger;
-
-#[macro_use]
 extern crate clap;
 
 #[macro_use]
@@ -27,6 +23,9 @@ extern crate chrono;
 #[macro_use]
 extern crate nix;
 
+#[macro_use]
+extern crate log;
+
 mod hermit;
 mod daemon;
 
@@ -38,18 +37,7 @@ use daemon::{Action, ActionResult};
 use std::net::Shutdown;
 use chrono::DateTime;
 
-extern fn exit(_:i32) {
-    panic!("Aborting ..");
-}
-
 fn main() {
-    // register a signal
-    /*let sig_action = signal::SigAction::new(signal::SigHandler::Handler(exit), signal::SaFlags::empty(), signal::SigSet::empty());
-    unsafe {
-        signal::sigaction(signal::SIGINT, &sig_action).unwrap();
-        signal::sigaction(signal::SIGTERM, &sig_action).unwrap();
-    }*/
-
     let matches = clap_app!(HermitProxy => 
         (version: "0.0.1")
         (author: "Lorenz Schmidt <bytesnake@mailbox.org>")
@@ -127,7 +115,7 @@ fn main() {
             let mut i = 0;
             println!("{0: <10} | {1: <10} | {2: <10}", "number", "time", "action");
             for log in logs {
-                println!("{0: <10} | {1: <10} | {2: <10?}", i, log.time.to_string(), log.action);
+                println!("{0: <10} | {1: <10} | {2: <10?}", i, log.time.to_rfc3339(), log.text);
                 i += 1;
             }
         } else if let ActionResult::IsleLog(content) = res {
@@ -160,6 +148,11 @@ fn main() {
             Ok(id) => {
                 let res = daemon.send(Action::RemoveIsle(id));
 
+                if let ActionResult::RemoveIsle(Ok(_)) = res {
+                    println!("Isle {} was successfully removed", id);
+                } else if let ActionResult::RemoveIsle(Err(err)) = res {
+                    println!("Remove failed: {:?}", err);
+                }
             },
             Err(_) => {
                 println!("Invalid number!");
@@ -198,7 +191,6 @@ fn main() {
             env::set_var("HERMIT_APP_PORT",app_port);
         }
 
-        env_logger::init().unwrap();
         let res = daemon.send(Action::CreateIsle(
                 matches.value_of("file").unwrap().into(), 
                 IsleParameter::from_env()

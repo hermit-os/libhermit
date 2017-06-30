@@ -17,7 +17,8 @@ pub enum Error {
     QEmu((String, String)),
     MissingBinary,
     Protocol(String),
-    ParseMemory
+    ParseMemory,
+    WrongIsleNumber
 }
 
 impl fmt::Debug for Error {
@@ -38,7 +39,8 @@ impl fmt::Debug for Error {
             Error::QEmu((_, ref stderr)) => write!(f, "The qemu binary has encountered an error: {}", stderr),
             Error::MissingBinary => write!(f, "Please specify a binary."),
             Error::Protocol(ref err) => write!(f, "{}", err),
-            Error::ParseMemory => write!(f, "Couldn't parse the guest memory size from the environment")
+            Error::ParseMemory => write!(f, "Couldn't parse the guest memory size from the environment"),
+            Error::WrongIsleNumber => write!(f, "Unknown isle number")
         }
     }
 }

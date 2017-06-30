@@ -1,8 +1,12 @@
 use std::os::unix::net::{UnixStream, UnixListener};
 use std::path::Path;
+use std::result;
 use std::thread;
+use log;
+use log::{LogMetadata, LogRecord, SetLoggerError, LogLevel, LogLevelFilter};
 use nix::unistd::{fork, ForkResult};
 use hermit::Isle;
+use std::sync::RwLock;
 use std::io::Write;
 use std::io::Read;
 use bincode::{serialize, deserialize, Infinite};
@@ -11,8 +15,39 @@ use hermit::IsleParameter;
 use hermit::qemu::QEmu;
 use hermit::multi::Multi;
 use hermit::uhyve::Uhyve;
-use hermit::error::Result;
+use hermit::error::{Result,Error};
 use chrono::{DateTime,Local};
+
+thread_local!{
+    static LOGS: RwLock<Vec<Log>> = RwLock::new(Vec::new());
+}
+
+struct LocalLogger;
+
+impl log::Log for LocalLogger {
+    fn enabled(&self, metadata: &LogMetadata) -> bool {
+        true
+    }
+
+    fn log(&self, record: &LogRecord) {
+
+        LOGS.with(|f| {
+            let mut writable = f.write().unwrap();
+
+            writable.push(Log { time: Local::now(), level: LogCoverage::Intern, text: format!("{}", record.args()) });
+        });
+
+    }
+}
+
+impl LocalLogger {
+    pub fn init() -> result::Result<(), SetLoggerError> {
+        log::set_logger(|max_level| {
+            max_level.set(LogLevelFilter::Trace);
+            Box::new(LocalLogger)
+        })
+    }
+}
 
 pub struct Connection {
     pub socket: UnixStream
@@ -69,20 +104,27 @@ pub enum ActionResult {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum LogCoverage {
+    All,
+    Communication,
+    Intern
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Log {
     pub time: DateTime<Local>,
-    pub action: Action
+    pub level: LogCoverage,
+    pub text: String
 }
 
 struct State {
     isles: Vec<Box<Isle>>,
-    specs: Vec<IsleParameter>,
-    logs: Vec<Log>
+    specs: Vec<IsleParameter>
 }
 
 impl State {
     pub fn new() -> State {
-        State { isles: Vec::new(), logs: Vec::new(), specs: Vec::new() }
+        State { isles: Vec::new(), specs: Vec::new() }
     }
 
     pub fn create_isle(&mut self, path: String, specs: IsleParameter) -> Result<u32> {
@@ -94,7 +136,6 @@ impl State {
             IsleParameter::Multi{ mem_size, num_cpus } => Box::new(Multi::new(0, &path, mem_size, num_cpus)?)
         };
 
-        isle.wait_until_available()?;
         isle.run()?;
 
         self.isles.push(isle);
@@ -107,18 +148,31 @@ impl State {
     }
 
     pub fn log(&self) -> Vec<Log> {
-        self.logs.clone()
+        let mut logs = Vec::new();
+        LOGS.with(|f| {
+            logs = (*f.read().unwrap()).to_vec();
+        });
+
+        logs
     }
 
     pub fn add_log(&mut self, action: Action) {
-        self.logs.push(Log { time: Local::now(), action: action });
+        LOGS.with(|f| {
+            let mut writable = f.write().unwrap();
+
+            writable.push(Log { time: Local::now(), level: LogCoverage::Communication, text: format!("{:?}",action) });
+        });
     }
 
     pub fn stop_isle(&mut self, id: u32) -> Result<i32> {
+        self.exist_isle(id)?;
+
         self.isles[id as usize].stop()
     }
 
     pub fn remove_isle(&mut self, id: u32) -> Result<i32> {
+        self.exist_isle(id)?;
+
         if self.isles[id as usize].is_running()? {
             self.isles[id as usize].stop()?;
         }
@@ -128,11 +182,27 @@ impl State {
 
         Ok(0)
     }
+
+    fn log_isle(&self, id: u32) -> Result<String> {
+        self.exist_isle(id)?;
+
+        self.isles[id as usize].output()
+    }
+
+    fn exist_isle(&self, id: u32) -> Result<()> {
+        if self.isles.len() > id as usize {
+            Ok(())
+        } else {
+            Err(Error::WrongIsleNumber)
+        }
+    }
 }
 
 pub fn daemon_handler() {
     let mut state = State::new();
     let mut buf = vec![0; 256];
+
+    LocalLogger::init();
 
     let listener = UnixListener::bind("/tmp/hermit_daemon").unwrap();
     //for stream in listener.incoming() {
@@ -156,7 +226,7 @@ pub fn daemon_handler() {
                                 Action::List => ActionResult::List(state.list()),
                                 Action::Log(id) => {
                                     match id {
-                                        Some(id) => ActionResult::IsleLog(state.isles[id as usize].output()),
+                                        Some(id) => ActionResult::IsleLog(state.log_isle(id)),
                                         None => ActionResult::Log(state.log())
                                     }
                                 },
