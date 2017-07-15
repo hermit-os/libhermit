@@ -166,8 +166,12 @@ impl Isle for QEmu {
         } else {
             Err(Error::InternalError)
         }*/
+        let mut file = File::open(&self.tmp_file).unwrap();
+        let mut content = String::new();
 
-        Err(Error::InternalError)
+        file.read_to_string(&mut content);
+
+        Ok(content)
     }
 
     fn stop(&mut self) -> Result<i32> {
