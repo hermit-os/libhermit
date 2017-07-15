@@ -5,6 +5,8 @@ use std::fs::File;
 use std::io::Read;
 use std::process::{ChildStdout, ChildStderr};
 use std::thread;
+use std::os::unix::net::UnixStream;
+use std::io::Write;
 
 use hermit::{Isle, IsleParameterQEmu};
 use hermit::utils;
@@ -32,6 +34,7 @@ impl QEmu {
         let mut child = QEmu::start_with(path, mem_size, num_cpus, additional, &tmpf, &pidf)?.spawn().expect("Couldn't find qemu binary!");
         let stdout = child.stdout.take().unwrap();
         let stderr = child.stderr.take().unwrap();
+        println!("{}", pidf);
 
         Ok(QEmu {
             socket: Some(Socket::new_qemu()),
@@ -39,17 +42,18 @@ impl QEmu {
             stdout: stdout,
             stderr: stderr,
             tmp_file: tmpf,
-            pid_file: pidf
+            pid_file: pidf,
         })
     }
     
     pub fn start_with(path: &str, mem_size: u64, num_cpus: u32, add: IsleParameterQEmu, tmp_file: &str, pid_file: &str) -> Result<Command> {
         let hostfwd = format!("user,hostfwd=tcp:127.0.0.1:{}-:{}", add.port, add.port);
-        let monitor_str = format!("telnet:127.0.0.1:{},server,nowait", add.port+1);
+        //let monitor_str = format!("telnet:127.0.0.1:{},server,nowait", add.port+1);
+        let monitor_str = format!("unix:{}_monitor,server,nowait", pid_file);
         let chardev = format!("file,id=gnc0,path={}",&tmp_file);
         let freq = format!("\"-freq{} -proxy\"",(utils::cpufreq().unwrap()/1000).to_string());
         let num_cpus = num_cpus.to_string();
-        let mem_size = mem_size.to_string();
+        let mem_size = format!("{}B", mem_size);
 
         let exe = env::current_exe().unwrap();
         let name = exe.to_str().unwrap();
@@ -86,10 +90,8 @@ impl QEmu {
             args.push("host");
         }
 
-        if add.monitor {
-            args.push("-monitor");
-            args.push(&monitor_str);
-        }
+        args.push("-monitor");
+        args.push(&monitor_str);
 
         if add.should_debug {
             args.push("-s");
@@ -100,13 +102,11 @@ impl QEmu {
             args.push("dump");
         }
 
-        debug!("Execute {} with args {:#?}", add.binary, args);
-
+        debug!("Execute {} with {}", add.binary, args.join(" "));
 
         let mut cmd = Command::new(add.binary);
 
         cmd.args(args).stdout(Stdio::piped()).stderr(Stdio::piped());
-
 
         Ok(cmd)
     }
@@ -119,6 +119,22 @@ impl QEmu {
         self.stderr.read_to_string(&mut stderr);
 
         (stdout, stderr)
+    }
+
+    pub fn send_cmd(&self, cmd: &str) -> Result<String> {
+        let file = format!("{}_monitor", self.pid_file);
+
+        let mut control = UnixStream::connect(&file)
+            .map_err(|_| Error::InvalidFile(file.clone()))?;
+        
+        control.write_all(cmd.as_bytes())
+            .map_err(|_| Error::InvalidFile(file))?;
+
+        let mut buf = String::new();
+
+        control.read_to_string(&mut buf);
+
+        Ok(buf)
     }
 }
 
@@ -155,11 +171,15 @@ impl Isle for QEmu {
     }
 
     fn stop(&mut self) -> Result<i32> {
+        self.send_cmd("system_powerdown")?;
+
         Ok(0)
     }
 
     fn is_running(&mut self) -> Result<bool> {
-        Ok(true)
+        let state = self.send_cmd("info status")?;
+
+        Ok(state == "running")
     }
 }
 

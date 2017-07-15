@@ -2,6 +2,7 @@ use std::os::unix::net::{UnixStream, UnixListener};
 use std::path::Path;
 use std::result;
 use std::thread;
+use std::process;
 use log;
 use log::{LogMetadata, LogRecord, SetLoggerError, LogLevel, LogLevelFilter};
 use nix::unistd::{fork, ForkResult};
@@ -57,7 +58,11 @@ impl Connection {
     pub fn connect() -> Connection {
         if !Path::new("/tmp/hermit_daemon").exists() {
             match fork() {
-                Ok(ForkResult::Child) => daemon_handler(),
+                Ok(ForkResult::Child) => {
+                    daemon_handler();
+
+                    process::exit(0);
+                },
                 _ => {}
             }
         }
@@ -76,7 +81,21 @@ impl Connection {
 
         let mut buf = Vec::new();
 
-        self.socket.read_to_end(&mut buf).unwrap();
+        if let Err(err) = self.socket.read_to_end(&mut buf) {
+            if let Action::KillDaemon = action {
+                return ActionResult::KillDaemon(Ok(()));
+            }
+
+            panic!("The daemon seem to be crashed!");
+        }
+
+        if buf.len() == 0 {
+            if let Action::KillDaemon = action {
+                return ActionResult::KillDaemon(Ok(()));
+            } else {
+                panic!("he result was empty!");
+            }
+        }
 
         deserialize(&buf).unwrap()
     }
@@ -208,7 +227,7 @@ pub fn daemon_handler() {
     //for stream in listener.incoming() {
     //    match stream {
     //        Ok(mut stream) => {
-    loop { match listener.accept() {
+    'outer: loop { match listener.accept() {
         Ok((mut stream, addr)) => {
 //            loop {
                     if let Ok(nread) = stream.read(&mut buf) {
@@ -220,7 +239,7 @@ pub fn daemon_handler() {
                             let ret = match action {
                                 Action::KillDaemon => {
                                     fs::remove_file("/tmp/hermit_daemon").unwrap();
-                                    break;
+                                    break 'outer;
                                 },
                                 Action::CreateIsle(path, specs) => ActionResult::CreateIsle(state.create_isle(path,specs)),
                                 Action::List => ActionResult::List(state.list()),

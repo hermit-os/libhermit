@@ -31,19 +31,10 @@ impl Socket {
     }
 
     pub fn connect(&self) -> Socket {
-        let mut stream = match *self {
-            Socket::QEmu => TcpStream::connect(("127.0.0.1", 0x494E)).unwrap(),
-            Socket::Multi(id) => TcpStream::connect((format!("127.0.0.{}", id).as_ref(), 0x494E)).unwrap(),
-            _ => panic!("")
-        };
-
-        debug!("Connected to {}", stream.peer_addr().unwrap());
-
+        // prepare the initializing struct
         let length: usize = 4 + env::args().skip(2).map(|x| 4+x.len()).sum::<usize>()+ 4 + env::vars().map(|(x,y)| 5 + x.len()+ y.len()).sum::<usize>();
-
         let mut buf = Cursor::new(vec![0u8;length]);
         buf.write_u32::<LittleEndian>(HERMIT_MAGIC);
-        
         // send all arguments (skip first)
         buf.write_u32::<LittleEndian>(env::args().count() as u32 - 2);
         for key in env::args().skip(2) {
@@ -59,8 +50,37 @@ impl Socket {
             buf.write(tmp.as_bytes());
         }
 
-        stream.write(buf.get_ref());
+        let mut stream;
+        loop {
+            match *self {
+                Socket::QEmu => {
+                    match TcpStream::connect(("127.0.0.1", 0x494E)) {
+                        Ok(mut s) => { 
+                            match s.write(buf.get_ref()) {
+                                Ok(_) => { stream = s; break; },
+                                Err(_) => {}
+                            }
+                        },
 
+                        Err(_) => {}
+                    }
+                },
+                Socket::Multi(id) => {
+                    match TcpStream::connect((format!("127.0.0.{}", id).as_ref(), 0x494E)) {
+                        Ok(mut s) => { 
+                            match s.write(buf.get_ref()) {
+                                Ok(_) => { stream = s; break; },
+                                Err(_) => {}
+                            }
+                        },
+                        Err(_) => {}
+                    }
+                },
+                _ => panic!("")
+            }
+        }
+
+        debug!("Connected to {}", stream.peer_addr().unwrap());
         debug!("Transmitted environment and arguments with length {}", length);
 
         Socket::Connected { stream: stream, stdout: String::new(), stderr: String::new() }
