@@ -3,11 +3,14 @@ use std::path::Path;
 use std::result;
 use std::thread;
 use std::process;
+use std::sync::Mutex;
+use std::net::Shutdown;
 use log;
 use log::{LogMetadata, LogRecord, SetLoggerError, LogLevel, LogLevelFilter};
 use nix::unistd::{fork, ForkResult};
 use hermit::Isle;
 use std::sync::RwLock;
+use std::sync::Arc;
 use std::io::Write;
 use std::io::Read;
 use bincode::{serialize, deserialize, Infinite};
@@ -69,6 +72,8 @@ impl Connection {
 
         loop {
             if let Ok(socket) = UnixStream::connect("/tmp/hermit_daemon") {
+                socket.set_nonblocking(true).unwrap();
+
                 return Connection { socket: socket };
             }
         }
@@ -79,25 +84,44 @@ impl Connection {
 
         self.socket.write(&encoded).unwrap();
 
+        let mut tmp = vec![0; 1024];
         let mut buf = Vec::new();
 
-        if let Err(err) = self.socket.read_to_end(&mut buf) {
-            if let Action::KillDaemon = action {
-                return ActionResult::KillDaemon(Ok(()));
+        loop {
+            match self.socket.read(&mut tmp) {
+                Ok(nread) => buf.extend_from_slice(&tmp[0..nread]),
+                Err(err) => {
+                    if buf.len() > 0 {
+                        break;
+                    }
+                }
             }
-
-            panic!("The daemon seem to be crashed!");
         }
 
         if buf.len() == 0 {
             if let Action::KillDaemon = action {
                 return ActionResult::KillDaemon(Ok(()));
             } else {
-                panic!("he result was empty!");
+                panic!("The result was empty!");
             }
         }
 
         deserialize(&buf).unwrap()
+    }
+
+    pub fn output(&mut self) {
+        let mut buf = vec![0; 1024];
+        loop {
+            if let Ok(nread) = self.socket.read(&mut buf) {
+                let obj = deserialize(&buf).unwrap();
+
+                if let ActionResult::Output(out) = obj {
+                    print!("{}", out);
+                } else if let ActionResult::OutputErr(out) = obj {
+                    print!("{}", out);
+                }
+            }
+        }
     }
 }
 
@@ -106,6 +130,7 @@ pub enum Action {
     CreateIsle(String, IsleParameter),
     StopIsle(u32),
     RemoveIsle(u32),
+    Connect(u32),
     Log(Option<u32>),
     List,
     KillDaemon
@@ -116,10 +141,13 @@ pub enum ActionResult {
     CreateIsle(Result<u32>),
     StopIsle(Result<i32>),
     RemoveIsle(Result<i32>),
+    Connect(Result<()>),
     Log(Vec<Log>),
     IsleLog(Result<String>),
     List(Vec<(Result<bool>, IsleParameter)>),
-    KillDaemon(Result<()>)
+    KillDaemon(Result<()>),
+    Output(String),
+    OutputErr(String)
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -215,6 +243,12 @@ impl State {
             Err(Error::WrongIsleNumber)
         }
     }
+
+    fn add_endpoint(&mut self, id: u32, stream: Arc<Mutex<UnixStream>>) -> Result<()> {
+        self.exist_isle(id)?;
+
+        self.isles[id as usize].add_endpoint(stream)
+    }
 }
 
 pub fn daemon_handler() {
@@ -224,13 +258,16 @@ pub fn daemon_handler() {
     LocalLogger::init();
 
     let listener = UnixListener::bind("/tmp/hermit_daemon").unwrap();
-    //for stream in listener.incoming() {
-    //    match stream {
-    //        Ok(mut stream) => {
-    'outer: loop { match listener.accept() {
-        Ok((mut stream, addr)) => {
-//            loop {
-                    if let Ok(nread) = stream.read(&mut buf) {
+    for stream in listener.incoming() {
+        match stream {
+            Ok(mut stream) => {
+                    let mut stream = Arc::new(Mutex::new(stream));
+                   
+                    loop {
+                        //println!("READ");
+                    let nread = stream.lock().unwrap().read(&mut buf);
+                    println!("{:?}", nread);
+                    if let Ok(nread) = nread {
                         if nread > 0 {
                             let action:Action  = deserialize(&buf).unwrap();
                             
@@ -239,10 +276,16 @@ pub fn daemon_handler() {
                             let ret = match action {
                                 Action::KillDaemon => {
                                     fs::remove_file("/tmp/hermit_daemon").unwrap();
-                                    break 'outer;
+                                    break;
                                 },
                                 Action::CreateIsle(path, specs) => ActionResult::CreateIsle(state.create_isle(path,specs)),
                                 Action::List => ActionResult::List(state.list()),
+                                Action::Connect(id) => {
+                                    let res = ActionResult::Connect(state.add_endpoint(id, stream.clone()));
+                                    let buf: Vec<u8> = serialize(&res, Infinite).unwrap();
+                                    stream.lock().unwrap().write(&buf);
+                                    break;
+                                },
                                 Action::Log(id) => {
                                     match id {
                                         Some(id) => ActionResult::IsleLog(state.log_isle(id)),
@@ -254,17 +297,17 @@ pub fn daemon_handler() {
                                 _ => { panic!(""); }
                             };
 
+                            println!("WRITE");
                             let buf: Vec<u8> = serialize(&ret, Infinite).unwrap();
-                            stream.write(&buf);
+                            stream.lock().unwrap().write(&buf);
+                        } else {
+                            break;
                         }
                     } else {
-
+                        break;
                     }
-  //              }
-            },
-            Err(err) => {
-                println!("ERR: {:?}", err);
-            }
-        }
-    }
+                    }
+        },
+        Err(err) => { println!("ERR: {:?}", err); }
+    }}
 }

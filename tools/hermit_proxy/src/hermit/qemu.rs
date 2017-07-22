@@ -7,11 +7,14 @@ use std::process::{ChildStdout, ChildStderr};
 use std::thread;
 use std::os::unix::net::UnixStream;
 use std::io::Write;
+use std::time::Duration;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use hermit::{Isle, IsleParameterQEmu};
 use hermit::utils;
 use hermit::error::*;
-use hermit::socket::Socket;
+use hermit::socket::{Socket, Console};
 
 const PIDNAME: &'static str = "/tmp/hpid-XXXXXX";
 const TMPNAME: &'static str = "/tmp/hermit-XXXXXX";
@@ -24,6 +27,7 @@ pub struct QEmu {
     stderr: ChildStderr,
     tmp_file: String,
     pid_file: String,
+    console: Console
 }
 
 impl QEmu {
@@ -35,20 +39,22 @@ impl QEmu {
         let stdout = child.stdout.take().unwrap();
         let stderr = child.stderr.take().unwrap();
         println!("{}", pidf);
+        let socket = Socket::new();
+        let console = socket.console();
 
         Ok(QEmu {
-            socket: Some(Socket::new_qemu()),
+            socket: Some(socket),
             child: child,
             stdout: stdout,
             stderr: stderr,
             tmp_file: tmpf,
             pid_file: pidf,
+            console: console
         })
     }
     
     pub fn start_with(path: &str, mem_size: u64, num_cpus: u32, add: IsleParameterQEmu, tmp_file: &str, pid_file: &str) -> Result<Command> {
         let hostfwd = format!("user,hostfwd=tcp:127.0.0.1:{}-:{}", add.port, add.port);
-        //let monitor_str = format!("telnet:127.0.0.1:{},server,nowait", add.port+1);
         let monitor_str = format!("unix:{}_monitor,server,nowait", pid_file);
         let chardev = format!("file,id=gnc0,path={}",&tmp_file);
         let freq = format!("\"-freq{} -proxy\"",(utils::cpufreq().unwrap()/1000).to_string());
@@ -126,15 +132,29 @@ impl QEmu {
 
         let mut control = UnixStream::connect(&file)
             .map_err(|_| Error::InvalidFile(file.clone()))?;
+
+        control.set_read_timeout(Some(Duration::new(0,500))).unwrap();
         
         control.write_all(cmd.as_bytes())
+            .map_err(|_| Error::InvalidFile(file.clone()))?;
+        
+        control.write_all("\n".as_bytes())
             .map_err(|_| Error::InvalidFile(file))?;
 
-        let mut buf = String::new();
+		let mut response = [0u8; 256];
+		let mut buf = Vec::new();
+		loop {
+		    if let Ok(nread) = control.read(&mut response) {
+		        buf.extend_from_slice(&response[..nread]);
+		    } else {
+		        break;
+		    }
+		}   
+		
+		let res = String::from_utf8(buf).unwrap();
+		let res: String = res.lines().filter(|x| !x.starts_with("QEMU") && !x.starts_with("(qemu)")).collect();
 
-        control.read_to_string(&mut buf);
-
-        Ok(buf)
+        Ok(res)
     }
 }
 
@@ -151,21 +171,17 @@ impl Isle for QEmu {
     }
 
     fn run(&mut self) -> Result<()> {
-        let socket = self.socket.take();
+        let mut socket = self.socket.take().ok_or(Error::InternalError)?;
+        socket.connect()?;
 
-        thread::spawn(|| {
-            socket.unwrap().connect().run();
+        thread::spawn(move || {
+            socket.run();
         });
 
         Ok(())
     }
 
     fn output(&self) -> Result<String> {
-        /*if let &Socket::Connected { ref stdout, ref stderr, .. } = &self.socket.unwrap() {
-            Ok(stdout.clone())
-        } else {
-            Err(Error::InternalError)
-        }*/
         let mut file = File::open(&self.tmp_file).unwrap();
         let mut content = String::new();
 
@@ -175,7 +191,7 @@ impl Isle for QEmu {
     }
 
     fn stop(&mut self) -> Result<i32> {
-        self.send_cmd("system_powerdown")?;
+        self.send_cmd("stop")?;
 
         Ok(0)
     }
@@ -183,7 +199,13 @@ impl Isle for QEmu {
     fn is_running(&mut self) -> Result<bool> {
         let state = self.send_cmd("info status")?;
 
-        Ok(state == "running")
+        Ok(state == "VM status: running")
+    }
+
+    fn add_endpoint(&mut self, stream: Arc<Mutex<UnixStream>>) -> Result<()> { 
+        self.console.lock().unwrap().push(stream);
+
+        Ok(())
     }
 }
 

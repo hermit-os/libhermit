@@ -6,34 +6,42 @@ use std::ffi::CString;
 use std::ffi::CStr;
 use std::process;
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::os::unix::net::UnixStream;
+use bincode::{serialize, Infinite};
 
 use hermit::proto;
 use hermit::proto::Packet;
+use hermit::error::{Error, Result};
+
+use daemon::ActionResult;
 
 use libc;
 
 const HERMIT_MAGIC: u32 = 0x7E317;
 
+pub type Console = Arc<Mutex<Vec<Arc<Mutex<UnixStream>>>>>;
+
 #[derive(Debug)]
-pub enum Socket {
-    QEmu,
-    Multi(u8),
-    Connected { stream: TcpStream, stdout: String, stderr: String }
+pub struct Socket {
+    stream: Option<TcpStream>, 
+    console: Console
 }
 
 impl Socket {
-    pub fn new_qemu() -> Socket {
-        Socket::QEmu
+    pub fn new() -> Socket {
+        Socket { stream: None, console: Arc::new(Mutex::new(Vec::new())) }
     }
 
-    pub fn new_multi(id: u8) -> Socket {
-        Socket::Multi(id)
-    }
-
-    pub fn connect(&self) -> Socket {
+    pub fn connect(&mut self) -> Result<()> {
         // prepare the initializing struct
-        let length: usize = 4 + env::args().skip(2).map(|x| 4+x.len()).sum::<usize>()+ 4 + env::vars().map(|(x,y)| 5 + x.len()+ y.len()).sum::<usize>();
+        let length: usize = 4 + env::args().skip(2).map(|x| 4+x.len()).sum::<usize>() + 
+                            4 + env::vars().map(|(x,y)| 5 + x.len()+ y.len()).sum::<usize>();
+
         let mut buf = Cursor::new(vec![0u8;length]);
+
+        // initialize the connection with the magic number
         buf.write_u32::<LittleEndian>(HERMIT_MAGIC);
         // send all arguments (skip first)
         buf.write_u32::<LittleEndian>(env::args().count() as u32 - 2);
@@ -52,47 +60,38 @@ impl Socket {
 
         let mut stream;
         loop {
-            match *self {
-                Socket::QEmu => {
-                    match TcpStream::connect(("127.0.0.1", 0x494E)) {
-                        Ok(mut s) => { 
-                            match s.write(buf.get_ref()) {
-                                Ok(_) => { stream = s; break; },
-                                Err(_) => {}
-                            }
-                        },
+            match TcpStream::connect(("127.0.0.1", 0x494E)) {
+                Ok(mut s) => { 
+                    match s.write(buf.get_ref()) {
+                        Ok(_) => { stream = s; break; },
+                        Err(_) => {}
+                    }
+                },
 
-                        Err(_) => {}
-                    }
-                },
-                Socket::Multi(id) => {
-                    match TcpStream::connect((format!("127.0.0.{}", id).as_ref(), 0x494E)) {
-                        Ok(mut s) => { 
-                            match s.write(buf.get_ref()) {
-                                Ok(_) => { stream = s; break; },
-                                Err(_) => {}
-                            }
-                        },
-                        Err(_) => {}
-                    }
-                },
-                _ => panic!("")
+                Err(_) => {}
             }
         }
 
-        debug!("Connected to {}", stream.peer_addr().unwrap());
+        self.stream = Some(stream);
+
+        debug!("Connected to {}", self.stream()?.peer_addr().unwrap());
         debug!("Transmitted environment and arguments with length {}", length);
 
-        Socket::Connected { stream: stream, stdout: String::new(), stderr: String::new() }
+        Ok(())
     }
 
-    pub fn run(&mut self) {
+    pub fn console(&self) -> Console {
+        self.console.clone()
+    }
+
+    pub fn stream(&self) -> Result<&TcpStream> {
+        self.stream.as_ref().ok_or(Error::InternalError)
+    }
+
+    pub fn run(&mut self) -> Result<()> {
         debug!("Initializing protocol state machine");
         let mut state = proto::State::Id;
-        let (mut stream, mut stdout, mut stderr) = match self {
-            &mut Socket::Connected { ref mut stream, ref  mut stdout, ref mut stderr } => (stream, stdout, stderr),
-            _ => return
-        };
+        let mut stream = self.stream()?;
 
         let mut cur = Cursor::new(vec![]);
         let mut buf = [0u8; 4096];
@@ -122,9 +121,21 @@ impl Socket {
                             let buf_ret: [u8;8] = transmute(libc::write(fd as i32, buf.as_ptr() as *const libc::c_void, buf.len()).to_le());
                             
                             if fd == 1 {
-                                stdout.push_str(&String::from_utf8_unchecked(buf));
+                                let ret = ActionResult::Output(String::from_utf8_unchecked(buf));
+                                let buf: Vec<u8> = serialize(&ret, Infinite).unwrap();
+                                
+                                for stream in self.console.lock().unwrap().iter_mut() {
+                                    stream.lock().unwrap().write(&buf).unwrap();
+                                }
+                                //stdout.push_str(&String::from_utf8_unchecked(buf));
                             } else if fd == 2 {
-                                stderr.push_str(&String::from_utf8_unchecked(buf));
+                                let ret = ActionResult::OutputErr(String::from_utf8_unchecked(buf));
+                                let buf: Vec<u8> = serialize(&ret, Infinite).unwrap();
+
+                                for stream in self.console.lock().unwrap().iter_mut() {
+                                    stream.lock().unwrap().write(&buf).unwrap();
+                                }
+                                //stderr.push_str(&String::from_utf8_unchecked(buf));
                             } else {
                                 stream.write(&buf_ret);
                             }
@@ -171,5 +182,6 @@ impl Socket {
                 }
             }
         }
+        Ok(())
     }
 }

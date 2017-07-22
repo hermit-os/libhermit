@@ -11,6 +11,9 @@ use std::path::Path;
 use std::io::{Write, Read, BufReader, BufRead};
 use inotify::{Inotify, watch_mask};
 use std::env;
+use std::os::unix::net::UnixStream;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use hermit::qemu::QEmu;
 use hermit::multi::Multi;
@@ -105,6 +108,8 @@ pub trait Isle {
     fn run(&mut self) -> Result<()>;
 
     fn is_running(&mut self) -> Result<bool>;
+
+    fn add_endpoint(&mut self, stream: Arc<Mutex<UnixStream>>) -> Result<()>;
 
     fn is_available(&self) -> Result<bool> {
         let log = match self.log_file() {

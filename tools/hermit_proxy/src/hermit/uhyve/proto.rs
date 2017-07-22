@@ -1,8 +1,12 @@
-use libc::{write, read, lseek, exit, open, close, c_int, c_void};
+use libc::{write, read, lseek, exit, open, close, c_int, c_void, c_char};
 use super::kvm_header::{kvm_run, KVM_EXIT_IO, KVM_EXIT_HLT, KVM_EXIT_MMIO,KVM_EXIT_FAIL_ENTRY, KVM_EXIT_INTERNAL_ERROR, KVM_EXIT_SHUTDOWN }; 
 use std::ffi::CStr;
+use std::ffi::CString;
+use bincode::{serialize, Infinite};
 
 use super::{Error, Result};
+use hermit::socket::Console;
+use daemon::ActionResult;
 
 const PORT_WRITE: u16 = 0x499;
 const PORT_OPEN: u16 = 0x500;
@@ -91,12 +95,21 @@ impl Syscall {
 
     }
 
-    pub unsafe fn run(&self, guest_mem: *mut u8) -> Result<Return> {
+    pub unsafe fn run(&self, guest_mem: *mut u8, console: Console) -> Result<Return> {
         debug!("{:?}", *self);
         
         match *self {
             Syscall::Write(obj) => {
                 if (*obj).fd == 1 {
+                    use std::io::Write;
+                   
+                    let cstr = CString::from_raw((*obj).buf as *mut c_char);
+                    let ret = ActionResult::Output(cstr.into_string().unwrap_or("".into()));
+                    let buf: Vec<u8> = serialize(&ret, Infinite).unwrap();
+                    
+                    for stream in console.lock().unwrap().iter_mut() {
+                        stream.lock().unwrap().write(&buf).unwrap();
+                    }
                 } else if (*obj).fd == 2 {
                 }
                 (*obj).length = write((*obj).fd, guest_mem.offset((*obj).buf) as *const c_void, (*obj).length as usize);

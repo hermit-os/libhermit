@@ -56,11 +56,18 @@ fn main() {
         (@subcommand list =>
             (about: "Lists all Hermit isles")
         )
+        (@subcommand start_daemon => 
+            (about: "Starts the daemon in foreground")
+        )
         (@subcommand kill_daemon => 
             (about: "Stops the daemon and deletes the unix socket")
         )
         (@subcommand stop => 
             (about: "Stops an Hermit isle")
+            (@arg name: +required "The corresponding name")
+        )
+        (@subcommand connect =>
+            (about: "Connects to an hermit isle")
             (@arg name: +required "The corresponding name")
         )
         (@subcommand log =>
@@ -72,6 +79,12 @@ fn main() {
             (@arg name: "The number or name of the Isle")
         )
     ).get_matches();
+
+    if let Some(_) = matches.subcommand_matches("start_daemon") {
+        daemon::daemon_handler();
+
+        return;
+    }
 
     let mut daemon = daemon::Connection::connect();
 
@@ -160,6 +173,23 @@ fn main() {
         }
     }
 
+    if let Some(matches) = matches.subcommand_matches("connect") {
+        match matches.value_of("name").unwrap().parse::<u32>() {
+            Ok(id) => {
+                let res = daemon.send(Action::Connect(id));
+
+                if let ActionResult::Connect(Ok(_)) = res {
+                    daemon.output();
+                } else if let ActionResult::Connect(Err(err)) = res {
+                    println!("Connect failed: {:?}", err);
+                }
+            },
+            Err(_) => {
+                println!("Invalid number!");
+            }
+        }
+    }
+
     // create the isle, wait to be available and start it
     if let Some(matches) = matches.subcommand_matches("run") {
         if let Some(isle) = matches.value_of("isle") {
@@ -197,13 +227,5 @@ fn main() {
         )); 
 
         println!("Created Isle with number: {:?}", res);
-
-//        hermit::new_isle(&matches.value_of("file").unwrap())
-//            .and_then(|mut isle| { 
-//                isle.wait_until_available()?;
-//                isle.run()?;
-//
-//                Ok(())
-//            }).unwrap();
     }
 }

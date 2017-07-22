@@ -1,14 +1,19 @@
 use std::fs::File;
 use std::env;
 use std::io::{Write, Read};
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::thread;
 
 use hermit::Isle;
 use hermit::error::*;
 use hermit::socket::Socket;
 
+use std::os::unix::net::UnixStream;
+
 pub struct Multi {
     num: u8,
-    socket: Socket
+    socket: Option<Socket>
 }
 
 impl Multi {
@@ -46,7 +51,7 @@ impl Multi {
             return Err(Error::MultiIsleFailed);
         }
 
-        Ok(Multi { num: num, socket: Socket::new_multi(num) })
+        Ok(Multi { num: num, socket: Some(Socket::new()) })
     }
 }
 
@@ -68,7 +73,13 @@ impl Isle for Multi {
     }
 
     fn run(&mut self) -> Result<()> {
-        self.socket.connect().run();
+        let mut socket = self.socket.take().ok_or(Error::InternalError)?;
+        socket.connect()?;
+
+        thread::spawn(move || {
+            
+            socket.run();
+        });
 
         Ok(())
     }
@@ -95,5 +106,9 @@ impl Isle for Multi {
 
     fn is_running(&mut self) -> Result<bool> {
         Ok(true)
+    }
+
+    fn add_endpoint(&mut self, stream: Arc<Mutex<UnixStream>>) -> Result<()> {
+        Ok(())
     }
 }
