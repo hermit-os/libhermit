@@ -99,28 +99,38 @@
 
 #define DEFAULT_UART_PORT 	0xc110
 
-static size_t	iobase = 0;
+extern size_t	uartport;
 
 static inline unsigned char read_from_uart(uint32_t off)
 {
 	uint8_t c = 0;
 
-	if (iobase)
-		c = inportb(iobase + off);
+	if (uartport)
+		c = inportb(uartport + off);
 
 	return c;
 }
 
+static inline int is_transmit_empty(void)
+{
+	if (uartport)
+		return inportb(uartport + UART_LSR) & 0x20;
+
+	return 1;
+}
+
 static inline void write_to_uart(uint32_t off, unsigned char c)
 {
-	if (iobase)
-		outportb(iobase + off, c);
+	while (is_transmit_empty() == 0) { PAUSE; }
+
+	if (uartport)
+		outportb(uartport + off, c);
 }
 
 /* Puts a single character on a serial device */
 int uart_putchar(unsigned char c)
 {
-	if (!iobase)
+	if (!uartport)
 		return 0;
 
 	write_to_uart(UART_TX, c);
@@ -133,7 +143,7 @@ int uart_puts(const char *text)
 {
 	size_t i, len = strlen(text);
 
-	if (!iobase)
+	if (!uartport)
 		return 0;
 
 	for (i = 0; i < len; i++)
@@ -144,18 +154,11 @@ int uart_puts(const char *text)
 
 static int uart_config(void)
 {
-	/*
-	 * enable FIFOs
-	 * clear RX and TX FIFO
-	 * set irq trigger to 8 bytes
-	 */
-	write_to_uart(UART_FCR, UART_FCR_ENABLE_FIFO | UART_FCR_CLEAR_RCVR | UART_FCR_CLEAR_XMIT | UART_FCR_TRIGGER_1);
+	if (!uartport)
+		return 0;
 
 	/* disable interrupts */
 	write_to_uart(UART_IER, 0);
-
-	/* DTR + RTS */
-	write_to_uart(UART_MCR, UART_MCR_DTR|UART_MCR_RTS);
 
 	/*
 	 * 8bit word length
@@ -169,51 +172,59 @@ static int uart_config(void)
 	write_to_uart(UART_LCR, lcr);
 
 	/*
-	 * set baudrate to 9600
+	 * set baudrate to 38400
 	 */
-	uint32_t divisor = 1843200 / 9600; //115200;
-	write_to_uart(UART_DLL, divisor & 0xff);
-	write_to_uart(UART_DLM, (divisor >> 8) & 0xff);
+	write_to_uart(UART_DLL, 0x03);
+	write_to_uart(UART_DLM, 0x00);
 
 	/* set DLAB=0 */
 	write_to_uart(UART_LCR, lcr & (~UART_LCR_DLAB));
 
+	/*
+	 * enable FIFOs
+	 * clear RX and TX FIFO
+	 * set irq trigger to 8 bytes
+	 */
+	write_to_uart(UART_FCR, UART_FCR_ENABLE_FIFO | UART_FCR_CLEAR_RCVR | UART_FCR_CLEAR_XMIT | UART_FCR_TRIGGER_1);
+
 	return 0;
 }
-
-extern const void kernel_start;
 
 int uart_init(void)
 {
 	if (is_uhyve())
 		return 0;
 
+	if (uartport)
+		return uart_config();
+
 	pci_info_t pci_info;
 	uint32_t bar = 0;
 
 	// Searching for Intel's UART device
-	if (pci_get_device_info(0x8086, 0x0936, &pci_info, 1) == 0)
+	if (pci_get_device_info(0x8086, 0x0936, PCI_IGNORE_SUBID, &pci_info, 1) == 0)
 		goto Lsuccess;
 	// Searching for Qemu's UART device
-	if (pci_get_device_info(0x1b36, 0x0002, &pci_info, 1) == 0)
+	if (pci_get_device_info(0x1b36, 0x0002, PCI_IGNORE_SUBID, &pci_info, 1) == 0)
 		goto Lsuccess;
 	// Searching for Qemu's 2x UART device (pci-serial-2x)
-	if (pci_get_device_info(0x1b36, 0x0003, &pci_info, 1) == 0)
+	if (pci_get_device_info(0x1b36, 0x0003, PCI_IGNORE_SUBID, &pci_info, 1) == 0)
 		goto Lsuccess;
 	// Searching for Qemu's 4x UART device (pci-serial-4x)
-	if (pci_get_device_info(0x1b36, 0x0004, &pci_info, 1) == 0)
+	if (pci_get_device_info(0x1b36, 0x0004, PCI_IGNORE_SUBID, &pci_info, 1) == 0)
 		goto Lsuccess;
 
 	// default value of our QEMU configuration
-	iobase = DEFAULT_UART_PORT;
+	uartport = DEFAULT_UART_PORT;
 
 	// configure uart
-	return uart_config();;
+	return uart_config();
 
 Lsuccess:
-	iobase = pci_info.base[bar];
+	uartport = pci_info.base[bar];
+
 	//irq_install_handler(32+pci_info.irq, uart_handler);
-	kprintf("UART uses io address 0x%x\n", iobase);
+	kprintf("UART uses io address 0x%x\n", uartport);
 
 	// configure uart
 	return uart_config();

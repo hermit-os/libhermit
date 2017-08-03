@@ -1,7 +1,7 @@
 # HermitCore - A lightweight unikernel for a scalable and predictable runtime behavior
 
-[![Join the chat at https://gitter.im/RWTH-OS/HermitCore](https://badges.gitter.im/RWTH-OS/HermitCore.svg)](https://gitter.im/RWTH-OS/HermitCore?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/RWTH-OS/HermitCore.svg?branch=devel)](https://travis-ci.org/RWTH-OS/HermitCore)
+[![Slack Status](https://radiant-ridge-95061.herokuapp.com/badge.svg)](https://radiant-ridge-95061.herokuapp.com)
 
 The project [HermitCore]( http://www.hermitcore.org ) is a new
 [unikernel](http://unikernel.org) targeting a scalable and predictable runtime
@@ -27,6 +27,10 @@ cloud computing applications. It is the result of a research project at RWTH
 Aachen University and is currently an experimental approach, i.e., not
 production ready. Please use it with caution.
 
+## Contributing
+
+HermitCore is being developed on [GitHub](https://github.com/RWTH-OS/HermitCore).
+Create your own fork, send us a pull request, and chat with us on [Slack](https://radiant-ridge-95061.herokuapp.com).
 
 ## Requirements
 
@@ -49,6 +53,20 @@ $ sudo apt-get -qq update
 $ sudo apt-get install binutils-hermit newlib-hermit pthread-embedded-hermit gcc-hermit libhermit
 ```
 
+For non-Debian based systems, a docker image with the complete toolchain is provided and can be installed as follows:
+
+```bash
+$ docker pull rwthos/hermitcore
+```
+
+The following commad starts within the new docker container a shell and mounts from the host system the directory `~/src` to `/src`:
+
+```bash
+$ docker run -i -t -v ~/src:/src rwthos/hermitcore:latest
+```
+
+Within the shell the croos toolchain can be used to build HermitCore applications.
+
 If you want to build the toolchain yourself, have a look at the repository [hermit-toolchain](https://github.com/RWTH-OS/hermit-toolchain), which contains scripts to build the whole toolchain.
 
 Depending on how you want to use HermitCore, you might need additional packages
@@ -56,8 +74,18 @@ such as:
 
  * QEMU (`apt-get install qemu-system-x86`)
 
+## Building HermitCore
 
-## CMake requirements
+### Preliminary work
+
+To build HermitCore from source (without compiler), the repository with its submodules has to be cloned.
+
+```bash
+$ git clone git@github.com:RWTH-OS/HermitCore.git
+$ cd HermitCore
+$ git submodule init
+$ git submodule update
+```
 
 We require a fairly recent version of CMake (`3.7`) which is not yet present in
 most Linux distributions. We therefore provide a helper script that fetches the
@@ -87,14 +115,16 @@ cmake-3.7.2-Linux-x86_64.tar.gz         100%[===================>]  29,26M  3,74
 So before you build HermitCore you have to source the `local-cmake.sh` script
 everytime you open a new terminal.
 
-	
-## Building HermitCore
+### Building the library perating systems and its examples
+
+To build HermitCore go to the directory with the source code, create a `build` directory and call `cmake` followed by `make`.
 
 ```bash
 $ mkdir build
 $ cd build
 $ cmake ..
 $ make
+$ sudo make install
 ```
 
 If your toolchain is not located in `/opt/hermit/bin` then you have to supply

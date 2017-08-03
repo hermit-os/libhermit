@@ -17,6 +17,11 @@ script:
   - cd build
   - cmake ..
   - make -j1 package
+  - cd $TRAVIS_BUILD_DIR
+  - ./tests.sh
+
+notifications:
+  slack: hermitcore:UtcfeEXkbpx3WyIDK2Wm2beS
 
 deploy:
   on: master

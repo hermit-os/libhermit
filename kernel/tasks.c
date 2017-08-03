@@ -67,7 +67,6 @@ static readyqueues_t readyqueues[1] = {[0] = {task_table+0, NULL, 0, 0, 0, {[0 .
 #endif
 
 DEFINE_PER_CORE(task_t*, current_task, task_table+0);
-DEFINE_PER_CORE(char*, kernel_stack, NULL);
 
 #if MAX_CORES > 1
 DEFINE_PER_CORE(uint32_t, __core_id, 0);
@@ -176,6 +175,10 @@ static void readyqueues_push_back(uint32_t core_id, task_t* task)
 
 	// increase the number of ready tasks
 	readyqueues[core_id].nr_tasks++;
+
+	// should we wakeup the core?
+	if (readyqueues[core_id].nr_tasks == 1)
+		wakeup_core(core_id);
 }
 
 
@@ -278,9 +281,8 @@ int multitasking_init(void)
 	task_table[0].prio = IDLE_PRIO;
 	task_table[0].stack = (char*) ((size_t)&boot_stack + core_id * KERNEL_STACK_SIZE);
 	task_table[0].ist_addr = (char*)&boot_ist;
-	set_per_core(kernel_stack, task_table[0].stack + KERNEL_STACK_SIZE - 0x10);
 	set_per_core(current_task, task_table+0);
-  arch_init_task(task_table+0);
+	arch_init_task(task_table+0);
 
 	readyqueues[core_id].idle = task_table+0;
 
@@ -303,12 +305,11 @@ int set_idle_task(void)
 			task_table[i].last_stack_pointer = NULL;
 			task_table[i].stack = (char*) ((size_t)&boot_stack + core_id * KERNEL_STACK_SIZE);
 			task_table[i].ist_addr = create_stack(KERNEL_STACK_SIZE);
-			set_per_core(kernel_stack, task_table[i].stack + KERNEL_STACK_SIZE - 0x10);
 			task_table[i].prio = IDLE_PRIO;
 			task_table[i].heap = NULL;
 			readyqueues[core_id].idle = task_table+i;
 			set_per_core(current_task, readyqueues[core_id].idle);
-      arch_init_task(task_table+i);
+			arch_init_task(task_table+i);
 			ret = 0;
 
 			break;
@@ -483,7 +484,7 @@ int clone_task(tid_t* id, entry_point_t ep, void* arg, uint8_t prio)
 			task_table[i].stack = stack;
 			task_table[i].prio = prio;
 			task_table[i].heap = curr_task->heap;
-                        task_table[i].start_tick = get_clock_tick();
+			task_table[i].start_tick = get_clock_tick();
 			task_table[i].last_tsc = 0;
 			task_table[i].parent = curr_task->id;
 			task_table[i].tls_addr = curr_task->tls_addr;
@@ -513,6 +514,9 @@ int clone_task(tid_t* id, entry_point_t ep, void* arg, uint8_t prio)
 				readyqueues[core_id].queue[prio-1].last->next = task_table+i;
 				readyqueues[core_id].queue[prio-1].last = task_table+i;
 			}
+			// should we wakeup the core?
+			if (readyqueues[core_id].nr_tasks == 1)
+				wakeup_core(core_id);
 			spinlock_irqsave_unlock(&readyqueues[core_id].lock);
  			break;
 		}
@@ -529,11 +533,6 @@ out:
 		destroy_stack(stack, DEFAULT_STACK_SIZE);
 		destroy_stack(ist, KERNEL_STACK_SIZE);
 	}
-
-#if 0
-	if (core_id != CORE_ID)
-		apic_send_ipi(core_id, 121);
-#endif
 
 	return ret;
 }
@@ -634,11 +633,6 @@ out:
 		kfree(counter);
 	}
 
-#if 0
-	if (core_id != CORE_ID)
-		apic_send_ipi(core_id, 121);
-#endif
-
 	return ret;
 }
 
@@ -674,6 +668,8 @@ int wakeup_task(tid_t id)
 	core_id = task->last_core;
 
 	if (task->status == TASK_BLOCKED) {
+		LOG_DEBUG("wakeup task %d\n", id);
+
 		task->status = TASK_READY;
 		ret = 0;
 
@@ -711,6 +707,8 @@ int block_task(tid_t id)
 	core_id = task->last_core;
 
 	if (task->status == TASK_RUNNING) {
+		LOG_DEBUG("block task %d\n", id);
+
 		task->status = TASK_BLOCKED;
 
 		spinlock_irqsave_lock(&readyqueues[core_id].lock);

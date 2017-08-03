@@ -39,7 +39,10 @@
 #include <asm/page.h>
 #include <asm/multiboot.h>
 
-#define TLS_OFFSET	0
+#define TLS_ALIGNBITS		5
+#define TLS_ALIGNSIZE		(1L << TLS_ALIGNBITS)
+#define TSL_ALIGNMASK		((~0L) << TLS_ALIGNBITS)
+#define TLS_FLOOR(addr)		((((size_t)addr) + TLS_ALIGNSIZE - 1) & TSL_ALIGNMASK)
 
 /*
  * Note that linker symbols are not variables, they have no memory allocated for
@@ -64,20 +67,20 @@ static int init_tls(void)
 		curr_task->tls_addr = (size_t) &tls_start;
 		curr_task->tls_size = (size_t) &tls_end - (size_t) &tls_start;
 
-		tls_addr = kmalloc(curr_task->tls_size + TLS_OFFSET + sizeof(size_t));
+		tls_addr = kmalloc(curr_task->tls_size + TLS_ALIGNSIZE + sizeof(size_t));
 		if (BUILTIN_EXPECT(!tls_addr, 0)) {
 			LOG_ERROR("load_task: heap is missing!\n");
 			return -ENOMEM;
 		}
 
-		memset(tls_addr, 0x00, TLS_OFFSET);
-		memcpy((void*) (tls_addr+TLS_OFFSET), (void*) curr_task->tls_addr, curr_task->tls_size);
-		fs = (size_t) tls_addr + curr_task->tls_size + TLS_OFFSET;
+		memset(tls_addr, 0x00, TLS_ALIGNSIZE);
+		memcpy((void*) TLS_FLOOR(tls_addr), (void*) curr_task->tls_addr, curr_task->tls_size);
+		fs = (size_t) TLS_FLOOR(tls_addr) + curr_task->tls_size;
 		*((size_t*)fs) = fs;
 
 		// set fs register to the TLS segment
 		set_tls(fs);
-		LOG_INFO("TLS of task %d on core %d starts at 0x%zx (size 0x%zx)\n", curr_task->id, CORE_ID, tls_addr + TLS_OFFSET, curr_task->tls_size);
+		LOG_INFO("TLS of task %d on core %d starts at 0x%zx (size 0x%zx)\n", curr_task->id, CORE_ID, TLS_FLOOR(tls_addr), curr_task->tls_size);
 	} else set_tls(0); // no TLS => clear fs register
 
 	return 0;
@@ -103,10 +106,10 @@ int is_proxy(void)
 		return 0;
 	if (!is_single_kernel())
 		return 1;
-	if (mb_info && (mb_info->flags & MULTIBOOT_INFO_CMDLINE))
+	if (mb_info && (mb_info->flags & MULTIBOOT_INFO_CMDLINE) && (cmdline))
 	{
 		// search in the command line for the "proxy" hint
-		char* found = strstr((char*) (size_t) mb_info->cmdline, "-proxy");
+		char* found = strstr((char*) (size_t) cmdline, "-proxy");
 		if (found)
 			return 1;
 	}
@@ -123,7 +126,6 @@ size_t* get_current_stack(void)
 	else
 		stptr = (stptr + DEFAULT_STACK_SIZE - sizeof(size_t)) & ~0x1F;
 
-	set_per_core(kernel_stack, stptr);
 	set_tss(stptr, (size_t) curr_task->ist_addr + KERNEL_STACK_SIZE - 0x10);
 
 	return curr_task->last_stack_pointer;
@@ -190,10 +192,15 @@ int create_default_frame(task_t* task, entry_point_t ep, void* arg, uint32_t cor
 	return 0;
 }
 
+#define USE_MWAIT
+
 void wait_for_task(void)
 {
+#ifndef USE_MWAIT
+	HALT;
+#else
 	if (!has_mwait()) {
-		PAUSE;
+		HALT;
 	} else {
 		void* queue = get_readyqueue();
 
@@ -203,4 +210,21 @@ void wait_for_task(void)
 		monitor(queue, 0, 0);
 		mwait(0x2 /* 0x2 = c3, 0xF = c0 */, 1 /* break on interrupt flag */);
 	}
+#endif
+}
+
+void wakeup_core(uint32_t core_id)
+{
+#ifdef USE_MWAIT
+	// if mwait is available, an IPI isn't required to wakeup the core
+	if (has_mwait())
+		return;
+#endif
+
+	// no self IPI required
+	if (core_id == CORE_ID)
+		return;
+
+	LOG_DEBUG("wakeup core %d\n", core_id);
+	apic_send_ipi(core_id, 121);
 }

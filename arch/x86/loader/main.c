@@ -42,8 +42,9 @@ extern const void kernel_start;
 extern const void kernel_end;
 extern const void bss_start;
 extern const void bss_end;
+extern size_t uartport;
 
-static int load_code(size_t viraddr, size_t phyaddr, size_t limit, uint32_t file_size, size_t mem_size)
+static int load_code(size_t viraddr, size_t phyaddr, size_t limit, uint32_t file_size, size_t mem_size, size_t cmdline, size_t cmdsize)
 {
 	const size_t displacement = 0x200000ULL - (phyaddr & 0x1FFFFFULL);
 
@@ -65,6 +66,9 @@ static int load_code(size_t viraddr, size_t phyaddr, size_t limit, uint32_t file
 	*((uint32_t*) (viraddr + 0x30)) = 0; // apicid
 	*((uint64_t*) (viraddr + 0x38)) = mem_size;
 	*((uint32_t*) (viraddr + 0x60)) = 1; // numa nodes
+	*((uint64_t*) (viraddr + 0x98)) = uartport;
+	*((uint64_t*) (viraddr + 0xA0)) = cmdline;
+	*((uint64_t*) (viraddr + 0xA8)) = cmdsize;
 
 	// move file to a 2 MB boundary
 	for(size_t va = viraddr+(npages << PAGE_BITS)+displacement-sizeof(uint8_t); va >= viraddr+displacement; va-=sizeof(uint8_t))
@@ -86,6 +90,8 @@ void main(void)
 	elf_header_t* header = NULL;
 	uint32_t file_size = 0;
 	size_t mem_size = 0;
+	size_t cmdline_size = 0;
+	size_t cmdline = 0;
 
 	// initialize .bss section
 	memset((void*)&bss_start, 0x00, ((size_t) &bss_end - (size_t) &bss_start));
@@ -95,6 +101,12 @@ void main(void)
 	kprintf("Loader starts at %p and ends at %p\n", &kernel_start, &kernel_end);
 	kprintf("Found mb_info at %p\n", mb_info);
 
+	if (mb_info && mb_info->cmdline) {
+		cmdline = (size_t) mb_info->cmdline;
+		cmdline_size = strlen((char*)cmdline);
+	}
+
+	// enable paging
 	page_init();
 
 	if (mb_info) {
@@ -171,7 +183,7 @@ void main(void)
 					viraddr = prog_header->virt_addr;
 				if (!phyaddr)
 					phyaddr = prog_header->offset + (size_t)header;
-				file_size = prog_header->virt_addr + PAGE_FLOOR(prog_header->file_size) - viraddr;
+				file_size = prog_header->virt_addr + PAGE_CEIL(prog_header->file_size) - viraddr;
 				mem_size += prog_header->mem_size;
 			}
 			break;
@@ -184,7 +196,7 @@ void main(void)
 		}
 	}
 
-	if (BUILTIN_EXPECT(load_code(viraddr, phyaddr, limit, file_size, mem_size), 0))
+	if (BUILTIN_EXPECT(load_code(viraddr, phyaddr, limit, file_size, mem_size, cmdline, cmdline_size), 0))
 		goto failed;
 
 	kprintf("Entry point: 0x%zx\n", header->entry);

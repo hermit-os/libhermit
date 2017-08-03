@@ -54,7 +54,7 @@ union buddy;
 /** @brief Buddy
  *
  * Every free memory block is stored in a linked list according to its size.
- *  We can use this free memory to store store this buddy_t union which represents
+ *  We can use this free memory to store this buddy_t union which represents
  *  this block (the buddy_t union is alligned to the front).
  *  Therefore the address of the buddy_t union is equal with the address
  *  of the underlying free memory block.
@@ -71,8 +71,6 @@ typedef union buddy {
 		uint8_t exponent;
 		/// Must be equal to BUDDY_MAGIC for a valid memory block
 		uint16_t magic;
-		/// padding to gurantee a sizeof 32Byte
-		uint8_t padding[28];
 	} prefix;
 } buddy_t;
 
@@ -84,4 +82,3 @@ void buddy_dump(void);
 #endif
 
 #endif
-

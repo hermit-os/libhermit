@@ -69,6 +69,9 @@ align 4
     global hbmem_size
     global uhyve
     global image_size
+    global uartport
+    global cmdline
+    global cmdsize
     base dq 0
     limit dq 0
     cpu_freq dd 0
@@ -93,6 +96,9 @@ align 4
     hbmem_base dq 0
     hbmem_size dq 0
     uhyve dd 0
+    uartport dq 0
+    cmdline dq 0
+    cmdsize dq 0
 
 ; Bootstrap page tables are used during the initialization.
 align 4096
@@ -114,9 +120,6 @@ boot_pgt:
 SECTION .ktext
 align 4
 start64:
-    ; store pointer to the multiboot information
-    mov [mb_info], QWORD rdx
-
     ; reset registers to kill any stale realmode selectors
     xor eax, eax
     mov ds, eax
@@ -133,6 +136,9 @@ start64:
     mov eax, DWORD [cpu_online]
     cmp eax, 0
     jne Lno_pml4_init
+
+    ; store pointer to the multiboot information
+    mov [mb_info], QWORD rdx
 
     ; relocate page tables
     mov rdi, boot_pml4
@@ -188,16 +194,17 @@ Lno_mbinfo:
     xor rcx, rcx
     mov rsi, 510*0x200000
     sub rsi, kernel_start
+    mov r11, QWORD [image_size]
 Lremap:
     mov QWORD [rdi], rax
     add rax, 0x200000
     add rcx, 0x200000
     add rdi, 8
-    ; note: the whole code segement muust fit in the first pgd
+    ; note: the whole code segement has to fit in the first pgd
     cmp rcx, rsi
-    jnb Lno_pml4_init
-    cmp rcx, QWORD [image_size]
-    jb Lremap
+    jnl Lno_pml4_init
+    cmp rcx, r11
+    jl Lremap
 
 Lno_pml4_init:
     ; Set CR3
@@ -272,9 +279,9 @@ gdt_flush:
     global isr%1
     align 64
     isr%1:
-        push byte 0 ; pseudo error code
-        push byte %1
-        jmp common_stub
+    push byte 0 ; pseudo error code
+    push byte %1
+    jmp common_stub
 %endmacro
 
 ; Similar to isrstub_pseudo_error, but without pushing
@@ -284,8 +291,8 @@ gdt_flush:
     global isr%1
     align 64
     isr%1:
-        push byte %1
-        jmp common_stub
+    push byte %1
+    jmp common_stub
 %endmacro
 
 ; Create isr entries, where the number after the
@@ -337,9 +344,9 @@ isrstub_pseudo_error 9
     global irq%1
     align 64
     irq%1:
-        push byte 0 ; pseudo error code
-        push byte 32+%1
-        jmp common_stub
+    push byte 0 ; pseudo error code
+    push byte 32+%1
+    jmp common_stub
 %endmacro
 
 ; Create entries for the interrupts 0 to 23
@@ -360,15 +367,15 @@ global wakeup
 align 64
 wakeup:
     push byte 0 ; pseudo error code
-	push byte 121
-	jmp common_stub
+    push byte 121
+    jmp common_stub
 
 global mmnif_irq
 align 64
 mmnif_irq:
     push byte 0 ; pseudo error code
-	push byte 122
-	jmp common_stub
+    push byte 122
+    jmp common_stub
 
 global apic_timer
 align 64
@@ -409,7 +416,6 @@ extern irq_handler
 extern get_current_stack
 extern finish_task_switch
 extern syscall_handler
-extern kernel_stack
 
 global getcontext
 align 64

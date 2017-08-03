@@ -176,7 +176,7 @@ static inline void lapic_timer_set_counter(uint32_t counter)
 
 static inline void lapic_timer_disable(void)
 {
-	lapic_write(APIC_LVT_TSR, 0x10000);
+	lapic_write(APIC_LVT_T, 0x10000);
 }
 
 static inline void lapic_timer_oneshot(void)
@@ -364,7 +364,7 @@ int apic_enable_timer(void)
 }
 
 static apic_mp_t* search_mptable(size_t base, size_t limit) {
-	size_t ptr=PAGE_CEIL(base), vptr=0;
+	size_t ptr=PAGE_FLOOR(base), vptr=0;
 	size_t flags = PG_GLOBAL | PG_RW | PG_PCD;
 	apic_mp_t* tmp;
 	uint32_t i;
@@ -410,7 +410,7 @@ static apic_mp_t* search_mptable(size_t base, size_t limit) {
 
 #if 0
 static size_t search_ebda(void) {
-	size_t ptr=PAGE_CEIL(0x400), vptr=0xF0000;
+	size_t ptr=PAGE_FLOOR(0x400), vptr=0xF0000;
 	size_t flags = PG_GLOBAL | PG_RW | PG_PCD;
 
 	// protec apic by the NX flags
@@ -456,8 +456,8 @@ static int lapic_reset(void)
 		lapic_write(APIC_LVT_TSR, 0x10000);	// disable thermal sensor interrupt
 	if (max_lvt >= 5)
 		lapic_write(APIC_LVT_PMC, 0x10000);	// disable performance counter interrupt
-	lapic_write(APIC_LINT0, 0x7C);	// connect LINT0 to idt entry 124
-	lapic_write(APIC_LINT1, 0x7D);	// connect LINT1 to idt entry 125
+	lapic_write(APIC_LINT0, 0x00010000);	// disable LINT0
+	lapic_write(APIC_LINT1, 0x00010000);	// disable LINT1
 	lapic_write(APIC_LVT_ER, 0x7E);	// connect error to idt entry 126
 
 	return 0;
@@ -580,8 +580,8 @@ int smp_init(void)
 	 * Wakeup the other cores via IPI. They start at this address
 	 * in real mode, switch to protected and finally they jump to smp_main.
 	 */
-	page_map(SMP_SETUP_ADDR, SMP_SETUP_ADDR, PAGE_FLOOR(sizeof(boot_code)) >> PAGE_BITS, PG_RW|PG_GLOBAL);
-	vma_add(SMP_SETUP_ADDR, SMP_SETUP_ADDR + PAGE_FLOOR(sizeof(boot_code)), VMA_READ|VMA_WRITE|VMA_CACHEABLE);
+	page_map(SMP_SETUP_ADDR, SMP_SETUP_ADDR, PAGE_CEIL(sizeof(boot_code)) >> PAGE_BITS, PG_RW|PG_GLOBAL);
+	vma_add(SMP_SETUP_ADDR, SMP_SETUP_ADDR + PAGE_CEIL(sizeof(boot_code)), VMA_READ|VMA_WRITE|VMA_CACHEABLE);
 	memcpy((void*)SMP_SETUP_ADDR, boot_code, sizeof(boot_code));
 
 	for(i=0; i<sizeof(boot_code); i++)
@@ -667,6 +667,7 @@ int apic_calibration(void)
 	atomic_int32_inc(&cpu_online);
 
 	if (is_single_kernel()) {
+		LOG_INFO("Disable PIC\n");
 		// Now, HermitCore is able to use the APIC => Therefore, we disable the PIC
 		outportb(0xA1, 0xFF);
 		outportb(0x21, 0xFF);
@@ -683,6 +684,7 @@ int apic_calibration(void)
 		}
 
 		// now, we don't longer need the IOAPIC timer and turn it off
+		LOG_INFO("Disable IOAPIC timer\n");
 		ioapic_intoff(2, apic_processors[boot_processor]->id);
 	}
 
@@ -721,7 +723,7 @@ static int apic_probe(void)
 
 found_mp:
 	if (!apic_mp) {
-		LOG_ERROR("Didn't find MP config table\n");
+		LOG_INFO("Didn't find MP config table\n");
 		goto no_mp;
 	}
 
@@ -916,12 +918,6 @@ int smp_start(void)
 	// install IDT
 	idt_install();
 
-	/*
-	 * we turned on paging
-	 * => now, we are able to register our task
-	 */
-	register_task();
-
 	// enable additional cpu features
 	cpu_detection();
 
@@ -935,6 +931,12 @@ int smp_start(void)
 	write_cr0(cr0);
 
 	set_idle_task();
+
+	/*
+	 * TSS is set, pagining is enabled
+	 * => now, we are able to register our task
+	 */
+	register_task();
 
 	irq_enable();
 
@@ -1039,6 +1041,7 @@ static void apic_err_handler(struct state *s)
 void shutdown_system(void)
 {
 	int if_bootprocessor = (boot_processor == apic_cpu_id());
+	uint32_t max_lvt;
 
 	irq_disable();
 
@@ -1061,8 +1064,11 @@ void shutdown_system(void)
 	if (if_bootprocessor)
 		LOG_INFO("Disable APIC\n");
 
-	lapic_write(APIC_LVT_TSR, 0x10000);	// disable thermal sensor interrupt
-	lapic_write(APIC_LVT_PMC, 0x10000);	// disable performance counter interrupt
+	max_lvt = apic_lvt_entries();
+	if (max_lvt >= 4)
+		lapic_write(APIC_LVT_TSR, 0x10000);	// disable thermal sensor interrupt
+	if (max_lvt >= 5)
+		lapic_write(APIC_LVT_PMC, 0x10000);	// disable performance counter interrupt
 	lapic_write(APIC_SVR, 0x00);	// disable the apic
 
 	// disable x2APIC
@@ -1082,17 +1088,16 @@ void shutdown_system(void)
 	}
 }
 
-static void apic_shutdown(struct state * s)
+static void apic_shutdown(struct state* s)
 {
 	go_down = 1;
 
 	LOG_DEBUG("Receive shutdown interrupt\n");
 }
 
-static void apic_lint0(struct state * s)
+static void apic_wakeup(struct state* s)
 {
-	// Currently nothing to do
-	LOG_INFO("Receive LINT0 interrupt\n");
+	LOG_DEBUG("Receive wakeup interrupt\n");
 }
 
 int apic_init(void)
@@ -1104,12 +1109,12 @@ int apic_init(void)
 		return ret;
 
 	// set APIC error handler
+	irq_install_handler(121, apic_wakeup);
 	irq_install_handler(126, apic_err_handler);
 #if MAX_CORES > 1
 	irq_install_handler(80+32, apic_tlb_handler);
 #endif
 	irq_install_handler(81+32, apic_shutdown);
-	irq_install_handler(124, apic_lint0);
 	if (apic_processors[boot_processor])
 		LOG_INFO("Boot processor %u (ID %u)\n", boot_processor, apic_processors[boot_processor]->id);
 	else

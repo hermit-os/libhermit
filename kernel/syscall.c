@@ -90,7 +90,7 @@ typedef struct {
 void NORETURN sys_exit(int arg)
 {
 	if (is_uhyve()) {
-		uhyve_send(UHYVE_PORT_EXIT, (unsigned) (size_t) &arg);
+		uhyve_send(UHYVE_PORT_EXIT, (unsigned) virt_to_phys((size_t) &arg));
 	} else {
 		sys_exit_t sysargs = {__NR_exit, arg};
 
@@ -290,11 +290,11 @@ ssize_t sys_sbrk(ssize_t incr)
 		heap->end += incr;
 
 		// reserve VMA regions
-		if (PAGE_CEIL(heap->end) > PAGE_CEIL(ret)) {
+		if (PAGE_FLOOR(heap->end) > PAGE_FLOOR(ret)) {
 			// region is already reserved for the heap, we have to change the
 			// property
-			vma_free(PAGE_CEIL(ret), PAGE_FLOOR(heap->end));
-			vma_add(PAGE_CEIL(ret), PAGE_FLOOR(heap->end), VMA_HEAP|VMA_USER);
+			vma_free(PAGE_FLOOR(ret), PAGE_CEIL(heap->end));
+			vma_add(PAGE_FLOOR(ret), PAGE_CEIL(heap->end), VMA_HEAP|VMA_USER);
 		}
 	} else ret = -ENOMEM;
 
@@ -422,6 +422,56 @@ out:
 	spinlock_irqsave_unlock(&lwip_lock);
 
 	return ret;
+}
+
+int sys_spinlock_init(spinlock_t** lock)
+{
+	int ret;
+
+	if (BUILTIN_EXPECT(!lock, 0))
+		return -EINVAL;
+
+	*lock = (spinlock_t*) kmalloc(sizeof(spinlock_t));
+	if (BUILTIN_EXPECT(!(*lock), 0))
+		return -ENOMEM;
+
+	ret = spinlock_init(*lock);
+	if (ret) {
+		kfree(*lock);
+		*lock = NULL;
+	}
+
+	return ret;
+}
+
+int sys_spinlock_destroy(spinlock_t* lock)
+{
+	int ret;
+
+	if (BUILTIN_EXPECT(!lock, 0))
+		return -EINVAL;
+
+	ret = spinlock_destroy(lock);
+	if (!ret)
+		kfree(lock);
+
+	return ret;
+}
+
+int sys_spinlock_lock(spinlock_t* lock)
+{
+	if (BUILTIN_EXPECT(!lock, 0))
+		return -EINVAL;
+
+	return spinlock_lock(lock);
+}
+
+int sys_spinlock_unlock(spinlock_t* lock)
+{
+	if (BUILTIN_EXPECT(!lock, 0))
+		return -EINVAL;
+
+	return spinlock_unlock(lock);
 }
 
 void sys_msleep(unsigned int ms)
