@@ -1,8 +1,8 @@
 use libc::{write, read, lseek, exit, open, close, c_int, c_void, c_char};
 use super::kvm_header::{kvm_run, KVM_EXIT_IO, KVM_EXIT_HLT, KVM_EXIT_MMIO,KVM_EXIT_FAIL_ENTRY, KVM_EXIT_INTERNAL_ERROR, KVM_EXIT_SHUTDOWN }; 
 use std::ffi::CStr;
-use std::ffi::CString;
 use bincode::{serialize, Infinite};
+use std::slice;
 
 use super::{Error, Result};
 use hermit::socket::Console;
@@ -58,7 +58,7 @@ pub enum Syscall {
     Close(*mut Close),
     Read(*mut Read),
     LSeek(*mut LSeek),
-    Exit(*mut isize),
+    Exit(*mut i32),
     Other(*const kvm_run)
 }
 
@@ -88,7 +88,7 @@ impl Syscall {
                 PORT_CLOSE => { Syscall::Close(guest_mem.offset(offset) as *mut Close) },
                 PORT_OPEN  => { Syscall::Open (guest_mem.offset(offset) as *mut Open ) },
                 PORT_LSEEK => { Syscall::LSeek(guest_mem.offset(offset) as *mut LSeek) },
-                PORT_EXIT  => { Syscall::Exit( guest_mem.offset(offset) as *mut isize) },
+                PORT_EXIT  => { Syscall::Exit( guest_mem.offset(offset) as *mut i32) },
                 _ => { panic!("KVM: unhandled KVM_EXIT_IO at port 0x{}, direction {}", run.__bindgen_anon_1.io.port, run.__bindgen_anon_1.io.direction); }
             }
         }
@@ -96,29 +96,36 @@ impl Syscall {
     }
 
     pub unsafe fn run(&self, guest_mem: *mut u8, console: Console) -> Result<Return> {
-        debug!("{:?}", *self);
+        println!("{:?}", *self);
         
         match *self {
             Syscall::Write(obj) => {
-                if (*obj).fd == 1 {
-                    use std::io::Write;
-                   
-                    let cstr = CString::from_raw((*obj).buf as *mut c_char);
-                    let ret = ActionResult::Output(cstr.into_string().unwrap_or("".into()));
+                use std::io::Write;
+
+                if (*obj).fd != 1 && (*obj).fd != 2 {
+                    (*obj).length = write((*obj).fd, guest_mem.offset((*obj).buf) as *const c_void, (*obj).length as usize);
+                } else {
+                    let tmp = slice::from_raw_parts(guest_mem.offset((*obj).buf) as *const u8, (*obj).length as usize);
+                    let content = String::from_utf8_unchecked(tmp.into());
+
+                    let ret = match (*obj).fd {
+                        1 => ActionResult::Output(content),
+                        2 => ActionResult::OutputErr(content),
+                        _ => unreachable!()
+                    };
+
                     let buf: Vec<u8> = serialize(&ret, Infinite).unwrap();
                     
                     for stream in console.lock().unwrap().iter_mut() {
-                        stream.lock().unwrap().write(&buf).unwrap();
+                        stream.write(&buf).unwrap();
                     }
-                } else if (*obj).fd == 2 {
                 }
-                (*obj).length = write((*obj).fd, guest_mem.offset((*obj).buf) as *const c_void, (*obj).length as usize);
             },
             Syscall::Read(obj) => {
                 (*obj).ret = read((*obj).fd, guest_mem.offset((*obj).buf) as *mut c_void, (*obj).len);
             },
             Syscall::Exit(obj) => {
-                return Ok(Return::Exit(*((guest_mem as *mut i32).offset((*obj) as isize))));
+                return Ok(Return::Exit(*(guest_mem.offset((*obj) as isize)) as i32));
             },
             Syscall::Open(obj) => {
                 (*obj).ret = open(guest_mem.offset((*obj).name) as *const i8, (*obj).flags, (*obj).mode);

@@ -1,5 +1,5 @@
 use std::net::TcpStream;
-use std::env;
+use std::{env, slice};
 use std::mem::transmute;
 use std::io::{Write, Read, Cursor};
 use std::ffi::CString;
@@ -21,7 +21,7 @@ use libc;
 
 const HERMIT_MAGIC: u32 = 0x7E317;
 
-pub type Console = Arc<Mutex<Vec<Arc<Mutex<UnixStream>>>>>;
+pub type Console = Arc<Mutex<Vec<UnixStream>>>;
 
 #[derive(Debug)]
 pub struct Socket {
@@ -118,27 +118,25 @@ impl Socket {
                     match packet {
                         Packet::Exit { arg } => break 'main,
                         Packet::Write { fd, buf } => {
-                            let buf_ret: [u8;8] = transmute(libc::write(fd as i32, buf.as_ptr() as *const libc::c_void, buf.len()).to_le());
-                            
-                            if fd == 1 {
-                                let ret = ActionResult::Output(String::from_utf8_unchecked(buf));
-                                let buf: Vec<u8> = serialize(&ret, Infinite).unwrap();
-                                
-                                for stream in self.console.lock().unwrap().iter_mut() {
-                                    stream.lock().unwrap().write(&buf).unwrap();
-                                }
-                                //stdout.push_str(&String::from_utf8_unchecked(buf));
-                            } else if fd == 2 {
-                                let ret = ActionResult::OutputErr(String::from_utf8_unchecked(buf));
-                                let buf: Vec<u8> = serialize(&ret, Infinite).unwrap();
-
-                                for stream in self.console.lock().unwrap().iter_mut() {
-                                    stream.lock().unwrap().write(&buf).unwrap();
-                                }
-                                //stderr.push_str(&String::from_utf8_unchecked(buf));
+                            let mut buf_ret: [u8; 8];
+                            if fd != 1 && fd != 2 {
+                                buf_ret = transmute(libc::write(fd as i32, buf.as_ptr() as *const libc::c_void, buf.len()).to_le());
                             } else {
-                                stream.write(&buf_ret);
+                                let res = match fd {
+                                    1 => ActionResult::Output(String::from_utf8_unchecked(buf)),
+                                    2 => ActionResult::OutputErr(String::from_utf8_unchecked(buf)),
+                                    _ => unreachable!()
+                                };
+
+                                let buf: Vec<u8> = serialize(&res, Infinite).unwrap();
+                                for stream in self.console.lock().unwrap().iter_mut() {
+                                    stream.write(&buf).unwrap();
+                                }
+
+                                buf_ret = transmute(buf.len());
                             }
+
+                            stream.write(&buf_ret);
                         },
                         Packet::Open { name, mode, flags } => {
                             let buf: [u8; 4] = transmute(libc::open(name.as_ptr(), flags as i32, mode as i32).to_le());

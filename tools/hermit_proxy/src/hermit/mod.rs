@@ -56,9 +56,21 @@ impl IsleParameter {
         let num_cpus: u32 = env::var("HERMIT_CPUS").map(|x| x.parse().unwrap_or(1)).unwrap_or(1);
 
         match isle_kind.as_str() {
-            "qemu" | "QEmu" | "QEMU" => {
+            "multi" | "MULTI" | "Multi" => {
+                IsleParameter::Multi {
+                    mem_size: mem_size,
+                    num_cpus: num_cpus
+                }
+            },
+            "uhyve" | "UHyve" | "UHYVE" => {
+                IsleParameter::UHyve {
+                    mem_size: mem_size,
+                    num_cpus: num_cpus
+                }
+            },
+            _ => {
                 let binary = env::var("HERMIT_BINARY").unwrap_or("qemu-system-x86_64".into());
-                let kvm = env::var("HERMIT_KVM").map(|x| x.parse().unwrap_or(false)).unwrap_or(false);
+                let kvm = env::var("HERMIT_KVM").map(|x| x.parse().unwrap_or(true)).unwrap_or(true);
                 let monitor = env::var("HERMIT_MONITOR").map(|x| x.parse().unwrap_or(false)).unwrap_or(false);
                 let capture_net = env::var("HERMIT_CAPTURE_NET").map(|x| x.parse().unwrap_or(false)).unwrap_or(false);
                 let port = env::var("HERMIT_PORT").map(|x| x.parse().unwrap_or(18766)).unwrap_or(18766);
@@ -78,20 +90,7 @@ impl IsleParameter {
                         should_debug: debug
                     }
                 }
-            },
-            "multi" | "MULTI" | "Multi" => {
-                IsleParameter::Multi {
-                    mem_size: mem_size,
-                    num_cpus: num_cpus
-                }
-            },
-            "uhyve" | "UHyve" | "UHYVE" => {
-                IsleParameter::UHyve {
-                    mem_size: mem_size,
-                    num_cpus: num_cpus
-                }
-            },
-            _ => { panic!(""); }
+            }
         }
     }
 }
@@ -109,7 +108,7 @@ pub trait Isle {
 
     fn is_running(&mut self) -> Result<bool>;
 
-    fn add_endpoint(&mut self, stream: Arc<Mutex<UnixStream>>) -> Result<()>;
+    fn add_endpoint(&mut self, stream: UnixStream) -> Result<()>;
 
     fn is_available(&self) -> Result<bool> {
         let log = match self.log_file() {

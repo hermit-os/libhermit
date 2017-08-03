@@ -164,7 +164,7 @@ impl Isle for Uhyve {
         self.vm.is_running()
     }
 
-    fn add_endpoint(&mut self, stream: Arc<Mutex<UnixStream>>) -> Result<()> {
+    fn add_endpoint(&mut self, stream: UnixStream) -> Result<()> {
         self.console.lock().unwrap().push(stream);
 
         Ok(())

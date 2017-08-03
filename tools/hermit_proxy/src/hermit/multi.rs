@@ -108,7 +108,7 @@ impl Isle for Multi {
         Ok(true)
     }
 
-    fn add_endpoint(&mut self, stream: Arc<Mutex<UnixStream>>) -> Result<()> {
+    fn add_endpoint(&mut self, stream: UnixStream) -> Result<()> {
         Ok(())
     }
 }

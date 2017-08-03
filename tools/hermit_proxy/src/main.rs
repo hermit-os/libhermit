@@ -30,7 +30,7 @@ mod hermit;
 mod daemon;
 
 use nix::sys::signal;
-use std::env;
+use std::{env, fs};
 
 use hermit::{IsleParameter, error};
 use daemon::{Action, ActionResult};
@@ -128,7 +128,7 @@ fn main() {
             let mut i = 0;
             println!("{0: <10} | {1: <10} | {2: <10}", "number", "time", "action");
             for log in logs {
-                println!("{0: <10} | {1: <10} | {2: <10?}", i, log.time.to_rfc3339(), log.text);
+                println!("{0: <10} | {1: <10} | {2: <10?}", i, log.time.format("%H:%M:%S"), log.text);
                 i += 1;
             }
         } else if let ActionResult::IsleLog(content) = res {
@@ -178,10 +178,8 @@ fn main() {
             Ok(id) => {
                 let res = daemon.send(Action::Connect(id));
 
-                if let ActionResult::Connect(Ok(_)) = res {
+                if let ActionResult::Connect = res {
                     daemon.output();
-                } else if let ActionResult::Connect(Err(err)) = res {
-                    println!("Connect failed: {:?}", err);
                 }
             },
             Err(_) => {
@@ -221,10 +219,17 @@ fn main() {
             env::set_var("HERMIT_APP_PORT",app_port);
         }
 
+        let relative_path: String = matches.value_of("file").unwrap().into();
+        let path = fs::canonicalize(relative_path).unwrap();
+
         let res = daemon.send(Action::CreateIsle(
-                matches.value_of("file").unwrap().into(), 
+                path.to_str().unwrap().into(),
                 IsleParameter::from_env()
         )); 
+
+        if let ActionResult::CreateIsle(_) = res {
+            daemon.output();
+        }
 
         println!("Created Isle with number: {:?}", res);
     }

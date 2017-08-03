@@ -141,7 +141,7 @@ pub enum ActionResult {
     CreateIsle(Result<u32>),
     StopIsle(Result<i32>),
     RemoveIsle(Result<i32>),
-    Connect(Result<()>),
+    Connect,
     Log(Vec<Log>),
     IsleLog(Result<String>),
     List(Vec<(Result<bool>, IsleParameter)>),
@@ -220,8 +220,8 @@ impl State {
     pub fn remove_isle(&mut self, id: u32) -> Result<i32> {
         self.exist_isle(id)?;
 
-        if self.isles[id as usize].is_running()? {
-            self.isles[id as usize].stop()?;
+        if let Ok(true) = self.isles[id as usize].is_running() {
+            self.isles[id as usize].stop();
         }
 
         self.isles.remove(id as usize);
@@ -244,7 +244,7 @@ impl State {
         }
     }
 
-    fn add_endpoint(&mut self, id: u32, stream: Arc<Mutex<UnixStream>>) -> Result<()> {
+    fn add_endpoint(&mut self, id: u32, stream: UnixStream) -> Result<()> {
         self.exist_isle(id)?;
 
         self.isles[id as usize].add_endpoint(stream)
@@ -261,51 +261,60 @@ pub fn daemon_handler() {
     for stream in listener.incoming() {
         match stream {
             Ok(mut stream) => {
-                    let mut stream = Arc::new(Mutex::new(stream));
+                    //let mut stream = Arc::new(Mutex::new(stream));
                    
                     loop {
-                        //println!("READ");
-                    let nread = stream.lock().unwrap().read(&mut buf);
-                    println!("{:?}", nread);
-                    if let Ok(nread) = nread {
-                        if nread > 0 {
-                            let action:Action  = deserialize(&buf).unwrap();
-                            
-                            state.add_log(action.clone());
+                        let nread = stream.read(&mut buf);
 
-                            let ret = match action {
-                                Action::KillDaemon => {
-                                    fs::remove_file("/tmp/hermit_daemon").unwrap();
-                                    break;
-                                },
-                                Action::CreateIsle(path, specs) => ActionResult::CreateIsle(state.create_isle(path,specs)),
-                                Action::List => ActionResult::List(state.list()),
-                                Action::Connect(id) => {
-                                    let res = ActionResult::Connect(state.add_endpoint(id, stream.clone()));
-                                    let buf: Vec<u8> = serialize(&res, Infinite).unwrap();
-                                    stream.lock().unwrap().write(&buf);
-                                    break;
-                                },
-                                Action::Log(id) => {
-                                    match id {
-                                        Some(id) => ActionResult::IsleLog(state.log_isle(id)),
-                                        None => ActionResult::Log(state.log())
-                                    }
-                                },
-                                Action::StopIsle(id) => ActionResult::StopIsle(state.stop_isle(id)),
-                                Action::RemoveIsle(id) => ActionResult::RemoveIsle(state.remove_isle(id)),
-                                _ => { panic!(""); }
-                            };
+                        if let Ok(nread) = nread {
+                            if nread > 0 {
+                                let action:Action  = deserialize(&buf).unwrap();
+                                
+                                state.add_log(action.clone());
 
-                            println!("WRITE");
-                            let buf: Vec<u8> = serialize(&ret, Infinite).unwrap();
-                            stream.lock().unwrap().write(&buf);
+                                let ret = match action {
+                                    Action::KillDaemon => {
+                                        fs::remove_file("/tmp/hermit_daemon").unwrap();
+                                        break;
+                                    },
+                                    Action::CreateIsle(path, specs) => {
+                                        let id = state.create_isle(path,specs);
+                                        let buf: Vec<u8> = serialize(&ActionResult::CreateIsle(id.clone()), Infinite).unwrap();
+                                        stream.write(&buf);
+
+                                        if let Ok(id) = id {
+                                            state.add_endpoint(id, stream);
+                                        }
+                                        break;
+                                    },
+                                    Action::List => ActionResult::List(state.list()),
+                                    Action::Connect(id) => {
+                                        let buf: Vec<u8> = serialize(&ActionResult::Connect, Infinite).unwrap();
+                                        stream.write(&buf);
+                                        
+                                        state.add_endpoint(id, stream);
+                                        break;
+                                    },
+                                    Action::Log(id) => {
+                                        match id {
+                                            Some(id) => ActionResult::IsleLog(state.log_isle(id)),
+                                            None => ActionResult::Log(state.log())
+                                        }
+                                    },
+                                    Action::StopIsle(id) => ActionResult::StopIsle(state.stop_isle(id)),
+                                    Action::RemoveIsle(id) => ActionResult::RemoveIsle(state.remove_isle(id)),
+                                    _ => { panic!(""); }
+                                };
+
+                                let buf = serialize(&ret, Infinite).unwrap();
+
+                                stream.write(&buf);
+                            } else {
+                                break;
+                            }
                         } else {
                             break;
                         }
-                    } else {
-                        break;
-                    }
                     }
         },
         Err(err) => { println!("ERR: {:?}", err); }

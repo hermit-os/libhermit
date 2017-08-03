@@ -61,11 +61,13 @@ impl QEmu {
         let num_cpus = num_cpus.to_string();
         let mem_size = format!("{}B", mem_size);
 
-        let exe = env::current_exe().unwrap();
+        /*let exe = env::current_exe().unwrap();
         let name = exe.to_str().unwrap();
         let exe_path  = name.split("/").take(name.matches('/').count()).collect::<Vec<&str>>().join("/");
 
         let exe = format!("{}/ldhermit.elf", exe_path);
+*/
+        let exe: String = "/opt/hermit/bin/ldhermit.elf".into();
 
         let mut port_str;
 
@@ -202,7 +204,7 @@ impl Isle for QEmu {
         Ok(state == "VM status: running")
     }
 
-    fn add_endpoint(&mut self, stream: Arc<Mutex<UnixStream>>) -> Result<()> { 
+    fn add_endpoint(&mut self, stream: UnixStream) -> Result<()> { 
         self.console.lock().unwrap().push(stream);
 
         Ok(())

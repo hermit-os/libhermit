@@ -17,7 +17,3 @@ serde = "1.*.*"
 chrono = { version = "0.4", features = ["serde"] }
 bincode = "0.8"
 serde_derive = "1.*.*"
-
-[dependencies.env_logger]
-version = "0.3"
-default-features = false
