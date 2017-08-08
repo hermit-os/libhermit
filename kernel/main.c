@@ -192,8 +192,10 @@ static int init_netifs(void)
 			goto success;
 		if ((err = netifapi_netif_add(&default_netif, ip_2_ip4(&ipaddr), ip_2_ip4(&netmask), ip_2_ip4(&gw), NULL, rtl8139if_init, ethernet_input)) == ERR_OK)
 			goto success;
+#ifdef USE_E1000
 		if ((err = netifapi_netif_add(&default_netif, ip_2_ip4(&ipaddr), ip_2_ip4(&netmask), ip_2_ip4(&gw), NULL, e1000if_init, ethernet_input)) == ERR_OK)
 			goto success;
+#endif
 
 		LOG_ERROR("Unable to add the network interface: err = %d\n", err);
 
@@ -309,8 +311,8 @@ static int initd(void* arg)
 	}
 
 	curr_task->heap->flags = VMA_HEAP|VMA_USER;
-	curr_task->heap->start = PAGE_FLOOR(heap);
-	curr_task->heap->end = PAGE_FLOOR(heap);
+	curr_task->heap->start = PAGE_CEIL(heap);
+	curr_task->heap->end = PAGE_CEIL(heap);
 
 	// region is already reserved for the heap, we have to change the
 	// property of the first page

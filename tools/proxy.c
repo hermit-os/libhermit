@@ -270,7 +270,7 @@ static void wait_hermit_available(void)
 		return;
 
 	int fd = inotify_init();
-	if ( fd < 0 ) {
+	if (fd < 0) {
 		perror( "inotify_init" );
 		exit(1);
 	}
