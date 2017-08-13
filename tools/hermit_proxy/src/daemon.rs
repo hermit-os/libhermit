@@ -89,6 +89,7 @@ impl Connection {
 
         loop {
             match self.socket.read(&mut tmp) {
+                Ok(0) => break,
                 Ok(nread) => buf.extend_from_slice(&tmp[0..nread]),
                 Err(err) => {
                     if buf.len() > 0 {
@@ -141,7 +142,7 @@ pub enum ActionResult {
     CreateIsle(Result<u32>),
     StopIsle(Result<i32>),
     RemoveIsle(Result<i32>),
-    Connect,
+    Connect(Result<()>),
     Log(Vec<Log>),
     IsleLog(Result<String>),
     List(Vec<(Result<bool>, IsleParameter)>),
@@ -251,6 +252,9 @@ impl State {
     }
 }
 
+fn exit_daemon_handler() {
+}
+
 pub fn daemon_handler() {
     let mut state = State::new();
     let mut buf = vec![0; 256];
@@ -261,8 +265,6 @@ pub fn daemon_handler() {
     for stream in listener.incoming() {
         match stream {
             Ok(mut stream) => {
-                    //let mut stream = Arc::new(Mutex::new(stream));
-                   
                     loop {
                         let nread = stream.read(&mut buf);
 
@@ -275,6 +277,11 @@ pub fn daemon_handler() {
                                 let ret = match action {
                                     Action::KillDaemon => {
                                         fs::remove_file("/tmp/hermit_daemon").unwrap();
+
+                                        let buf: Vec<u8> = serialize(&ActionResult::KillDaemon(Ok(())), Infinite).unwrap();
+                                        stream.write(&buf);
+
+                                        process::exit(0);
                                         break;
                                     },
                                     Action::CreateIsle(path, specs) => {
@@ -289,7 +296,7 @@ pub fn daemon_handler() {
                                     },
                                     Action::List => ActionResult::List(state.list()),
                                     Action::Connect(id) => {
-                                        let buf: Vec<u8> = serialize(&ActionResult::Connect, Infinite).unwrap();
+                                        let buf: Vec<u8> = serialize(&ActionResult::Connect(state.exist_isle(id)), Infinite).unwrap();
                                         stream.write(&buf);
                                         
                                         state.add_endpoint(id, stream);

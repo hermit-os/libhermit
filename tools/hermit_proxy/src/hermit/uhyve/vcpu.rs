@@ -237,20 +237,14 @@ impl VirtualCPU {
                     Ok(proto::Return::Exit(code)) => {
                         state.running_state.store(false, Ordering::Relaxed);
 
-                        println!("exit {}", code);
-                    
                         return ExitCode::Cause(Ok(code));
                     },
                     Err(err) => {
                         state.running_state.store(false, Ordering::Relaxed);
                         
-                        println!("error {:?}", err);
-
                         return ExitCode::Cause(Err(err));
                     },
-                    _ => {
-                        println!("RUN");
-                    }
+                    _ => {}
                 }
             }
 

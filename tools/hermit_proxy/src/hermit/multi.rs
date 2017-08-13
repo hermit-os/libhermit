@@ -51,7 +51,7 @@ impl Multi {
             return Err(Error::MultiIsleFailed);
         }
 
-        Ok(Multi { num: num, socket: Some(Socket::new()) })
+        Ok(Multi { num: num, socket: Some(Socket::new(18766)) })
     }
 }
 

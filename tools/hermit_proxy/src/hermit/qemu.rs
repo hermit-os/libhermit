@@ -19,6 +19,26 @@ use hermit::socket::{Socket, Console};
 const PIDNAME: &'static str = "/tmp/hpid-XXXXXX";
 const TMPNAME: &'static str = "/tmp/hermit-XXXXXX";
 
+const BASE_PORT: u16 = 18766;
+static mut FREE_PORT: u64 = 0u64;
+
+// there are 64 ports free
+fn get_free_port() -> Result<u16> {
+    // assume single threading
+    unsafe {
+        if FREE_PORT == u64::max_value() {
+            return Err(Error::InternalError);
+        }
+    
+        // find first bit set to zero
+        let pos = (!FREE_PORT).trailing_zeros();
+
+        FREE_PORT |= (1 << pos);   
+    
+        Ok(BASE_PORT + pos as u16)
+    }
+}
+
 #[derive(Debug)]
 pub struct QEmu {
     socket: Option<Socket>,
@@ -34,12 +54,15 @@ impl QEmu {
     pub fn new(path: &str, mem_size: u64, num_cpus: u32, additional: IsleParameterQEmu) -> Result<QEmu> {
         let tmpf = utils::create_tmp_file(TMPNAME)?;
         let pidf = utils::create_tmp_file(PIDNAME)?;
+        // get a new port number
+        let port = get_free_port()?;
 
-        let mut child = QEmu::start_with(path, mem_size, num_cpus, additional, &tmpf, &pidf)?.spawn().expect("Couldn't find qemu binary!");
+        debug!("new port number: {}", port);
+
+        let mut child = QEmu::start_with(path, port, mem_size, num_cpus, additional, &tmpf, &pidf)?.spawn().expect("Couldn't find qemu binary!");
         let stdout = child.stdout.take().unwrap();
         let stderr = child.stderr.take().unwrap();
-        println!("{}", pidf);
-        let socket = Socket::new();
+        let socket = Socket::new(port);
         let console = socket.console();
 
         Ok(QEmu {
@@ -53,8 +76,8 @@ impl QEmu {
         })
     }
     
-    pub fn start_with(path: &str, mem_size: u64, num_cpus: u32, add: IsleParameterQEmu, tmp_file: &str, pid_file: &str) -> Result<Command> {
-        let hostfwd = format!("user,hostfwd=tcp:127.0.0.1:{}-:{}", add.port, add.port);
+    pub fn start_with(path: &str, port: u16, mem_size: u64, num_cpus: u32, add: IsleParameterQEmu, tmp_file: &str, pid_file: &str) -> Result<Command> {
+        let hostfwd = format!("user,hostfwd=tcp:127.0.0.1:{}-:{}", port, 18766);
         let monitor_str = format!("unix:{}_monitor,server,nowait", pid_file);
         let chardev = format!("file,id=gnc0,path={}",&tmp_file);
         let freq = format!("\"-freq{} -proxy\"",(utils::cpufreq().unwrap()/1000).to_string());

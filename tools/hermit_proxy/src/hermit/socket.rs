@@ -26,17 +26,18 @@ pub type Console = Arc<Mutex<Vec<UnixStream>>>;
 #[derive(Debug)]
 pub struct Socket {
     stream: Option<TcpStream>, 
+    port: u16,
     console: Console
 }
 
 impl Socket {
-    pub fn new() -> Socket {
-        Socket { stream: None, console: Arc::new(Mutex::new(Vec::new())) }
+    pub fn new(port: u16) -> Socket {
+        Socket { stream: None, port: port, console: Arc::new(Mutex::new(Vec::new())) }
     }
 
     pub fn connect(&mut self) -> Result<()> {
         // prepare the initializing struct
-        let length: usize = 4 + env::args().skip(2).map(|x| 4+x.len()).sum::<usize>() + 
+        let length: usize = 4 + 4 + env::args().skip(2).map(|x| 4+x.len()+1).sum::<usize>() +
                             4 + env::vars().map(|(x,y)| 5 + x.len()+ y.len()).sum::<usize>();
 
         let mut buf = Cursor::new(vec![0u8;length]);
@@ -46,8 +47,9 @@ impl Socket {
         // send all arguments (skip first)
         buf.write_u32::<LittleEndian>(env::args().count() as u32 - 2);
         for key in env::args().skip(2) {
-            buf.write_u32::<LittleEndian>(key.len() as u32);
+            buf.write_u32::<LittleEndian>(key.len() as u32 + 1);
             buf.write(key.as_bytes());
+            buf.write_u8(b'\0');
         }
 
         // send the environment
@@ -60,7 +62,7 @@ impl Socket {
 
         let mut stream;
         loop {
-            match TcpStream::connect(("127.0.0.1", 0x494E)) {
+            match TcpStream::connect(("127.0.0.1", self.port)) {
                 Ok(mut s) => { 
                     match s.write(buf.get_ref()) {
                         Ok(_) => { stream = s; break; },
@@ -120,7 +122,7 @@ impl Socket {
                         Packet::Write { fd, buf } => {
                             let mut buf_ret: [u8; 8];
                             if fd != 1 && fd != 2 {
-                                buf_ret = transmute(libc::write(fd as i32, buf.as_ptr() as *const libc::c_void, buf.len()).to_le());
+                                buf_ret = transmute(libc::write(fd, buf.as_ptr() as *const libc::c_void, buf.len()).to_le());
                             } else {
                                 let res = match fd {
                                     1 => ActionResult::Output(String::from_utf8_unchecked(buf)),
@@ -129,9 +131,10 @@ impl Socket {
                                 };
 
                                 let buf: Vec<u8> = serialize(&res, Infinite).unwrap();
-                                for stream in self.console.lock().unwrap().iter_mut() {
-                                    stream.write(&buf).unwrap();
-                                }
+
+                                // try to send the new console log to each endpoint and retain only
+                                // the successfully ones.
+                                self.console.lock().unwrap().retain(|mut x| x.write(&buf).is_ok());
 
                                 buf_ret = transmute(buf.len());
                             }
@@ -139,23 +142,18 @@ impl Socket {
                             stream.write(&buf_ret);
                         },
                         Packet::Open { name, mode, flags } => {
-                            let buf: [u8; 4] = transmute(libc::open(name.as_ptr(), flags as i32, mode as i32).to_le());
-                            debug!("got {:?}", buf);
-                            
+                            let mut buf: [u8; 4] = transmute(libc::open(name.as_ptr(), flags as i32, mode as i32).to_le());
                             let written = stream.write(&buf).unwrap();
                                 
-                            debug!("Written {}", written);
                         },
                         Packet::Close { fd } => {
-                            let buf: [u8; 4] = transmute(libc::close(fd as i32).to_le());
+                            let buf: [u8; 4] = transmute(libc::close(fd).to_le());
                             stream.write(&buf);
                         },
                         Packet::Read { fd, len } => {
                             let mut tmp: Vec<u8> = vec![0; len as usize];
-                            let got = libc::read(fd as i32, tmp.as_mut_ptr() as *mut libc::c_void, len as usize);
+                            let got = libc::read(fd, tmp.as_mut_ptr() as *mut libc::c_void, len as usize);
                             let buf: [u8; 8] = transmute(got.to_le());
-
-                            debug!("Read size {:?}", buf);
 
                             stream.write(&buf);
 
@@ -164,7 +162,7 @@ impl Socket {
                             }
                         },
                         Packet::LSeek { fd, offset, whence } => {
-                            let buf: [u8; 8] = transmute(libc::lseek(fd as i32, offset, whence as i32).to_le());
+                            let buf: [u8; 8] = transmute(libc::lseek(fd, offset, whence as i32).to_le());
                             stream.write(&buf);
                         }
                     };

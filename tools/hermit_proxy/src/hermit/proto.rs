@@ -65,6 +65,10 @@ pub enum Packet {
 
 impl Packet {
     pub fn from_buf(obj: &PartialPacket, buf: &mut Cursor<Vec<u8>>) -> Packet {
+
+        //println!("{:?}", *obj);
+
+
         match *obj {
             PartialPacket::Write { fd, len } => {
                 debug!("Read write packet with length {}", len);

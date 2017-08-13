@@ -178,8 +178,10 @@ fn main() {
             Ok(id) => {
                 let res = daemon.send(Action::Connect(id));
 
-                if let ActionResult::Connect = res {
+                if let ActionResult::Connect(Ok(())) = res {
                     daemon.output();
+                } else {
+                    println!("Invalid number!");
                 }
             },
             Err(_) => {

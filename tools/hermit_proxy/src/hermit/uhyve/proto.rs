@@ -96,8 +96,6 @@ impl Syscall {
     }
 
     pub unsafe fn run(&self, guest_mem: *mut u8, console: Console) -> Result<Return> {
-        println!("{:?}", *self);
-        
         match *self {
             Syscall::Write(obj) => {
                 use std::io::Write;
@@ -116,9 +114,7 @@ impl Syscall {
 
                     let buf: Vec<u8> = serialize(&ret, Infinite).unwrap();
                     
-                    for stream in console.lock().unwrap().iter_mut() {
-                        stream.write(&buf).unwrap();
-                    }
+                    console.lock().unwrap().retain(|mut x| x.write(&buf).is_ok());
                 }
             },
             Syscall::Read(obj) => {
