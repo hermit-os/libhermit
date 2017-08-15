@@ -243,9 +243,9 @@ void page_free(void* viraddr, size_t sz)
 		put_pages(phyaddr, PAGE_FLOOR(sz) >> PAGE_BITS);
 }
 
-#if 0
 int memory_init(void)
 {
+#if 0
 	size_t image_size = (size_t) &kernel_end - (size_t) &kernel_start;
 	int ret = 0;
 
@@ -362,6 +362,5 @@ int memory_init(void)
 oom:
 	LOG_ERROR("BUG: Failed to init mm!\n");
 	while(1) {HALT; }
-}
-
 #endif
+}
