@@ -57,11 +57,15 @@ image_size: .quad 0
 possible_isles: .dword 1
 
 start64:
-/* Pointer to stack base  */
-ldr x1, =(boot_stack+KERNEL_STACK_SIZE-0xF)
-mov sp, x1
-bl hermit_main
-b .
+  /* Pointer to stack base  */
+  ldr x1, =(boot_stack+KERNEL_STACK_SIZE-0xF)
+  mov sp, x1
+  bl hermit_main
+
+// halt
+halt:
+  wfe
+  b halt
 
 .section .data
 .global boot_stack
