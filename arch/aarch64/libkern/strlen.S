@@ -55,7 +55,7 @@
 #define	EEND(sym)
 
 	/* Start of critial section -- keep to one 64Byte cache line.  */
-ENTRY(arm64_strlen)
+ENTRY(aarch64_strlen)
 	mov	zeroones, #REP8_01
 	bic	src, srcin, #15
 	ands	tmp1, srcin, #15
@@ -120,4 +120,4 @@ ENTRY(arm64_strlen)
 	csinv	data1, data1, xzr, le
 	csel	data2, data2, data2a, le
 	b	.Lrealigned
-END(arm64_strlen)
+END(aarch64_strlen)

@@ -99,7 +99,7 @@
 #define	END(sym) .size sym, . - sym
 #define	EEND(sym)
 
-ENTRY(arm64_memcpy)
+ENTRY(aarch64_memcpy)
 	prfm	PLDL1KEEP, [src]
 	add	srcend, src, count
 	add	dstend, dstin, count
@@ -220,4 +220,4 @@ L(copy_long):
 	stp	B_l, B_h, [dstend, -32]
 	stp	C_l, C_h, [dstend, -16]
 	ret
-END(arm64_memcpy)
+END(aarch64_memcpy)

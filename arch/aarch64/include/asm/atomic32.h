@@ -63,8 +63,17 @@ typedef struct { volatile int32_t counter; } atomic_int32_t;
  */
 inline static int32_t atomic_int32_test_and_set(atomic_int32_t* d, int32_t v)
 {
-	atomic_barrier();
-	return __sync_lock_test_and_set(&d->counter, v);
+	asm volatile(
+		"%=:\n\t"
+		"ldxr w0, %0\n\t"
+		"ldr w1, %1\n\t"
+		"str w0, %1\n\t"
+		"stxr w1, w1, %0\n\t"
+		"cbnz w1, %=b"
+		: "+Q"(d->counter), "+m"(v)
+		:
+		: "memory", "w0", "w1");
+	return v;
 }
 
 /** @brief Atomic addition of values to atomic_int32_t vars
@@ -78,8 +87,18 @@ inline static int32_t atomic_int32_test_and_set(atomic_int32_t* d, int32_t v)
  */
 inline static int32_t atomic_int32_add(atomic_int32_t *d, int32_t i)
 {
-	atomic_barrier();
-	return __sync_add_and_fetch(&d->counter, i);
+	asm volatile(
+		"ldr w1, %1\n\t"
+		"%=:\n\t"
+		"ldxr w0, %0\n\t"
+		"add w0, w0, w1\n\t"
+		"stxr w1, w0, %0\n\t"
+		"cbnz w1, %=b\n\t"
+		"str w0, %1"
+		: "+Q"(d->counter), "+m"(i)
+		:
+		: "memory", "w0", "w1");
+	return i;
 }
 
 /** @brief Atomic subtraction of values from atomic_int32_t vars

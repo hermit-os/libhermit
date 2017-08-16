@@ -32,14 +32,12 @@
 #include <hermit/ctype.h>
 #include <asm/uart.h>
 
-#ifndef CONFIG_VGA
-
 volatile static unsigned int* mmio = NULL;
 
 /* Puts a single character on a serial device */
 int uart_putchar(unsigned char c)
 {
-	if (!mmio)
+	if (mmio)
 		*mmio = (unsigned int) c;
 
 	return (int) c;
@@ -59,23 +57,15 @@ int uart_puts(const char *text)
 	return len;
 }
 
-static int uart_config(void)
-{
-	//TODO: config UART device
-
-	return 0;
-}
-
 int uart_early_init(char* cmdline)
 {
 	if (is_uhyve())
 		return 0;
 
 	// default value of our QEMU configuration
-	mmio = (unsigned int*) 0x101f1000;
+	mmio = (unsigned int*) 0x09000000;
 
-	// configure uart
-	return uart_config();
+	return 0;
 }
 
 int uart_init(void)
@@ -83,10 +73,7 @@ int uart_init(void)
 	if (is_uhyve())
 		return 0;
 
-	mmio = (unsigned int*) 0x101f1000;
+	mmio = (unsigned int*) 0x09000000;
 
-	// configure uart
-	return uart_config();
+	return 0;
 }
-
-#endif

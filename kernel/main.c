@@ -107,6 +107,10 @@ static int hermit_init(void)
 		memcpy((char*) &percore_start + i*sz, (char*) &percore_start, sz);
 
 	koutput_init();
+#ifndef __x86_64__
+	kputs("Hello from aarch64\n");
+	while(1);
+#endif
 	system_init();
 	irq_init();
 	timer_init();
