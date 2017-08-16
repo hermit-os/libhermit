@@ -42,39 +42,39 @@ extern "C" {
 #endif
 
 #if HAVE_ARCH_MEMCPY
-void *arm64_memcpy(void *dest, const void *src, size_t count);
+void *aarch64_memcpy(void *dest, const void *src, size_t count);
 
-#define memcpy(dest, src, count) arm64_memcpy((dest), (src), (count))
+#define memcpy(dest, src, count) aarch64_memcpy((dest), (src), (count))
 #endif
 
 #if HAVE_ARCH_MEMSET
-void *arm64_memset(void *dest, int val, size_t count);
+void *aarch64_memset(void *dest, int val, size_t count);
 
-#define memset(dest, val, count) arm64_memset((dest), (val), (count))
+#define memset(dest, val, count) aarch64_memset((dest), (val), (count))
 #endif
 
 #if HAVE_ARCH_MEMCMP
-int arm64_memcmp(const void *s1, const void *s2, size_t n);
+int aarch64_memcmp(const void *s1, const void *s2, size_t n);
 
-#define memcmp(s1, s2, n) arm64_memcmp((s1), (s2), (n))
+#define memcmp(s1, s2, n) aarch64_memcmp((s1), (s2), (n))
 #endif
 
 #if HAVE_ARCH_STRLEN
-size_t arm64_strlen(const char *str);
+size_t aarch64_strlen(const char *str);
 
-#define strlen(str) arm64_strlen((str))
+#define strlen(str) aarch64_strlen((str))
 #endif
 
 #if HAVE_ARCH_STRNCPY
-char *arm64_strncpy(char *dest, const char *src, size_t n);
+char *aarch64_strncpy(char *dest, const char *src, size_t n);
 
-#define strncpy(dest, src, n) arm64_strncpy((dest), (src), (n))
+#define strncpy(dest, src, n) aarch64_strncpy((dest), (src), (n))
 #endif
 
 #if HAVE_ARCH_STRCPY
-char *arm64_strcpy(char *dest, const char *src);
+char *aarch64_strcpy(char *dest, const char *src);
 
-#define strcpy(dest, src) arm64_strcpy((dest), (src))
+#define strcpy(dest, src) aarch64_strcpy((dest), (src))
 #endif
 
 #if HAVE_ARCH_STRCMP

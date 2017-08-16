@@ -59,7 +59,7 @@
 #define	END(sym) .size sym, . - sym
 #define	EEND(sym)
 
-ENTRY(arm64_memset)
+ENTRY(aarch64_memset)
 	mov	dst, dstin		/* Preserve return value.  */
 	ands	A_lw, val, #255
 #ifndef DONT_USE_DC
@@ -218,7 +218,7 @@ ENTRY(arm64_memset)
 	ands	count, count, zva_bits_x
 	b.ne	.Ltail_maybe_long
 	ret
-END(arm64_memset)
+END(aarch64_memset)
 
 #ifdef MAYBE_VIRT
 	.bss
