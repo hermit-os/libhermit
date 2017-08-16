@@ -25,8 +25,20 @@ option(DYNAMIC_TICKS
 option(SAVE_FPU
 	"Save FPU registers on context switch" ON)
 
-option(HAVE_ARCH_MEMSET	 "Use machine specific version of memset"  OFF)
-option(HAVE_ARCH_MEMCPY	 "Use machine specific version of memcpy"  OFF)
-option(HAVE_ARCH_STRLEN	 "Use machine specific version of strlen"  OFF)
-option(HAVE_ARCH_STRCPY	 "Use machine specific version of strcpy"  OFF)
-option(HAVE_ARCH_STRNCPY "Use machine specific version of strncpy" OFF)
+set(HAVE_ARCH_MEMSET "1" CACHE STRING
+	"Use machine specific version of memset")
+set(HAVE_ARCH_MEMCPY "1" CACHE STRING
+	"Use machine specific version of memcpy")
+set(HAVE_ARCH_STRLEN "1" CACHE STRING
+	"Use machine specific version of strlen")
+if("${HERMIT_ARCH}" STREQUAL "aarch64")
+set(HAVE_ARCH_STRCPY "0" CACHE STRING
+	"Use machine specific version of strcpy")
+set(HAVE_ARCH_STRNCPY "0" CACHE STRING
+	"Use machine specific version of strncpy")
+else()
+set(HAVE_ARCH_STRCPY  "1" CACHE STRING
+	"Use machine specific version of strcpy")
+set(HAVE_ARCH_STRNCPY "1" CACHE STRING
+	"Use machine specific version of strncpy")
+endif()

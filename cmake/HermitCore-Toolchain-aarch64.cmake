@@ -31,9 +31,3 @@ set(CMAKE_Go_COMPILER ${TOOLCHAIN_BIN_DIR}/${TARGET_ARCH}-gccgo)
 # binutils
 set(_CMAKE_TOOLCHAIN_PREFIX "${TARGET_ARCH}-")
 set(_CMAKE_TOOLCHAIN_LOCATION ${TOOLCHAIN_BIN_DIR})
-
-#option(HAVE_ARCH_MEMSET	 "Use machine specific version of memset" ON)
-#option(HAVE_ARCH_MEMCPY	 "Use machine specific version of memcpy" ON)
-#option(HAVE_ARCH_STRLEN	 "Use machine specific version of strlen" ON)
-#option(HAVE_ARCH_STRCPY	 "Use machine specific version of strcpy" ON)
-#option(HAVE_ARCH_STRNCPY "Use machine specific version of strncpy" ON)
