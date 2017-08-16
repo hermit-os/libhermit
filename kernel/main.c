@@ -102,12 +102,15 @@ static int hermit_init(void)
 	// initialize .kbss sections
 	memset((void*)&hbss_start, 0x00, (size_t) &__bss_start - (size_t) &hbss_start);
 
-
 	// initialize .percore section => copy first section to all other sections
 	for(i=1; i<MAX_CORES; i++)
 		memcpy((char*) &percore_start + i*sz, (char*) &percore_start, sz);
 
 	koutput_init();
+#ifndef __x86_64__
+	kputs("Hello from aarch64\n");
+	while(1);
+#endif
 	system_init();
 	irq_init();
 	timer_init();
@@ -485,20 +488,8 @@ out:
 	return 0;
 }
 
-volatile unsigned int * const UART0DR = (unsigned int *)0x09000000;
-
-void print_uart0(const char *s) {
-	while(*s != '\0') { /* Loop until end of string */
-		*UART0DR = (unsigned int)(*s); /* Transmit char */
-		s++; /* Next char */
-	}
-}
-
 int hermit_main(void)
 {
-	print_uart0("Hello world!\n");
-	while(1);
-
 	hermit_init();
 	system_calibration(); // enables also interrupts
 
