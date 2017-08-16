@@ -62,7 +62,7 @@ start64:
   mov sp, x1
   bl hermit_main
 
-// halt
+  /* halt */
 halt:
   wfe
   b halt
