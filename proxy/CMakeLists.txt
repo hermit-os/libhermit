@@ -16,7 +16,7 @@ ExternalProject_Add(
     proxy
     DOWNLOAD_COMMAND ""
     CONFIGURE_COMMAND ""
-    BUILD_COMMAND cargo build
+    BUILD_COMMAND cargo build --release
     BINARY_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
     INSTALL_COMMAND ""
     LOG_BUILD ON)
