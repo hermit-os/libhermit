@@ -15,7 +15,6 @@ install(TARGETS proxy
 install(FILES init.sh
 	DESTINATION tools)
 
-add_subdirectory(./hermit_proxy)
 # Show include files in IDE
 file(GLOB_RECURSE TOOLS_INCLUDES "*.h")
 add_custom_target(tools_includes_ide SOURCES ${TOOLS_INCLUDES})

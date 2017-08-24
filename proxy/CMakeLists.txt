@@ -13,7 +13,7 @@ include(Rust)
 #    PACKAGE_VERSIONS =0.5.2 =0.2.22 =0.8 =0.0.10 =0.2.3 =0.4 =1 =0.3 =0.3)
 
 ExternalProject_Add(
-    hermit_proxy
+    proxy
     DOWNLOAD_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_COMMAND cargo build
@@ -21,4 +21,4 @@ ExternalProject_Add(
     INSTALL_COMMAND ""
     LOG_BUILD ON)
 
-install(PROGRAMS target/debug/hermit_proxy DESTINATION bin)
+install(PROGRAMS target/debug/proxy DESTINATION bin)
