@@ -9,16 +9,16 @@ before_install:
   - travis_retry sudo apt-get -qq update
   - travis_retry sudo apt-get install -y curl wget qemu-system-x86 nasm texinfo libmpfr-dev libmpc-dev libgmp-dev libisl-dev flex bison packaging-dev rpm
   - travis_retry sudo apt-get install -y --force-yes binutils-hermit libhermit newlib-hermit pthread-embedded-hermit gcc-hermit
-  - git submodule update --init lwip usr/libomp
 
 script:
+  - curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain nightly
   - source cmake/local-cmake.sh
   - mkdir build
   - cd build
   - cmake ..
   - make -j1 package
   - cd $TRAVIS_BUILD_DIR
-  - ./tests.sh
+#  - ./tests.sh
 
 notifications:
   slack: hermitcore:UtcfeEXkbpx3WyIDK2Wm2beS
