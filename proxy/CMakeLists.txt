@@ -21,4 +21,4 @@ ExternalProject_Add(
     INSTALL_COMMAND ""
     LOG_BUILD ON)
 
-install(PROGRAMS target/debug/proxy DESTINATION bin)
+install(PROGRAMS target/release/proxy DESTINATION bin)
