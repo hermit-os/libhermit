@@ -2,6 +2,9 @@ sudo: required
 dist: trusty
 git:
   submodules: true
+env:
+  global:
+    - PATH=$PATH:~/.cargo/bin
 language: c
 compiler:
   - clang
