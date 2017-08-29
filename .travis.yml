@@ -89,12 +89,11 @@ script:
   - source cmake/local-cmake.sh
   - mkdir build
   - cd build
-  - cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DCMAKE_CXX_COMPILER=$COMPILERCXX -DCMAKE_C_COMPILER=$COMPILERC ..
-  - make -j1 package
+  - cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=true ..
+  - CC=$COMPILERC CXX=$COMPILERCXX make -j1 package
   - cd $TRAVIS_BUILD_DIR
   - ./tests.sh
-#  - cd ..
-#  - if [ -n "$RUNCLANGTIDY" ]; then git ls-files '*.cpp' | xargs -P 1 -I{} clang-tidy -p build/ -header-filter="^((?\!build).)*$" {}; fi
+
 
 notifications:
   slack: hermitcore:UtcfeEXkbpx3WyIDK2Wm2beS
