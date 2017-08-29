@@ -81,6 +81,7 @@ before_install:
   - travis_retry sudo apt-get install -y --force-yes binutils-hermit libhermit newlib-hermit pthread-embedded-hermit gcc-hermit
   - git submodule update --init lwip usr/libomp
   # download clang
+  - mkdir $HOME/clang+llvm
   - export PATH=$HOME/clang+llvm/bin:$PATH
   - if [ -n "$CLANGV" ]; then wget http://llvm.org/releases/$CLANGV/clang+llvm-$CLANGV-x86_64-linux-gnu-debian8.tar.xz -O $HOME/clang+llvm.tar.xz; fi
   - if [ -n "$CLANGV" ]; then tar xf $HOME/clang+llvm.tar.xz -C $HOME/clang+llvm --strip-components 1; fi
