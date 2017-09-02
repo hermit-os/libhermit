@@ -66,6 +66,53 @@ set_target_properties(hermit-bootstrap PROPERTIES
 # dependency makes sure that this is done before hermit is linked
 add_dependencies(hermit-bootstrap ${X86_KERNEL_TARGET})
 
+# add external project hermit-rs
+ExternalProject_Add(
+    objmv
+    DOWNLOAD_COMMAND ""
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND cargo build --release
+    BINARY_DIR "${CMAKE_SOURCE_DIR}/objmv"
+    INSTALL_COMMAND ""
+    LOG_BUILD ON)
+
+# add external project hermit-rs
+ExternalProject_Add(
+    hermit-rs
+    DOWNLOAD_COMMAND ""
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND make all
+    BINARY_DIR "${CMAKE_SOURCE_DIR}/librs"
+    INSTALL_COMMAND ""
+    LOG_BUILD ON)
+
+# Create dependency of hermit-rs objmv
+add_dependencies(hermit-rs objmv)
+# Create dependency of hermit-boostrap hermit-rs
+add_dependencies(hermit-bootstrap hermit-rs)
+
+add_custom_command(
+	TARGET
+		hermit-rs POST_BUILD
+	# rename sections in rust library
+	COMMAND
+		${CMAKE_SOURCE_DIR}/objmv/target/release/objmv
+						${CMAKE_SOURCE_DIR}/librs/target/x86_64-hermit/release/libhermit_rs.a
+
+	# convert rust library to hermitcore's osabi
+	COMMAND
+		${CMAKE_ELFEDIT} --output-osabi HermitCore ${CMAKE_SOURCE_DIR}/librs/target/x86_64-hermit/release/libhermit_rs.a
+
+	# copy libhermit_rs.a into local prefix directory so that all subsequent
+	# targets can link against the freshly built version (as opposed to
+	# linking against the one supplied by the toolchain)
+	COMMAND
+		${CMAKE_COMMAND} -E make_directory ${LOCAL_PREFIX_ARCH_LIB_DIR}
+	COMMAND
+		${CMAKE_COMMAND} -E copy_if_different
+							${CMAKE_SOURCE_DIR}/librs/target/x86_64-hermit/release/libhermit_rs.a
+							${LOCAL_PREFIX_ARCH_LIB_DIR}/)
+
 add_custom_command(
 	TARGET
 		hermit-bootstrap POST_BUILD
@@ -75,6 +122,18 @@ add_custom_command(
 						 --rename-section .text=.ktext
 						 --rename-section .data=.kdata
 						 $<TARGET_FILE:hermit-bootstrap>
+
+	# merge libhermit.a and libhermit_rs.a
+	COMMAND
+		${CMAKE_AR} x ${CMAKE_SOURCE_DIR}/librs/target/x86_64-hermit/release/libhermit_rs.a
+	COMMAND
+		${CMAKE_AR} rcs $<TARGET_FILE:hermit-bootstrap> *.o
+	COMMAND
+		${CMAKE_COMMAND} -E remove *.o
+
+	# redefine _Unwind_Resume to avoid collision with libgcc.a
+	COMMAND
+		${CMAKE_OBJCOPY} --redefine-sym _Unwind_Resume=_Unwind_Resume_rs $<TARGET_FILE:hermit-bootstrap>
 
 	# copy libhermit.a into local prefix directory so that all subsequent
 	# targets can link against the freshly built version (as opposed to

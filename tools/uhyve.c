@@ -100,8 +100,8 @@
 #define PAGE_MASK		((~0L) << PAGE_BITS)
 #define PAGE_2M_MASK		(~0L) << PAGE_2M_BITS)
 #else
-#define PAGE_MASK			(((~0L) << PAGE_BITS) & ~PG_XD)
-#define PAGE_2M_MASK	(((~0L) << PAGE_2M_BITS) & ~PG_XD)
+#define PAGE_MASK			(((~0UL) << PAGE_BITS) & ~PG_XD)
+#define PAGE_2M_MASK	(((~0UL) << PAGE_2M_BITS) & ~PG_XD)
 #endif
 
 // Page is present
@@ -517,6 +517,17 @@ static int load_checkpoint(uint8_t* mem, char* path)
 	return 0;
 }
 
+static size_t virt2phys(size_t addr)
+{
+	struct kvm_translation trans;
+
+	// determine guest physical address of the current rsp
+	trans.linear_address = addr;
+	kvm_ioctl(vcpufd, KVM_TRANSLATE, &trans);
+
+	return trans.physical_address;
+}
+
 static inline void show_dtable(const char *name, struct kvm_dtable *dtable)
 {
 	fprintf(stderr, " %s                 %016zx  %08hx\n", name, (size_t) dtable->base, (uint16_t) dtable->limit);
@@ -589,6 +600,29 @@ static void show_registers(int id, struct kvm_regs* regs, struct kvm_sregs* sreg
 	for (i = 0; i < (KVM_NR_INTERRUPTS + 63) / 64; i++)
 		fprintf(stderr, " %016zx", (size_t) sregs->interrupt_bitmap[i]);
 	fprintf(stderr, "\n");
+
+	fprintf(stderr, "\n Last values on the stack:\n");
+
+	// determine guest physical address of the current rsp
+	size_t rsp_phys = virt2phys(regs->rsp);
+
+	for (i=7; i>=0; i--)
+		fprintf(stderr, " [0x%llx] = 0x%zx\n", regs->rsp+i*sizeof(size_t),
+			*((size_t*)(guest_mem+rsp_phys+i*sizeof(size_t))));
+
+	size_t tr_phys = virt2phys(sregs->tr.base);
+	for(i=0; i<7; i++) {
+		size_t vaddr = *((size_t*) (guest_mem+tr_phys+9*4+i*sizeof(size_t)));
+
+		if (vaddr) {
+			fprintf(stderr, "\n Last values on IST%d (at 0x%zx):\n", i, vaddr);
+
+			size_t paddr = virt2phys(vaddr);
+			for(int j=0; j<8; j++)
+				fprintf(stderr, " [0x%zx] = 0x%zx\n", vaddr-j*sizeof(size_t),
+					*((size_t*) (guest_mem+paddr-j*sizeof(size_t))));
+		}
+	}
 }
 
 static void print_registers(void)
@@ -836,11 +870,13 @@ static int vcpu_loop(void)
 			break;
 
 		case KVM_EXIT_SHUTDOWN:
+			print_registers();
 			err(1, "KVM: receive shutdown command\n");
 			break;
 
 		case KVM_EXIT_DEBUG:
 			print_registers();
+
 		default:
 			fprintf(stderr, "KVM: unhandled exit: exit_reason = 0x%x\n", run->exit_reason);
 			exit(EXIT_FAILURE);

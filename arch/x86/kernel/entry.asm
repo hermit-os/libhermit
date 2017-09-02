@@ -141,6 +141,7 @@ start64:
     ; store pointer to the multiboot information
     mov [mb_info], QWORD rdx
 
+	;
     ; relocate page tables
     mov rdi, boot_pml4
     mov rax, QWORD [rdi]
@@ -255,31 +256,6 @@ Lsmp_main:
     call smp_start
     jmp $
 %endif
-
-ALIGN 64
-global gdt_flush
-extern gp
-
-; This will set up our new segment registers and is declared in
-; C as 'extern void gdt_flush();'
-gdt_flush:
-    lgdt [gp]
-    ; reload the segment descriptors
-    mov eax, 0x10
-    mov ds, eax
-    mov es, eax
-    mov ss, eax
-    xor eax, eax
-    mov fs, eax
-    mov gs, eax
-    ; create pseudo interrupt to set cs
-    push QWORD 0x10             ; SS
-    push rsp                    ; RSP
-    add QWORD [rsp], 0x08       ; => value of rsp before the creation of a pseudo interrupt
-    pushfq                      ; RFLAGS
-    push QWORD 0x08             ; CS
-    push QWORD rollback         ; RIP
-    iretq
 
 ; The first 32 interrupt service routines (ISR) entries correspond to exceptions.
 ; Some exceptions will push an error code onto the stack which is specific to
