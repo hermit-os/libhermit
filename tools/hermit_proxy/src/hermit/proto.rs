@@ -1,6 +1,6 @@
-use std::io::{Read, Seek, Cursor};
+use std::io::{Read, Cursor};
 use std::mem;
-use byteorder::{ReadBytesExt, WriteBytesExt,LittleEndian,BigEndian};
+use byteorder::{ReadBytesExt, LittleEndian};
 use std::ffi::CString;
 
 const PACKET_LENGTH: &'static [u64] = &[1,3,1,1,2,3];
@@ -46,7 +46,7 @@ impl PartialPacket {
 
     pub fn additional_size(&self) -> usize {
         match *self {
-            PartialPacket::Write { fd, len } => len as usize,
+            PartialPacket::Write { len,.. } => len as usize,
             PartialPacket::Open { len } => len as usize + 8,
             _ => 0
         }

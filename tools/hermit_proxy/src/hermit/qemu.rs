@@ -1,4 +1,3 @@
-use std::env;
 use std::process::{Stdio, Child, Command};
 use libc;
 use std::fs::File;
@@ -8,8 +7,6 @@ use std::thread;
 use std::os::unix::net::UnixStream;
 use std::io::Write;
 use std::time::Duration;
-use std::sync::Arc;
-use std::sync::Mutex;
 
 use hermit::{Isle, IsleParameterQEmu};
 use hermit::utils;
@@ -33,7 +30,7 @@ fn get_free_port() -> Result<u16> {
         // find first bit set to zero
         let pos = (!FREE_PORT).trailing_zeros();
 
-        FREE_PORT |= (1 << pos);   
+        FREE_PORT |= 1 << pos;
     
         Ok(BASE_PORT + pos as u16)
     }
@@ -92,7 +89,7 @@ impl QEmu {
 */
         let exe: String = "/opt/hermit/bin/ldhermit.elf".into();
 
-        let mut port_str;
+        let port_str;
 
         let mut args: Vec<&str> = vec![
             "-daemonize",
@@ -146,8 +143,8 @@ impl QEmu {
         let mut stderr = String::new();
         let mut stdout = String::new();
 
-        self.stdout.read_to_string(&mut stdout);
-        self.stderr.read_to_string(&mut stderr);
+        self.stdout.read_to_string(&mut stdout).unwrap();
+        self.stderr.read_to_string(&mut stderr).unwrap();
 
         (stdout, stderr)
     }
@@ -200,7 +197,7 @@ impl Isle for QEmu {
         socket.connect()?;
 
         thread::spawn(move || {
-            socket.run();
+            socket.run().unwrap();
         });
 
         Ok(())

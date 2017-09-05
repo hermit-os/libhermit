@@ -1,8 +1,5 @@
 use std::fs::File;
-use std::env;
 use std::io::{Write, Read};
-use std::sync::Arc;
-use std::sync::Mutex;
 use std::thread;
 
 use hermit::Isle;
@@ -20,6 +17,7 @@ impl Multi {
     pub fn new(num: u8, path: &str, mem_size: u64, num_cpus: u32) -> Result<Multi> {
         let cpu_path = format!("/sys/hermit/isle{}/path", num);
         let bin_path= format!("/sys/hermit/isle{}/cpus", num);
+        debug!("Mem size: {}", mem_size);
 
         // request a new isle, enforce close
         {
@@ -108,7 +106,7 @@ impl Isle for Multi {
         Ok(true)
     }
 
-    fn add_endpoint(&mut self, stream: UnixStream) -> Result<()> {
+    fn add_endpoint(&mut self, _: UnixStream) -> Result<()> {
         Ok(())
     }
 }

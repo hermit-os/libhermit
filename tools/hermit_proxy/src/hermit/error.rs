@@ -1,5 +1,4 @@
 use std::{result, fmt};
-use nix;
 use errno::errno;
 
 pub type Result<T> = result::Result<T, Error>;

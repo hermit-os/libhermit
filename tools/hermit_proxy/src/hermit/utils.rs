@@ -1,5 +1,4 @@
 use std::fs::File;
-use std::os::unix::io::FromRawFd;
 use std::ffi::CString;
 use std::io::Read;
 

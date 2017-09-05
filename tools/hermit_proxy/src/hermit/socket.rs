@@ -1,11 +1,8 @@
 use std::net::TcpStream;
-use std::{env, slice};
+use std::env;
 use std::mem::transmute;
 use std::io::{Write, Read, Cursor};
-use std::ffi::CString;
-use std::ffi::CStr;
-use std::process;
-use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
+use byteorder::{WriteBytesExt, LittleEndian};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::os::unix::net::UnixStream;
@@ -15,7 +12,7 @@ use hermit::proto;
 use hermit::proto::Packet;
 use hermit::error::{Error, Result};
 
-use daemon::ActionResult;
+use proto::ActionResult;
 
 use libc;
 
@@ -118,7 +115,7 @@ impl Socket {
                 if let proto::State::Finished(packet) = state {
                     unsafe {
                     match packet {
-                        Packet::Exit { arg } => break 'main,
+                        Packet::Exit { .. } => break 'main,
                         Packet::Write { fd, buf } => {
                             let mut buf_ret: [u8; 8];
                             if fd != 1 && fd != 2 {
@@ -143,7 +140,7 @@ impl Socket {
                         },
                         Packet::Open { name, mode, flags } => {
                             let mut buf: [u8; 4] = transmute(libc::open(name.as_ptr(), flags as i32, mode as i32).to_le());
-                            let written = stream.write(&buf).unwrap();
+                            stream.write(&buf).unwrap();
                                 
                         },
                         Packet::Close { fd } => {

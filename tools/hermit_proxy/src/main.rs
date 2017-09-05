@@ -1,6 +1,5 @@
 #![feature(untagged_unions)]
 #![feature(core_intrinsics)]
-#![feature(unique)]
 #![allow(dead_code)]
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)]
@@ -28,16 +27,16 @@ extern crate log;
 
 mod hermit;
 mod daemon;
+mod proto;
+mod logger;
 
-use nix::sys::signal;
 use std::{env, fs};
 
-use hermit::{IsleParameter, error};
-use daemon::{Action, ActionResult};
-use std::net::Shutdown;
-use chrono::DateTime;
+use hermit::IsleParameter;
+use proto::{Action, ActionResult};
 
 fn main() {
+    // create the structure of the application
     let matches = clap_app!(HermitProxy => 
         (version: "0.0.1")
         (author: "Lorenz Schmidt <bytesnake@mailbox.org>")
@@ -80,29 +79,34 @@ fn main() {
         )
     ).get_matches();
 
+    // start the daemon in foreground
     if let Some(_) = matches.subcommand_matches("start_daemon") {
         daemon::daemon_handler();
 
         return;
     }
 
+    // connect to the daemon and (if not running) start the daemon in background
     let mut daemon = daemon::Connection::connect();
 
     // list all isles
     if let Some(_) = matches.subcommand_matches("list") {
         let isles = daemon.send(Action::List);   
 
+        // if everything worked as expected, list all isles
         if let ActionResult::List(isles) = isles {
             println!("{0: <10} | {1: <10} | {2: <10} | {3: <10}", "number", "state", "CPUs", "memory size");
             
             let mut id = 0;
             for (running, infos) in isles.into_iter() {
+                // obtain information about the memory size and number of CPUs
                 let (cpus, mem_size) = match infos {
                     IsleParameter::QEmu { mem_size, num_cpus, .. } => (num_cpus, mem_size),
                     IsleParameter::Multi { mem_size, num_cpus } => (num_cpus, mem_size),
                     IsleParameter::UHyve { mem_size, num_cpus } => (num_cpus, mem_size)
                 };
 
+                // running state
                 let state = match running {
                     Ok(true) => "running",
                     Ok(false) => "stopped",
@@ -116,17 +120,26 @@ fn main() {
         }
     }
 
+    // send an action to kill the daemon
     if let Some(_) = matches.subcommand_matches("kill_daemon") {
         daemon.send(Action::KillDaemon);
     }
 
+    // print either the daemon log or logs about a single isle
     if let Some(matches) = matches.subcommand_matches("log") {
-        let id = matches.value_of("name").and_then(|x| x.parse::<u32>().ok());
+        // parse the ID to an integer
+        let id = matches.value_of("name")
+            .and_then(|x| x.parse::<u32>().ok());
+
         let res = daemon.send(Action::Log(id));
 
         if let ActionResult::Log(logs) = res { 
             let mut i = 0;
+
+            // print the header
             println!("{0: <10} | {1: <10} | {2: <10}", "number", "time", "action");
+            
+            // and each line of log
             for log in logs {
                 println!("{0: <10} | {1: <10} | {2: <10?}", i, log.time.format("%H:%M:%S"), log.text);
                 i += 1;
@@ -139,26 +152,35 @@ fn main() {
                 },
                 Err(_) => println!("An error occured!")
             }
-                
         }
     }
 
+    // stop the execution of an isle
     if let Some(matches) = matches.subcommand_matches("stop") {
-        match matches.value_of("name").unwrap().parse::<u32>() {
-            Ok(id) => {
+        // parse the id as an integer
+        let id = matches.value_of("name")
+            .and_then(|x| x.parse::<u32>().ok());
+
+        match id {
+            Some(id) => {
                 let res = daemon.send(Action::StopIsle(id));
 
                 println!("Isle {} exited with code {:?}", id, res);
             },
-            Err(_) => {
+            None => {
                 println!("Invalid number!");
             }
         }
     }
 
+    // remove the isle from the list
     if let Some(matches) = matches.subcommand_matches("remove") {
-        match matches.value_of("name").unwrap().parse::<u32>() {
-            Ok(id) => {
+        // parse the id as an integer
+        let id = matches.value_of("name")
+            .and_then(|x| x.parse::<u32>().ok());
+
+        match id {
+            Some(id) => {
                 let res = daemon.send(Action::RemoveIsle(id));
 
                 if let ActionResult::RemoveIsle(Ok(_)) = res {
@@ -167,15 +189,20 @@ fn main() {
                     println!("Remove failed: {:?}", err);
                 }
             },
-            Err(_) => {
+            None => {
                 println!("Invalid number!");
             }
         }
     }
 
+    // connect to console of an isle
     if let Some(matches) = matches.subcommand_matches("connect") {
-        match matches.value_of("name").unwrap().parse::<u32>() {
-            Ok(id) => {
+        // parse the id as an integer
+        let id = matches.value_of("name")
+            .and_then(|x| x.parse::<u32>().ok());
+
+        match id {
+            Some(id) => {
                 let res = daemon.send(Action::Connect(id));
 
                 if let ActionResult::Connect(Ok(())) = res {
@@ -184,7 +211,7 @@ fn main() {
                     println!("Invalid number!");
                 }
             },
-            Err(_) => {
+            None => {
                 println!("Invalid number!");
             }
         }
@@ -192,6 +219,7 @@ fn main() {
 
     // create the isle, wait to be available and start it
     if let Some(matches) = matches.subcommand_matches("run") {
+        // copy some parameters to the environment
         if let Some(isle) = matches.value_of("isle") {
             env::set_var("HERMIT_ISLE", isle);
         }
@@ -224,11 +252,13 @@ fn main() {
         let relative_path: String = matches.value_of("file").unwrap().into();
         let path = fs::canonicalize(relative_path).unwrap();
 
+        // start a new isle
         let res = daemon.send(Action::CreateIsle(
                 path.to_str().unwrap().into(),
                 IsleParameter::from_env()
         )); 
 
+        // connect to the console of the isle
         if let ActionResult::CreateIsle(_) = res {
             daemon.output();
         }
@@ -236,3 +266,4 @@ fn main() {
         println!("Created Isle with number: {:?}", res);
     }
 }
+

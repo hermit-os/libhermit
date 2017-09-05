@@ -1,12 +1,11 @@
-use libc::{write, read, lseek, exit, open, close, c_int, c_void, c_char};
+use libc::{write, read, lseek, open, close, c_void};
 use super::kvm_header::{kvm_run, KVM_EXIT_IO, KVM_EXIT_HLT, KVM_EXIT_MMIO,KVM_EXIT_FAIL_ENTRY, KVM_EXIT_INTERNAL_ERROR, KVM_EXIT_SHUTDOWN }; 
-use std::ffi::CStr;
 use bincode::{serialize, Infinite};
 use std::slice;
 
 use super::{Error, Result};
 use hermit::socket::Console;
-use daemon::ActionResult;
+use proto::ActionResult;
 
 const PORT_WRITE: u16 = 0x499;
 const PORT_OPEN: u16 = 0x500;

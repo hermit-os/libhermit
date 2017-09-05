@@ -3,8 +3,7 @@
 
 use libc;
 use std::ptr;
-use std::fs::File;
-use std::io::{Read, Cursor};
+use std::io::Cursor;
 use memmap::{Mmap, Protection};
 use elf;
 use elf::types::{ELFCLASS64, OSABI, PT_LOAD};
@@ -167,35 +166,35 @@ impl VirtualMachine {
     pub fn set_user_memory_region(&self, mut region: kvm_userspace_memory_region) -> Result<()> {
         unsafe {
             uhyve::ioctl::set_user_memory_region(self.vm_fd, (&mut region) as *mut kvm_userspace_memory_region)
-                .map_err(|x| Error::IOCTL(NameIOCTL::SetUserMemoryRegion)).map(|_| ())
+                .map_err(|_| Error::IOCTL(NameIOCTL::SetUserMemoryRegion)).map(|_| ())
         }
     }
 
     pub fn create_irqchip(&self) -> Result<()> {
         unsafe {
             uhyve::ioctl::create_irqchip(self.vm_fd, ptr::null_mut())
-                .map_err(|x| Error::IOCTL(NameIOCTL::CreateIRQChip)).map(|_| ())
+                .map_err(|_| Error::IOCTL(NameIOCTL::CreateIRQChip)).map(|_| ())
         }
     }
 
     pub fn check_extension(&self, mut extension: u32) -> Result<bool> {
         unsafe {
             uhyve::ioctl::check_extension(self.vm_fd, extension as *mut u8)
-                .map_err(|x| Error::IOCTL(NameIOCTL::CheckExtension)).map(|x| x > 0)
+                .map_err(|_| Error::IOCTL(NameIOCTL::CheckExtension)).map(|x| x > 0)
         }
     }
 
     pub fn set_tss_identity(&self, identity_base: u64) -> Result<()> {
         unsafe {
             uhyve::ioctl::set_identity_map_addr(self.vm_fd, (&identity_base) as *const u64)
-                .map_err(|x| Error::IOCTL(NameIOCTL::SetTssIdentity)).map(|_| ())
+                .map_err(|_| Error::IOCTL(NameIOCTL::SetTssIdentity)).map(|_| ())
         }
     }
 
     pub fn set_tss_addr(&self, mut identity_base: u64) -> Result<()> {
         unsafe {
             uhyve::ioctl::set_tss_addr(self.vm_fd, identity_base as *mut u8)
-                .map_err(|x| Error::IOCTL(NameIOCTL::SetTssAddr)).map(|_| ())
+                .map_err(|_| Error::IOCTL(NameIOCTL::SetTssAddr)).map(|_| ())
         }
     }
 
@@ -228,7 +227,7 @@ impl VirtualMachine {
     }
 
     pub fn run(&mut self) -> Result<()> {
-        let mut guest_mem = unsafe { self.mem.as_mut_slice() };
+        //let mut guest_mem = unsafe { self.mem.as_mut_slice() };
        
         unsafe { *(self.mboot.unwrap().offset(0x24) as *mut u32) = self.num_cpus; }
         self.running_state.store(true, Ordering::Relaxed);

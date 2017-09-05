@@ -5,8 +5,6 @@ use std::fs::File;
 use std::os::unix::io::{FromRawFd, RawFd};
 use std::intrinsics::{volatile_load,volatile_store};
 use std::thread;
-use std::thread::current;
-use std::ptr::Unique;
 use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -77,7 +75,7 @@ impl VirtualCPU {
 
         let file = unsafe { File::from_raw_fd(fd) };
 
-        let run_mem = unsafe {
+        let run_mem = {
             Mmap::open_with_offset(&file, Protection::ReadWrite, 0, VirtualCPU::get_mmap_size(kvm_fd)?)
                 .map_err(|x| panic!("{:?}", x) )//Error::InvalidFile)
         }?;
@@ -130,7 +128,7 @@ impl VirtualCPU {
         let mut sregs = kvm_sregs::empty();
         unsafe {
             uhyve::ioctl::get_sregs(self.vcpu_fd, (&mut sregs) as *mut kvm_sregs)
-                .map_err(|x| Error::IOCTL(NameIOCTL::GetSRegs))?;
+                .map_err(|_| Error::IOCTL(NameIOCTL::GetSRegs))?;
         }
 
         Ok(sregs)
@@ -139,7 +137,7 @@ impl VirtualCPU {
     pub fn set_sregs(&self, mut sregs: kvm_sregs) -> Result<()> {
         unsafe {
             uhyve::ioctl::set_sregs(self.vcpu_fd, (&mut sregs) as *mut kvm_sregs)
-                .map_err(|x| Error::IOCTL(NameIOCTL::SetSRegs))?;
+                .map_err(|_| Error::IOCTL(NameIOCTL::SetSRegs))?;
         }
 
         Ok(())
@@ -148,7 +146,7 @@ impl VirtualCPU {
     pub fn set_regs(&self, mut regs: kvm_regs) -> Result<()> {
         unsafe {
             uhyve::ioctl::set_regs(self.vcpu_fd, (&mut regs) as *mut kvm_regs)
-                .map_err(|x| Error::IOCTL(NameIOCTL::SetSRegs))?;
+                .map_err(|_| Error::IOCTL(NameIOCTL::SetSRegs))?;
         }
 
         Ok(())
@@ -159,7 +157,7 @@ impl VirtualCPU {
 
         unsafe {
             uhyve::ioctl::get_supported_cpuid(self.kvm_fd, (&mut cpuid.header) as *mut kvm_cpuid2_header)
-                .map_err(|x| Error::IOCTL(NameIOCTL::GetSupportedCpuID))?;
+                .map_err(|_| Error::IOCTL(NameIOCTL::GetSupportedCpuID))?;
         }
 
         Ok(cpuid)
@@ -168,7 +166,7 @@ impl VirtualCPU {
     pub fn set_cpuid2(&self, mut cpuid: kvm_cpuid2) -> Result<()> {
         unsafe {
             uhyve::ioctl::set_cpuid2(self.vcpu_fd, (&mut cpuid.header) as *mut kvm_cpuid2_header)
-                .map_err(|x| Error::IOCTL(NameIOCTL::SetCpuID2))?;
+                .map_err(|_| Error::IOCTL(NameIOCTL::SetCpuID2))?;
         }
 
         Ok(())
@@ -177,21 +175,21 @@ impl VirtualCPU {
     pub fn get_mmap_size(vcpu_fd: RawFd) -> Result<usize> {
         unsafe {
             uhyve::ioctl::get_vcpu_mmap_size(vcpu_fd, ptr::null_mut())
-                .map_err(|x| Error::IOCTL(NameIOCTL::GetVCPUMMAPSize)).map(|x| { x as usize})
+                .map_err(|_| Error::IOCTL(NameIOCTL::GetVCPUMMAPSize)).map(|x| { x as usize})
         }
     }
     
     pub fn set_mp_state(&self, mp_state: kvm_mp_state) -> Result<()> {
         unsafe {
             uhyve::ioctl::set_mp_state(self.vcpu_fd, (&mp_state) as *const kvm_mp_state)
-                .map_err(|x| Error::IOCTL(NameIOCTL::SetMPState)).map(|_| ())
+                .map_err(|_| Error::IOCTL(NameIOCTL::SetMPState)).map(|_| ())
         }
     }
 
     pub fn single_run(fd: RawFd, state: &Arc<SharedState>) -> Result<proto::Return> {
         let ret = unsafe {
             uhyve::ioctl::run(fd, ptr::null_mut())
-                .map_err(|x| Error::IOCTL(NameIOCTL::Run))
+                .map_err(|_| Error::IOCTL(NameIOCTL::Run))
         }?;
 
         debug!("Single Run CPU {}", fd);

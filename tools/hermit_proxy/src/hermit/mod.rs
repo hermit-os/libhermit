@@ -7,17 +7,12 @@ mod socket;
 pub mod uhyve;
 
 use std::fs::File;
-use std::path::Path;
-use std::io::{Write, Read, BufReader, BufRead};
-use inotify::{Inotify, watch_mask};
 use std::env;
 use std::os::unix::net::UnixStream;
-use std::sync::Arc;
-use std::sync::Mutex;
+use std::path::Path;
+use std::io::{BufReader, BufRead};
 
-use hermit::qemu::QEmu;
-use hermit::multi::Multi;
-use hermit::uhyve::uhyve::Uhyve;
+use inotify::{Inotify, watch_mask};
 
 use hermit::error::*;
 
