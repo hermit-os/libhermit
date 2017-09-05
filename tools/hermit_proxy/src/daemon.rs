@@ -39,7 +39,8 @@ impl Connection {
 
                     process::exit(0);
                 },
-                _ => panic!("Couldn't fork the deamon process!")
+                Err(_) => panic!("Couldn't fork the deamon process!"),
+                _ => {}
             }
         }
 

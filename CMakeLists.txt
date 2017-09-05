@@ -134,6 +134,7 @@ add_custom_target(hermit
 
 ## HermitCore's own tools such as Qemu/KVM proxy
 build_external(tools ${HERMIT_ROOT}/tools "")
+build_external(hermit_proxy ${HERMIT_ROOT}/tools/hermit_proxy "")
 build_external(arch_x86_loader ${HERMIT_ROOT}/arch/x86/loader "")
 
 ## Intel's OpenMP runtime for x86 (libomp)

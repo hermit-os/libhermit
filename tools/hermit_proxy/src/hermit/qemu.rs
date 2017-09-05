@@ -1,4 +1,5 @@
 use std::process::{Stdio, Child, Command};
+use std::env;
 use libc;
 use std::fs::File;
 use std::io::Read;
@@ -81,13 +82,12 @@ impl QEmu {
         let num_cpus = num_cpus.to_string();
         let mem_size = format!("{}B", mem_size);
 
-        /*let exe = env::current_exe().unwrap();
+        let exe = env::current_exe().unwrap();
         let name = exe.to_str().unwrap();
         let exe_path  = name.split("/").take(name.matches('/').count()).collect::<Vec<&str>>().join("/");
 
         let exe = format!("{}/ldhermit.elf", exe_path);
-*/
-        let exe: String = "/opt/hermit/bin/ldhermit.elf".into();
+        //let exe: String = "/opt/hermit/bin/ldhermit.elf".into();
 
         let port_str;
 
