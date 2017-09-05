@@ -241,7 +241,7 @@ static int is_hermit_available(void)
 	}
 
 	if (!file)
-		return 0;
+		goto err;
 
 	//PROXY_DEBUG("Open log file\n");
 
@@ -254,9 +254,10 @@ static int is_hermit_available(void)
 	}
 
 	fclose(file);
-	free(line);
 
-	return ret;
+    err:
+	   free(line);
+	   return ret;
 }
 
 // wait until HermitCore is sucessfully booted
