@@ -82,7 +82,7 @@ set(HERMIT_KERNEL_INCLUDES
 # Furthermore this will produce a sensible error message if the toolchain cannot
 # be found.
 if(NOT BOOTSTRAP)
-	enable_language(C CXX Fortran Go)
+	enable_language(C)
 	include(${CMAKE_CURRENT_LIST_DIR}/HermitCore-Paths.cmake)
 endif()
 
