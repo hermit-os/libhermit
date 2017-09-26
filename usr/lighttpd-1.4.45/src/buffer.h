@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <time.h>
 
+# include <stdint.h>
+
 #if defined HAVE_STDINT_H
 # include <stdint.h>
 #elif defined HAVE_INTTYPES_H
