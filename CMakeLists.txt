@@ -150,6 +150,12 @@ add_dependencies(hermit libiomp)
 build_external(ircce ${HERMIT_ROOT}/usr/ircce "")
 add_dependencies(hermit ircce)
 
+## Infiniband
+#build_external(infiniband ${HERMIT_ROOT}/usr/rdma-core/libibverbs "")
+#add_dependencies(hermit infiniband)
+build_external(rdma ${HERMIT_ROOT}/usr/rdma-core "")
+add_dependencies(hermit rdma)
+
 ## XRay profiler
 build_external(xray ${HERMIT_ROOT}/usr/xray "")
 add_dependencies(hermit xray)

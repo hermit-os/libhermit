@@ -1,0 +1,178 @@
+                          List of maintainers
+
+Generally patches should be submitted to the main development mailing list:
+
+linux-rdma@vger.kernel.org
+
+Descriptions of section entries:
+        F: Files and directories with wildcard patterns.
+           A trailing slash includes all files and subdirectory files.
+           F:   providers/mlx4/ all files in and below providers/mlx4/
+           F:   providers/*     all files in providers, but not below
+           F:   */net/*         all files in "any top level directory"/net
+           One pattern per line.  Multiple F: lines acceptable.
+        H: Historical authors
+        L: Mailing list that is relevant to this area
+        M: Designated reviewer: FullName <address@domain>
+           These reviewers should be CCed on patches.
+        S: Status, one of the following:
+           Supported:   Someone is actually paid to look after this.
+           Maintained:  Someone actually looks after it.
+           Odd Fixes:   It has a maintainer but they don't have time to do
+                        much other than throw the odd patch in. See below..
+           Orphan:      No current maintainer [but maybe you could take the
+                        role as you write your new code].
+           Obsolete:    Old code. Something tagged obsolete generally means
+                        it has been replaced by a better system and you
+                        should be using that.
+
+                -----------------------------------
+
+* OVERALL PACKAGE
+M:	Doug Ledford <dledford@redhat.com>
+M:	Leon Romanovsky <leon@kernel.org>
+S:	Supported
+
+BUILD SYSTEM
+M:	Jason Gunthorpe <jgunthorpe@obsidianresearch.com>
+S:	Supported
+F:	*/CMakeLists.txt
+F:	*/lib*.map
+F:	buildlib/
+
+BNXT_RE USERSPACE PROVIDER (for bnxt_re.ko)
+M:	Devesh Sharma  <Devesh.sharma@broadcom.com>
+S:	Supported
+F:	providers/bnxt_re/
+
+CXGB3 USERSPACE PROVIDER (for iw_cxgb3.ko)
+M:	Steve Wise <swise@opengridcomputing.com>
+S:	Supported
+F:	providers/cxgb3/
+
+CXGB4 USERSPACE PROVIDER (for iw_cxgb4.ko)
+M:	Steve Wise <swise@opengridcomputing.com>
+S:	Supported
+F:	providers/cxgb4/
+
+HF1 USERSPACE PROVIDER (for hf1.ko)
+M:	Mike Marciniszyn <mike.marciniszyn@intel.com>
+M:	Dennis Dalessandro <dennis.dalessandro@intel.com>
+S:	Supported
+L:	intel-opa@lists.01.org (moderated for non-subscribers)
+F:	providers/hfi1verbs/
+
+HNS USERSPACE PROVIDER (for hns-roce.ko)
+M:	Lijun Ou <oulijun@huawei.com>
+M:	Wei Hu(Xavier) <xavier.huwei@huawei.com>
+S:	Supported
+F:	providers/hns/
+
+I40IW USERSPACE PROVIDER (for i40iw.ko)
+M:	Tatyana Nikolova <Tatyana.E.Nikolova@intel.com>
+S:	Supported
+F:	providers/i40iw/
+
+RDMA Communication Manager Assistant (for librdmacm.so)
+M:	Sean Hefty <sean.hefty@intel.com>
+M:	Hal Rosenstock <hal@dev.mellanox.co.il>
+S:	Supported
+F:	ibacm/*
+
+IPATH/QIB USERSPACE PROVIDER (for ib_qib.ko)
+M:	Mike Marciniszyn <mike.marciniszyn@intel.com>
+M:	Dennis Dalessandro <dennis.dalessandro@intel.com>
+L:	infinipath@intel.com
+S:	Supported
+F:	providers/ipathverbs/
+
+IWARP PORT MAPPER DAEMON (for iwarp kernel providers)
+M:	Tatyana Nikolova <Tatyana.E.Nikolova@intel.com>
+M:	Steve Wise <swise@opengridcomputing.com>
+H:	Robert Sharp <robert.o.sharp@intel.com>
+S:	Supported
+F:	iwpmd/
+
+LIBIBCM USERSPACE LIBRARY FOR IB CONNECTION MANAGEMENT (/dev/infiniband/ucmX)
+M:	Sean Hefty <sean.hefty@intel.com>
+H:	Libor Michalek <libor@topspin.com>
+S:	Obsolete
+F:	libibcm/
+
+LIBIBUMAD USERSPACE LIBRARY FOR SMP AND GMP MAD PROCESSING (/dev/infiniband/umadX)
+M:	Hal Rosenstock <hal@dev.mellanox.co.il>
+H:	Sasha Khapyorsky <sashak@voltaire.com>
+H:	Shahar Frank <shahar@voltaire.com>
+S:	Supported
+F:	libibumad/
+
+LIBIBVERBS USERSPACE LIBRARY FOR RDMA VERBS (/dev/infiniband/uverbsX)
+M:	Doug Ledford <dledford@redhat.com>
+M:	Yishai Hadas <yishaih@dev.mellanox.co.il>
+H:	Michael S. Tsirkin <mst@mellanox.co.il>
+H:	Sean Hefty <sean.hefty@intel.com>
+H:	Dotan Barak <dotanba@gmail.com>
+H:	Roland Dreier <roland@topspin.com>
+S:	Supported
+F:	libibverbs/
+
+LIBRDMACM USERSPACE LIBRARY FOR RDMA CONNECTION MANAGEMENT (/dev/infiniband/rdma_cm)
+M:	Sean Hefty <sean.hefty@intel.com>
+S:	Supported
+F:	librdmacm/
+
+MLX4 USERSPACE PROVIDER (for mlx4_ib.ko)
+M:	Yishai Hadas <yishaih@mellanox.com>
+H:	Roland Dreier <rolandd@cisco.com>
+S:	Supported
+F:	providers/mlx4/
+
+MLX5 USERSPACE PROVIDER (for mlx5_ib.ko)
+M:	Yishai Hadas <yishaih@mellanox.com>
+H:	Eli Cohen <eli@mellanox.com>
+S:	Supported
+F:	providers/mlx5/
+
+MTHCA USERSPACE PROVIDER (for ib_mthca.ko)
+M:	Vladimir Sokolovsky <vlad@mellanox.com>
+H:	Michael S. Tsirkin <mst@mellanox.co.il>
+H:	Roland Dreier <roland@topspin.com>
+S:	Supported
+F:	providers/mthca/
+
+NES USERSPACE PROVIDER (for iw_nes.ko)
+M:	Tatyana Nikolova <Tatyana.E.Nikolova@intel.com>
+S:	Supported
+F:	providers/nes/
+
+OCRDMA USERSPACE PROVIDER (for ocrdma.ko)
+M:	Devesh Sharma <Devesh.sharma@broadcom.com>
+S:	Supported
+F:	providers/ocrdma/
+
+QEDR USERSPACE PROVIDER (for qedr.ko)
+M:	Ram Amrani <Ram.Amrani@cavium.com>
+M:	Ariel Elior <Ariel.Elior@cavium.com>
+S:	Supported
+F:	providers/qedr/
+
+RXE SOFT ROCEE USERSPACE PROVIDER (for rdma_rxe.ko)
+M:	Moni Shoua <monis@mellanox.com>
+S:	Supported
+F:	providers/rxe/
+
+SRP DAEMON (for ib_srp.ko)
+M:	Bart Van Assche <bvanassche@acm.org>
+S:	Supported
+F:	srp_daemon/
+
+SUSE PACKAGING
+M:	Nicolas Morey-Chaisemartin <nmoreychaisemartin@suse.de>
+S:	Supported
+F:	suse/
+
+VMWARE PVRDMA USERSPACE PROVIDER (for vmw_pvrdma.ko)
+M:	Adit Ranadive <aditr@vmware.com>
+L:	pv-drivers@vmware.com
+S:	Supported
+F:	providers/vmw_pvrdma/

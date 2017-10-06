@@ -44,6 +44,37 @@ int main(int argc, char** argv)
 	int i, random;
 	FILE* file;
 
+	// ---------------------------------------------------------------------------
+
+	/*struct ibv_device **dev_list;*/
+	int num_devices;
+
+	printf("before get dev list.\n");
+
+	/*dev_list = h_ibv_get_device_list(&num_devices);*/
+	/*printf("after get dev list.\n");*/
+
+	/*printf("char name: %s", dev_list[0]->name);*/
+
+	/*if (!dev_list) {*/
+		/*perror("Failed to get IB devices list");*/
+		/*return 1;*/
+	/*}*/
+	/*printf("after dev list check.\n");*/
+
+	/*const char* dev_name = h_ibv_get_device_name(dev_list[0]);*/
+	/*printf("after get device name.\n");*/
+
+	/*if (!dev_name) {*/
+		/*perror("Failed to get devices name");*/
+		/*return 1;*/
+	/*}*/
+
+	/*printf("Device: %s", dev_name);*/
+	/*printf("\nafter get dev name.\n");*/
+
+	// ---------------------------------------------------------------------------
+
 	// register test handler
 	signal(SIGUSR1, test_handler);
 

@@ -63,8 +63,11 @@
 #include <asm/msr-index.h>
 #include <asm/mman.h>
 
+#include <infiniband/verbs.h>		// Linux include
+
 #include "uhyve-cpu.h"
 #include "uhyve-syscalls.h"
+#include "uhyve-ibv.h"
 #include "uhyve-net.h"
 #include "proxy.h"
 
@@ -962,6 +965,26 @@ static int vcpu_loop(void)
 					uhyve_lseek->offset = lseek(uhyve_lseek->fd, uhyve_lseek->offset, uhyve_lseek->whence);
 					break;
 				}
+
+			// InfiniBand
+
+			case UHYVE_PORT_IBV_GET_DEVICE_LIST: {
+					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
+					uhyve_ibv_get_device_list_t* args = (uhyve_ibv_get_device_list_t*) (guest_mem+data);
+
+                                        args->ret = ibv_get_device_list((int*)(guest_mem+(size_t)args->num_devices));
+					printf("UHYVE_PORT_IBV_GET_DEVICE_LIST\n");
+					break;
+			}
+
+			case UHYVE_PORT_IBV_GET_DEVICE_NAME: {
+					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
+					uhyve_ibv_get_device_name_t* args = (uhyve_ibv_get_device_name_t*) (guest_mem+data);
+
+					args->ret = ibv_get_device_name((struct ibv_device*)(guest_mem+(size_t)args->device));
+					printf("UHYVE_PORT_IBV_GET_DEVICE_NAME\n");
+					break;
+			}
 
 			default:
 				err(1, "KVM: unhandled KVM_EXIT_IO at port 0x%x, direction %d\n", run->io.port, run->io.direction);

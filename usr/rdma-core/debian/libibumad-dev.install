@@ -1,0 +1,3 @@
+usr/include/infiniband/umad*.h
+usr/lib/*/libibumad*.so
+usr/share/man/man3/umad_*
