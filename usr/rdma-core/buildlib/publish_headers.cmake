@@ -9,6 +9,7 @@ function(publish_internal_headers DEST)
   endif()
 
   set(DDIR "${BUILD_INCLUDE}/${DEST}")
+	#message(STATUS "BUILD_INCLUDE: ${BUILD_INCLUDE}")
   file(MAKE_DIRECTORY "${DDIR}")
 
   foreach(SFIL ${ARGN})

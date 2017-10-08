@@ -32,7 +32,9 @@
 #include <errno.h>
 #include <signal.h>
 
-#include <ibv.h>	// geht nicht
+/*#include <verbs.h>	// GEHT, brauche ich aber nicht?*/
+
+#include <hermit/ibv.h>	// Geht per cmake copy workaround
 
 #define N	255
 
@@ -48,7 +50,7 @@ int main(int argc, char** argv)
 
 	// ---------------------------------------------------------------------------
 
-        /*struct ibv_device **dev_list;*/
+	/*struct ibv_device **dev_list;*/
 	/*int num_devices;*/
 
 	printf("before get dev list.\n");

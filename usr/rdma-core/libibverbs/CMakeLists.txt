@@ -1,3 +1,6 @@
+#message(STATUS "TARGET_ARCH: ${TARGET_ARCH}") # include HermitCore.cmake in CMakeLists?
+#message(STATUS "LOCAL_PREFIX_ARCH_INCLUDE_DIR: ${LOCAL_PREFIX_ARCH_INCLUDE_DIR}")
+
 publish_headers(infiniband
   arch.h
   kern-abi.h
@@ -40,3 +43,18 @@ target_link_libraries(ibverbs LINK_PRIVATE
   ${CMAKE_THREAD_LIBS_INIT}
   ${CMAKE_DL_LIBS}
   )
+
+message(STATUS "LOCAL_PREFIX_ARCH_LIB_DIR : ${LOCAL_PREFIX_ARCH_LIB_DIR}")
+message(STATUS "LOCAL_PREFIX_ARCH_INCLUDE_DIR : ${LOCAL_PREFIX_ARCH_INCLUDE_DIR}")
+
+file(COPY verbs.h DESTINATION "${LOCAL_PREFIX_ARCH_INCLUDE_DIR}")
+
+# This actually shouldn't work. Why does it work for ircce???
+#install(TARGETS ibverbs
+	#DESTINATION "${LOCAL_PREFIX_ARCH_LIB_DIR}/")
+#install(FILES verbs.h
+	#DESTINATION "${LOCAL_PREFIX_ARCH_INCLUDE_DIR}/")
+
+#rdma_create_symlink("${CMAKE_CURRENT_SOURCE_DIR}/verbs.h"
+	#"${LOCAL_PREFIX_ARCH_INCLUDE_DIR}/verbs.h")  # working
+

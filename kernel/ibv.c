@@ -31,8 +31,7 @@
 #include <hermit/stddef.h>
 #include <hermit/stdio.h>
 
-#include <hermit/ibv.h>		// kernel/syscall.c: #include <hermit/syscall.h> GEHT
-/*#include <infiniband/verbs.h>*/		// GEHT NICHT
+#include <hermit/ibv.h>		// GEHT
 
 
 typedef struct {

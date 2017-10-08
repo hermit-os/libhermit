@@ -30,6 +30,12 @@
 #      not support symbol versions, such as uclibc.
 
 cmake_minimum_required(VERSION 2.8.11 FATAL_ERROR)
+
+set(TARGET_ARCH x86_64-hermit)	# defined in HermitCore-Toolchain-x86.cmake. workaround.
+#include(../../cmake/HermitCore.cmake)		# results in go lang error and fopen() error
+#include(../../cmake/HermitCore-Toolchain-x86.cmake)	# results in fopen() missing.
+include(../../cmake/HermitCore-Paths.cmake)
+
 project(rdma-core C)
 
 # CMake likes to use -rdynamic too much, they fixed it in 3.4.

@@ -13,3 +13,5 @@ install(FILES
 	${GENERATED_CONFIG_DIR}/hermit/config.asm
 	DESTINATION ${TARGET_ARCH}/include/hermit/
 	COMPONENT bootstrap)
+
+file(COPY ibv.h DESTINATION "${LOCAL_PREFIX_ARCH_INCLUDE_DIR}/hermit")
