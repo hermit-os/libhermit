@@ -14,4 +14,5 @@ install(FILES
 	DESTINATION ${TARGET_ARCH}/include/hermit/
 	COMPONENT bootstrap)
 
+# More of a workaround?
 file(COPY ibv.h DESTINATION "${LOCAL_PREFIX_ARCH_INCLUDE_DIR}/hermit")

@@ -32,7 +32,7 @@
 #include <errno.h>
 #include <signal.h>
 
-/*#include <verbs.h>	// GEHT, brauche ich aber nicht?*/
+#include <verbs.h>	// GEHT, brauche ich aber nicht?
 
 #include <hermit/ibv.h>	// Geht per cmake copy workaround
 

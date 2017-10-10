@@ -24,6 +24,7 @@ endif()
 configure_file("libibverbs.map.in"
   "${CMAKE_CURRENT_BINARY_DIR}/libibverbs.map" @ONLY)
 
+# runs add_library.
 rdma_library(ibverbs "${CMAKE_CURRENT_BINARY_DIR}/libibverbs.map"
   # See Documentation/versioning.md
   1 1.1.${PACKAGE_VERSION}
@@ -38,6 +39,7 @@ rdma_library(ibverbs "${CMAKE_CURRENT_BINARY_DIR}/libibverbs.map"
   sysfs.c
   verbs.c
   )
+
 target_link_libraries(ibverbs LINK_PRIVATE
   ${NL_LIBRARIES}
   ${CMAKE_THREAD_LIBS_INIT}
@@ -47,14 +49,18 @@ target_link_libraries(ibverbs LINK_PRIVATE
 message(STATUS "LOCAL_PREFIX_ARCH_LIB_DIR : ${LOCAL_PREFIX_ARCH_LIB_DIR}")
 message(STATUS "LOCAL_PREFIX_ARCH_INCLUDE_DIR : ${LOCAL_PREFIX_ARCH_INCLUDE_DIR}")
 
-file(COPY verbs.h DESTINATION "${LOCAL_PREFIX_ARCH_INCLUDE_DIR}")
+# Why does it work for ircce?
 
-# This actually shouldn't work. Why does it work for ircce???
+# TODO: We probably also need this for the install step?
 #install(TARGETS ibverbs
-	#DESTINATION "${LOCAL_PREFIX_ARCH_LIB_DIR}/")
+	#DESTINATION ${LOCAL_PREFIX_ARCH_LIB_DIR})
 #install(FILES verbs.h
-	#DESTINATION "${LOCAL_PREFIX_ARCH_INCLUDE_DIR}/")
+	#DESTINATION ${LOCAL_PREFIX_ARCH_INCLUDE_DIR})
 
-#rdma_create_symlink("${CMAKE_CURRENT_SOURCE_DIR}/verbs.h"
-	#"${LOCAL_PREFIX_ARCH_INCLUDE_DIR}/verbs.h")  # working
+# Runs "execute_process(COMMAND ... ln ..."
+rdma_create_symlink("${CMAKE_CURRENT_SOURCE_DIR}/verbs.h"
+	"${LOCAL_PREFIX_ARCH_INCLUDE_DIR}/verbs.h")  # working
+
+# Alternative to symlink: Simply copies verbs hdr to build include dir.
+#file(COPY verbs.h DESTINATION "${LOCAL_PREFIX_ARCH_INCLUDE_DIR}")
 
