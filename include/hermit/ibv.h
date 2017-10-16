@@ -34,7 +34,7 @@
 #ifndef __IBV_H__
 #define __IBV_H__
 
-//#include <verbs.h>		// GEHT NICHT aus x86_64-hermit/include heraus.
+#include <hermit/verbs.h>
 
 #ifdef __cplusplus
 extern "C" {

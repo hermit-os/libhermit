@@ -1,4 +1,0 @@
-etc/libibverbs.d/
-usr/lib/*/libibverbs/lib*-rdmav*.so
-usr/lib/*/libmlx4.so.*
-usr/lib/*/libmlx5.so.*

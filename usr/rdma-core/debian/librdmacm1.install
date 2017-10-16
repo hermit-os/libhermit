@@ -1,3 +1,0 @@
-usr/lib/*/librdmacm*.so.*
-usr/lib/*/rsocket/librspreload*.so*
-usr/share/doc/rdma-core/librdmacm.md usr/share/doc/librdmacm1/
