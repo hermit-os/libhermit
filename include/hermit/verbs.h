@@ -36,19 +36,21 @@
 #ifndef INFINIBAND_VERBS_H
 #define INFINIBAND_VERBS_H
 
+#ifdef __KERNEL__
 #include <hermit/stddef.h>
 #include <hermit/errno.h>
 #include <hermit/string.h>
+#else
+#include <stddef.h>
+#include <errno.h>
+#include <string.h>
+#include <pthread.h>
+#endif
 
-//#include <stdint.h>
-#include <hermit/pthread.h>
-
-//#include <stddef.h>
-//#include <errno.h>
-//#include <string.h>
+//#include <stdint.h>	// not needed for data structures
 
 //#include <linux/types.h>
-//#include <stdint.h>
+
 
 #ifdef __cplusplus
 #  define BEGIN_C_DECLS extern "C" {
@@ -66,42 +68,54 @@
 
 BEGIN_C_DECLS
 
+// Replacing linux/types.h (left out __bitwise):
 // Replacing in-l64.h:
 typedef unsigned short __u16;
 typedef unsigned int __u32;
 typedef unsigned long __u64;
-
-// Replacing linux/types.h (left out __bitwise):
 //typedef __u16 __bitwise __be16;
 typedef __u16 __be16;
 typedef __u32 __be32;
 typedef __u64 __be64;
 
+#ifdef __KERNEL__
 // Replacing pthread.h:
 typedef struct _pthread_descr_struct *_pthread_descr; // TODO
 typedef long long int __pthread_cond_align_t;
 
 struct _pthread_fastlock {
-    long int __status;
-    int __spinlock;
+	long int __status;
+	int __spinlock;
 };
 
 typedef struct {
-    int __m_reserved;
-    int __m_count;
-    _pthread_descr __m_owner;
-    int __m_kind;
-    struct _pthread_fastlock __m_lock;
+	int __m_reserved;
+	int __m_count;
+	_pthread_descr __m_owner;
+	int __m_kind;
+	struct _pthread_fastlock __m_lock;
 } pthread_mutex_t;
 
 typedef struct {
-    struct _pthread_fastlock __c_lock;
-    _pthread_descr __c_waiting;
-    char __padding[48 - sizeof(struct _pthread_fastlock) -
-		   sizeof(_pthread_descr) -
-		   sizeof(__pthread_cond_align_t)];
-    __pthread_cond_align_t __align;
+	struct _pthread_fastlock __c_lock;
+	_pthread_descr __c_waiting;
+	char __padding[48 - sizeof(struct _pthread_fastlock) -
+		sizeof(_pthread_descr) -
+		sizeof(__pthread_cond_align_t)];
+	__pthread_cond_align_t __align;
 } pthread_cond_t;
+
+// Replacing time.h:
+// TODO: Put this in an appropriate (arch specific) header.
+typedef long		__kernel_long_t;
+typedef __kernel_long_t	__kernel_time_t;
+
+struct timespec {
+	__kernel_time_t	tv_sec;			/* seconds */
+	long		tv_nsec;		/* nanoseconds */
+};
+#endif
+
 
 union ibv_gid {
 	uint8_t			raw[16];
@@ -125,7 +139,7 @@ union ibv_gid {
 
 #define vext_field_avail(type, fld, sz) (offsetof(type, fld) < (sz))
 
-static void *__VERBS_ABI_IS_EXTENDED = (void *)UINTPTR_MAX;
+//static void *__VERBS_ABI_IS_EXTENDED = (void *)UINTPTR_MAX;
 
 enum ibv_node_type {
 	IBV_NODE_UNKNOWN	= -1,

@@ -16,3 +16,4 @@ install(FILES
 
 # More of a workaround?
 file(COPY ibv.h DESTINATION "${LOCAL_PREFIX_ARCH_INCLUDE_DIR}/hermit")
+file(COPY verbs.h DESTINATION "${LOCAL_PREFIX_ARCH_INCLUDE_DIR}/hermit")

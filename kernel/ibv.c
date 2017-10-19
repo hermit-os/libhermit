@@ -30,20 +30,27 @@
 #include <asm/uhyve.h>
 #include <hermit/stddef.h>
 #include <hermit/stdio.h>
+#include <hermit/stdlib.h>
 
 #include <hermit/ibv.h>		// GEHT
 
+#define MAX_NUM_OF_IBV_DEVICES 16
 
 typedef struct {
+	// In:
 	int								*num_devices;
-	struct ibv_device	**ret;
+	// Out:
+	/*struct ibv_device	**ret;*/
+	struct ibv_device devices[MAX_NUM_OF_IBV_DEVICES];
 } __attribute__((packed)) uhyve_ibv_get_device_list_t;
 
 struct ibv_device** h_ibv_get_device_list(int *num_devices)
 {
 	uhyve_ibv_get_device_list_t uhyve_args = {(int*) virt_to_phys((size_t) num_devices)};
+			 /*(struct ibv_device*) virt_to_phys((size_t) devices)};*/
+	&uhyve_args.devices = (struct ibv_device*) virt_to_phys((size_t) uhyve_args.devices);
 	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_LIST, (unsigned)virt_to_phys((size_t)&uhyve_args));
-	return uhyve_args.ret;
+	return &uhyve_args.devices;
 
 	// TODO: proxy implementation
 }

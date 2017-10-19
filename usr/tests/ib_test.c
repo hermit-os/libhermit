@@ -32,8 +32,6 @@
 #include <errno.h>
 #include <signal.h>
 
-/*#include <verbs.h>	// GEHT, brauche ich aber nicht?*/
-
 #include <hermit/ibv.h>	// Geht per cmake copy workaround
 
 #define N	255
@@ -50,21 +48,23 @@ int main(int argc, char** argv)
 
 	// ---------------------------------------------------------------------------
 
-	/*struct ibv_device **dev_list;*/
-	/*int num_devices;*/
+	struct ibv_device **dev_list;
+	int num_devices;
 
 	printf("before get dev list.\n");
 
 	/*dev_list = h_ibv_get_device_list(&num_devices);*/
-	/*printf("after get dev list.\n");*/
+	h_ibv_get_device_list(&num_devices);
+	printf("after get dev list.\n");
 
-	/*printf("char name: %s", dev_list[0]->name);*/
+	printf("num devices: %s\n", num_devices);
+	/*printf("first device name: %s\n", (*dev_list)->name);*/
 
 	/*if (!dev_list) {*/
 		/*perror("Failed to get IB devices list");*/
 		/*return 1;*/
 	/*}*/
-	/*printf("after dev list check.\n");*/
+	printf("after dev list check.\n");
 
 	/*const char* dev_name = h_ibv_get_device_name(dev_list[0]);*/
 	/*printf("after get device name.\n");*/

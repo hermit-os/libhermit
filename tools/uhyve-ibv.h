@@ -21,15 +21,18 @@
 
 #include <infiniband/verbs.h>		// Linux include
 
+#define MAX_NUM_OF_IBV_DEVICES 16
+
 typedef enum {
 	UHYVE_PORT_IBV_GET_DEVICE_LIST	= 0x510,
 	UHYVE_PORT_IBV_GET_DEVICE_NAME	= 0x511,
 } uhyve_ibv_t;
 
-
 typedef struct {
+	// In:
 	int								*num_devices;
-	struct ibv_device **ret;
+	// Out:
+	struct ibv_device devices[MAX_NUM_OF_IBV_DEVICES];
 } __attribute__((packed)) uhyve_ibv_get_device_list_t;
 
 typedef struct {
