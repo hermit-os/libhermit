@@ -40,20 +40,36 @@ typedef struct {
 	// In:
 	int								*num_devices;
 	// Out:
-	/*struct ibv_device	**ret;*/
-	struct ibv_device devices[MAX_NUM_OF_IBV_DEVICES];
+	/*struct ibv_device devices[MAX_NUM_OF_IBV_DEVICES];*/
+	struct ibv_device **device_list;
 } __attribute__((packed)) uhyve_ibv_get_device_list_t;
 
 struct ibv_device** h_ibv_get_device_list(int *num_devices)
 {
 	uhyve_ibv_get_device_list_t uhyve_args = {(int*) virt_to_phys((size_t) num_devices)};
-			 /*(struct ibv_device*) virt_to_phys((size_t) devices)};*/
-	&uhyve_args.devices = (struct ibv_device*) virt_to_phys((size_t) uhyve_args.devices);
-	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_LIST, (unsigned)virt_to_phys((size_t)&uhyve_args));
-	return &uhyve_args.devices;
 
-	// TODO: proxy implementation
+	struct ibv_device **list; 
+	struct ibv_device *devs; 
+	list = calloc(MAX_NUM_OF_IBV_DEVICES, sizeof(struct ibv_device *));	// NUM + 1 ???
+	devs = calloc(MAX_NUM_OF_IBV_DEVICES, sizeof(struct ibv_device));
+	for (int i = 0; i < MAX_NUM_OF_IBV_DEVICES; i++) {
+		list[i] = devs + i * sizeof(struct ibv_device)
+		/*list[i] = calloc(1, sizeof(struct ibv_device));*/
+	}
+	uhyve_args.first_device = (struct ibv_device*) virt_to_phys((size_t) dev_arr);
+
+	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_LIST, (unsigned)virt_to_phys((size_t)&uhyve_args));
+	return &dev_arr;
 }
+
+/*void h_ibv_get_device_list(int *num_devices)*/
+/*{*/
+	/*uhyve_ibv_get_device_list_t uhyve_args = {(int*) virt_to_phys((size_t) num_devices)};*/
+	/*uhyve_args.first_device = (struct ibv_device*) virt_to_phys((size_t) uhyve_args.devices);*/
+	/*[>&uhyve_args.devices = (struct ibv_device*) virt_to_phys((size_t) uhyve_args.devices);<]*/
+
+	/*uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_LIST, (unsigned)virt_to_phys((size_t)&uhyve_args));*/
+/*}*/
 
 
 typedef struct {

@@ -57,14 +57,14 @@ int main(int argc, char** argv)
 	h_ibv_get_device_list(&num_devices);
 	printf("after get dev list.\n");
 
-	printf("num devices: %s\n", num_devices);
+	printf("num devices: %d\n", num_devices);
 	/*printf("first device name: %s\n", (*dev_list)->name);*/
 
 	/*if (!dev_list) {*/
 		/*perror("Failed to get IB devices list");*/
 		/*return 1;*/
 	/*}*/
-	printf("after dev list check.\n");
+	/*printf("after dev list check.\n");*/
 
 	/*const char* dev_name = h_ibv_get_device_name(dev_list[0]);*/
 	/*printf("after get device name.\n");*/
