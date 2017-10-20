@@ -96,7 +96,7 @@ static uint8_t expect_zeroed_pages = 0;
 size_t virt_to_phys(size_t addr)
 {
 	if ((addr > (size_t) &kernel_start) &&
-	    (addr <= PAGE_2M_FLOOR((size_t) &kernel_start + image_size)))
+	    (addr <= PAGE_2M_CEIL((size_t) &kernel_start + image_size)))
 	{
 		size_t vpn   = addr >> (PAGE_2M_BITS);	// virtual page number
 		size_t entry = self[1][vpn];		// page table entry

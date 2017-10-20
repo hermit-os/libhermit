@@ -63,7 +63,7 @@ then
 	fi
 
 	echo "-- Local CMake v${MAJOR}.${MINOR} installed to ${CMAKE_DIR_REL}"
-	echo "-- Next time you source this script, no download will be neccessary"
+	echo "-- Next time you source this script, no download will be necessary"
 fi
 
 export PATH="${CMAKE_DIR}/bin:${PATH}"
