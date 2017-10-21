@@ -34,24 +34,27 @@
 
 #include <hermit/ibv.h>		// GEHT
 
-#define MAX_NUM_OF_IBV_DEVICES 16
+// TODO: Can/should we separate ibv_get_device_list into two KVM exit IOs to
+// allocate the right amount of memory?
+#define MAX_NUM_OF_IBV_DEVICES 16	
 
 typedef struct {
-	// In:
 	int								*num_devices;
-	// Out:
 	struct ibv_device *dev_phys_ptr_list[MAX_NUM_OF_IBV_DEVICES];
-	/*struct ibv_device **device_list;*/
+	// TODO: Can we make the return type struct ibv_device**?
 } __attribute__((packed)) uhyve_ibv_get_device_list_t;
 
 struct ibv_device** h_ibv_get_device_list(int *num_devices)
 {
+	// num_devices can be mapped to physical memory right away.
 	uhyve_ibv_get_device_list_t uhyve_args = {(int*) virt_to_phys((size_t) num_devices)};
 
+	// Allocate memory for return value.
 	struct ibv_device *devs = kmalloc(MAX_NUM_OF_IBV_DEVICES * sizeof(struct ibv_device));
-	struct ibv_device **list_virt;
-	list_virt = kmalloc(MAX_NUM_OF_IBV_DEVICES * sizeof(struct ibv_device *));	// NUM + 1 ???
+	struct ibv_device **list_virt = kmalloc(MAX_NUM_OF_IBV_DEVICES * sizeof(struct ibv_device *));
 
+	// We keep a list of the virtual addresses, so we can return it later, and map
+	// to physical addresses for the args struct passed to uhyve.
 	for (int i = 0; i < MAX_NUM_OF_IBV_DEVICES; i++) {
 		struct ibv_device* device_address = devs + i;
 		list_virt[i] = device_address;

@@ -972,22 +972,18 @@ static int vcpu_loop(void)
 					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 					uhyve_ibv_get_device_list_t* args = (uhyve_ibv_get_device_list_t*) (guest_mem+data);
 
+					// Call IBV function from hypervisor
 					int num_devices;
 					struct ibv_device **temp_dev_list = ibv_get_device_list(&num_devices);
-					printf("uhyve.c: before memcpy num_devices.\n");
-					memcpy(guest_mem+(size_t)args->num_devices, &num_devices, sizeof(num_devices));
-					/*memcpy(args->num_devices, &num_devices, sizeof(num_devices));*/
 
-					printf("uhyve.c: before for loop.\n");
+					// Copy number of devices to kernel memory	
+					memcpy(guest_mem+(size_t)args->num_devices, &num_devices, sizeof(num_devices));
+
 					for (int d = 0; d < num_devices; d++) { // TODO switch to num devices
-						/*struct ibv_device* dest_device_guest = guest_mem + (size_t)args->first_device + d*sizeof(struct ibv_device);*/
-						/*struct ibv_device* dest_device_guest = guest_mem + (size_t)args->first_device;*/
-						/*memcpy(dest_device_guest, temp_dev_list[d], sizeof(struct ibv_device));*/
 						printf("uhyve.c: before memcpy list[d].\n");
+						// Copy array entry containing ibv_device struct to kernel memory
 						memcpy(guest_mem + (size_t)args->dev_phys_ptr_list[d], temp_dev_list[d], sizeof(struct ibv_device));
 					}
-
-					printf("uhyve.c: before break.\n");
 					break;
 				}
 
