@@ -33,7 +33,8 @@ typedef struct {
 	int								*num_devices;
 	// Out:
 	//struct ibv_device devices[MAX_NUM_OF_IBV_DEVICES];
-	struct ibv_device **device_list;
+	struct ibv_device *dev_phys_ptr_list[MAX_NUM_OF_IBV_DEVICES];
+	//struct ibv_device **device_list;
 } __attribute__((packed)) uhyve_ibv_get_device_list_t;
 
 typedef struct {

@@ -974,24 +974,18 @@ static int vcpu_loop(void)
 
 					int num_devices;
 					struct ibv_device **temp_dev_list = ibv_get_device_list(&num_devices);
-					/*struct ibv_device **temp_dev_list = ibv_get_device_list(guest_mem+(size_t)args->num_devices);*/
 					printf("uhyve.c: before memcpy num_devices.\n");
 					memcpy(guest_mem+(size_t)args->num_devices, &num_devices, sizeof(num_devices));
 					/*memcpy(args->num_devices, &num_devices, sizeof(num_devices));*/
 
 					printf("uhyve.c: before for loop.\n");
-					for (int d = 0; d < 1; d++) { // TODO switch to num devices
-						printf("uhyve.c: for loop: before dev ptr definition.\n");
+					for (int d = 0; d < num_devices; d++) { // TODO switch to num devices
 						/*struct ibv_device* dest_device_guest = guest_mem + (size_t)args->first_device + d*sizeof(struct ibv_device);*/
-						struct ibv_device* dest_device_guest = guest_mem + (size_t)args->first_device;
-						printf("uhyve.c: device name: %s\n", temp_dev_list[d]->name);
-						printf("uhyve.c: for loop: before memcpy device struct.\n args->devices val: %s\n", args->devices);
-						memcpy(dest_device_guest, temp_dev_list[d], sizeof(struct ibv_device));
+						/*struct ibv_device* dest_device_guest = guest_mem + (size_t)args->first_device;*/
+						/*memcpy(dest_device_guest, temp_dev_list[d], sizeof(struct ibv_device));*/
+						printf("uhyve.c: before memcpy list[d].\n");
+						memcpy(guest_mem + (size_t)args->dev_phys_ptr_list[d], temp_dev_list[d], sizeof(struct ibv_device));
 					}
-
-					/*memcpy(uhyve_netinfo->mac_str, uhyve_get_mac(), 18);*/
-					/*memcpy(args->ret, ibv_get_device_list((int*)(guest_mem+(size_t)args->num_devices)), 18);*/
-					/*args->ret = ibv_get_device_list((int*)(guest_mem+(size_t)args->num_devices));*/
 
 					printf("uhyve.c: before break.\n");
 					break;

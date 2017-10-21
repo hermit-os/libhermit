@@ -51,14 +51,15 @@ int main(int argc, char** argv)
 	struct ibv_device **dev_list;
 	int num_devices;
 
-	printf("before get dev list.\n");
+	printf("ib_test.c: before get dev list.\n");
+	dev_list = h_ibv_get_device_list(&num_devices);
+	printf("ib_test.c: after get dev list.\n");
 
-	/*dev_list = h_ibv_get_device_list(&num_devices);*/
-	h_ibv_get_device_list(&num_devices);
-	printf("after get dev list.\n");
+	printf("ib_test.c: num devices: %d\n", num_devices);
 
-	printf("num devices: %d\n", num_devices);
-	/*printf("first device name: %s\n", (*dev_list)->name);*/
+	for (int i=0; i < num_devices; i++) {
+		printf("ib_test.c: Device name No. %d: %s\n", i, dev_list[i]->name);
+	}
 
 	/*if (!dev_list) {*/
 		/*perror("Failed to get IB devices list");*/
@@ -76,36 +77,6 @@ int main(int argc, char** argv)
 
 	/*printf("Device: %s", dev_name);*/
 	/*printf("\nafter get dev name.\n");*/
-
-	// ---------------------------------------------------------------------------
-
-	// register test handler
-	signal(SIGUSR1, test_handler);
-
-	printf("Hello World!!!\n");
-	//for(i=0; environ[i]; i++)
-	//	printf("environ[%d] = %s\n", i, environ[i]);
-	for(i=0; i<argc; i++)
-		printf("argv[%d] = %s\n", i, argv[i]);
-
-	raise(SIGUSR1);
-
-	file = fopen("/etc/hostname", "r");
-	if (file)
-	{
-		char fname[N] = "";
-
-		fscanf(file, "%s", fname);
-		printf("Hostname: %s\n", fname);
-		fclose(file);
-	} else fprintf(stderr, "Unable to open file /etc/hostname\n");
-
-	file = fopen("/tmp/test.txt", "w");
-	if (file)
-	{
-		fprintf(file, "Hello World!!!\n");
-		fclose(file);
-	} else fprintf(stderr, "Unable to open file /tmp/test.txt\n");
 
 	return 0;
 }
