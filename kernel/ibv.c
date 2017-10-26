@@ -23,6 +23,9 @@
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * TODO: Documentation
+ *
  */
 
 
@@ -38,16 +41,20 @@
 // allocate the right amount of memory?
 #define MAX_NUM_OF_IBV_DEVICES 16	
 
+
 typedef struct {
-	int								*num_devices;
+	// Parameters:
+	int						,		*num_devices;
+	// Return value:
 	struct ibv_device *dev_phys_ptr_list[MAX_NUM_OF_IBV_DEVICES];
 	// TODO: Can we make the return type struct ibv_device**?
 } __attribute__((packed)) uhyve_ibv_get_device_list_t;
 
-struct ibv_device** h_ibv_get_device_list(int *num_devices)
-{
+struct ibv_device** ibv_get_device_list(int *num_devices) {
 	// num_devices can be mapped to physical memory right away.
-	uhyve_ibv_get_device_list_t uhyve_args = {(int*) virt_to_phys((size_t) num_devices)};
+	uhyve_ibv_get_device_list_t uhyve_args = {
+			(int*) virt_to_phys((size_t) num_devices)
+	};
 
 	// Allocate memory for return value.
 	struct ibv_device *devs = kmalloc(MAX_NUM_OF_IBV_DEVICES * sizeof(struct ibv_device));
@@ -64,6 +71,95 @@ struct ibv_device** h_ibv_get_device_list(int *num_devices)
 	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_LIST, (unsigned)virt_to_phys((size_t)&uhyve_args));
 	return list_virt;
 }
+
+
+const char* ibv_get_device_name(struct ibv_device *device) {
+	// TODO: Also forward this to uhyve for consistency?
+	return device->name;
+}
+
+
+typedef struct {
+	// Parameters:
+	struct ibv_device *device;
+	// Return value:
+	struct ibv_context *ret;
+} __attribute__((packed)) uhyve_ibv_open_device_t;
+
+int ibv_open_device(struct ibv_device *device) {
+	uhyve_ibv_open_device_t uhyve_args = {
+			(struct ibv_device *) virt_to_phys((size_t) device),
+	};
+	uhyve_args->ret = kmalloc(sizeof(struct ibv_context));
+
+	uhyve_send(UHYVE_PORT_IBV_OPEN_DEVICE, (unsigned)virt_to_phys((size_t) &uhyve_args));
+
+	// Set all pointers contained in returned data structure to valid kernel space addresses.
+	uhyve_args->ret->device = device;
+
+	return uhyve_args.ret;
+}
+
+
+typedef struct {
+	// Parameters:
+	struct ibv_context *context;
+	// Return value:
+	struct ibv_comp_channel *ret;
+} __attribute__((packed)) uhyve_ibv_create_comp_channel_t;
+
+struct ibv_comp_channel* ibv_create_comp_channel(struct ibv_context *context) {
+	uhyve_ibv_create_comp_channel_t uhyve_args = {
+			(struct ibv_context *) virt_to_phys((size_t) context),
+	};
+	uhyve_args->ret = kmalloc(sizeof(struct ibv_comp_channel));
+
+	uhyve_send(UHYVE_PORT_IBV_CREATE_COMP_CHANNEL, (unsigned)virt_to_phys((size_t) &uhyve_args));
+
+	// Set all pointers contained in returned data structure to valid kernel space addresses.
+	uhyve_args->ret->device = device; // todo
+
+	return uhyve_args.ret;
+}
+
+
+typedef struct {
+	// Parameters:
+	struct ibv_qp *qp;
+	struct ibv_qp_attr *attr;
+	int attr_mask;
+	// Return value:
+	int ret;
+} __attribute__((packed)) uhyve_ibv_modify_qp_t;
+
+int ibv_modify_qp(struct ibv_qp *qp, struct ibv_qp_attr *attr, int attr_mask) {
+	uhyve_ibv_modify_qp_t uhyve_args = {
+			(struct ibv_qp *) virt_to_phys((size_t) qp),
+			(struct ibv_qp_attr *) virt_to_phys((size_t) attr),
+			attr_mask,
+			-1
+	};
+	uhyve_send(UHYVE_PORT_IBV_MODIFY_QP, (unsigned)virt_to_phys((size_t) &uhyve_args));
+	return uhyve_args.ret;
+}
+
+typedef struct {
+	// Parameters:
+	struct ibv_pd *pd;
+	struct ibv_ah_attr *attr;
+	// Return value:
+	struct ibv_ah *ret;
+} __attribute__((packed)) uhyve_ibv_create_ah_t;
+
+struct ibv_ah* ibv_create_ah(struct ibv_pd *pd,struct ibv_ah_attr *attr) {
+	uhyve_ibv_create_ah_t uhyve_args = {
+			(struct ibv_pd *) virt_to_phys((size_t) pd),
+			(struct ibv_ah_attr *) virt_to_phys((size_t) attr),
+	};
+	uhyve_send(UHYVE_PORT_IBV_CREATE_AH, (unsigned)virt_to_phys((size_t) &uhyve_args));
+	return uhyve_args.ret;
+}
+
 
 /*struct ibv_device** h_ibv_get_device_list(int *num_devices)*/
 /*{*/
@@ -85,25 +181,3 @@ struct ibv_device** h_ibv_get_device_list(int *num_devices)
 	/*uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_LIST, (unsigned)virt_to_phys((size_t)&uhyve_args));*/
 	/*return list_virt;*/
 /*}*/
-
-/*void h_ibv_get_device_list(int *num_devices)*/
-/*{*/
-	/*uhyve_ibv_get_device_list_t uhyve_args = {(int*) virt_to_phys((size_t) num_devices)};*/
-	/*uhyve_args.first_device = (struct ibv_device*) virt_to_phys((size_t) uhyve_args.devices);*/
-	/*[>&uhyve_args.devices = (struct ibv_device*) virt_to_phys((size_t) uhyve_args.devices);<]*/
-
-	/*uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_LIST, (unsigned)virt_to_phys((size_t)&uhyve_args));*/
-/*}*/
-
-
-typedef struct {
-	struct ibv_device *device;
-	char							*ret;
-} __attribute__((packed)) uhyve_ibv_get_device_name_t;
-
-const char* h_ibv_get_device_name(struct ibv_device *device)
-{
-	uhyve_ibv_get_device_name_t uhyve_args = {(struct ibv_device*) virt_to_phys((size_t) device)};
-	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_NAME, (unsigned)virt_to_phys((size_t)&uhyve_args));
-	return uhyve_args.ret;
-}

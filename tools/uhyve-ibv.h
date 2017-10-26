@@ -26,6 +26,15 @@
 typedef enum {
 	UHYVE_PORT_IBV_GET_DEVICE_LIST	= 0x510,
 	UHYVE_PORT_IBV_GET_DEVICE_NAME	= 0x511,
+	UHYVE_PORT_IBV_OPEN_DEVICE = 0x512,
+	UHYVE_PORT_IBV_CREATE_COMP_CHANNEL = 0x513,
+	UHYVE_PORT_IBV_ALLOC_PD = 0x514,
+	UHYVE_PORT_IBV_REG_MR = 0x515,
+	UHYVE_PORT_IBV_CREATE_CQ = 0x516,
+	UHYVE_PORT_IBV_CREATE_QP = 0x517,
+	UHYVE_PORT_IBV_QUERY_QP = 0x518,
+	UHYVE_PORT_IBV_MODIFY_QP = 0x519,
+	//UHYVE_PORT_IBV_CREATE_AH = 0x520,
 } uhyve_ibv_t;
 
 typedef struct {
@@ -38,9 +47,26 @@ typedef struct {
 } __attribute__((packed)) uhyve_ibv_get_device_list_t;
 
 typedef struct {
-	struct ibv_device *device;
-	char							*ret;
-} __attribute__((packed)) uhyve_ibv_get_device_name_t;
+	// Parameters:
+	struct ibv_qp *qp;
+	struct ibv_qp_attr *attr;
+	int attr_mask;
+	// Return value:
+	int ret;
+} __attribute__((packed)) uhyve_ibv_modify_qp_t;
+
+typedef struct {
+	// Parameters:
+	struct ibv_pd *pd;
+	struct ibv_ah_attr *attr;
+	// Return value:
+	struct ibv_ah *ret;
+} __attribute__((packed)) uhyve_ibv_create_ah_t;
+
+//typedef struct {
+	//struct ibv_device *device;
+	//char							*ret;
+//} __attribute__((packed)) uhyve_ibv_get_device_name_t;
 
 
 #endif // UHYVE_IBV_H

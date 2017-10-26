@@ -52,7 +52,7 @@ int main(int argc, char** argv)
 	int num_devices;
 
 	printf("ib_test.c: before get dev list.\n");
-	dev_list = h_ibv_get_device_list(&num_devices);
+	dev_list = ibv_get_device_list(&num_devices);
 	printf("ib_test.c: after get dev list.\n");
 
 	printf("ib_test.c: num devices: %d\n", num_devices);
@@ -67,7 +67,7 @@ int main(int argc, char** argv)
 	/*}*/
 	/*printf("after dev list check.\n");*/
 
-	/*const char* dev_name = h_ibv_get_device_name(dev_list[0]);*/
+	/*const char* dev_name = ibv_get_device_name(dev_list[0]);*/
 	/*printf("after get device name.\n");*/
 
 	/*if (!dev_name) {*/
