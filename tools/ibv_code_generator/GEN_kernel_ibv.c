@@ -8,7 +8,9 @@ typedef struct {
 const char * ibv_wc_status_str(enum ibv_wc_status status) {
 	uhyve_ibv_wc_status_str_t uhyve_args;
 	uhyve_args->status = status;
+
 	uhyve_args->ret = kmalloc(sizeof(const char));
+
 	uhyve_send(UHYVE_PORT_IBV_WC_STATUS_STR, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -26,6 +28,7 @@ typedef struct {
 int ibv_rate_to_mult(enum ibv_rate rate) {
 	uhyve_ibv_rate_to_mult_t uhyve_args;
 	uhyve_args->rate = rate;
+
 	uhyve_send(UHYVE_PORT_IBV_RATE_TO_MULT, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -43,6 +46,7 @@ typedef struct {
 enum ibv_rate mult_to_ibv_rate(int mult) {
 	uhyve_mult_to_ibv_rate_t uhyve_args;
 	uhyve_args->mult = mult;
+
 	uhyve_send(UHYVE_PORT_MULT_TO_IBV_RATE, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -60,6 +64,7 @@ typedef struct {
 int ibv_rate_to_mbps(enum ibv_rate rate) {
 	uhyve_ibv_rate_to_mbps_t uhyve_args;
 	uhyve_args->rate = rate;
+
 	uhyve_send(UHYVE_PORT_IBV_RATE_TO_MBPS, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -77,6 +82,7 @@ typedef struct {
 enum ibv_rate mbps_to_ibv_rate(int mbps) {
 	uhyve_mbps_to_ibv_rate_t uhyve_args;
 	uhyve_args->mbps = mbps;
+
 	uhyve_send(UHYVE_PORT_MBPS_TO_IBV_RATE, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -94,7 +100,9 @@ typedef struct {
 struct ibv_cq * ibv_cq_ex_to_cq(struct ibv_cq_ex * cq) {
 	uhyve_ibv_cq_ex_to_cq_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_cq));
+
 	uhyve_send(UHYVE_PORT_IBV_CQ_EX_TO_CQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -114,6 +122,7 @@ int ibv_start_poll(struct ibv_cq_ex * cq, struct ibv_poll_cq_attr * attr) {
 	uhyve_ibv_start_poll_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
 	uhyve_args->attr = (struct ibv_poll_cq_attr *) virt_to_phys((size_t) attr);
+
 	uhyve_send(UHYVE_PORT_IBV_START_POLL, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -131,6 +140,7 @@ typedef struct {
 int ibv_next_poll(struct ibv_cq_ex * cq) {
 	uhyve_ibv_next_poll_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_NEXT_POLL, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -148,6 +158,7 @@ typedef struct {
 void ibv_end_poll(struct ibv_cq_ex * cq) {
 	uhyve_ibv_end_poll_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_END_POLL, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -165,6 +176,7 @@ typedef struct {
 enum ibv_wc_opcode ibv_wc_read_opcode(struct ibv_cq_ex * cq) {
 	uhyve_ibv_wc_read_opcode_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_WC_READ_OPCODE, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -182,6 +194,7 @@ typedef struct {
 uint32_t ibv_wc_read_vendor_err(struct ibv_cq_ex * cq) {
 	uhyve_ibv_wc_read_vendor_err_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_WC_READ_VENDOR_ERR, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -199,6 +212,7 @@ typedef struct {
 uint32_t ibv_wc_read_byte_len(struct ibv_cq_ex * cq) {
 	uhyve_ibv_wc_read_byte_len_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_WC_READ_BYTE_LEN, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -216,6 +230,7 @@ typedef struct {
 __be32 ibv_wc_read_imm_data(struct ibv_cq_ex * cq) {
 	uhyve_ibv_wc_read_imm_data_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_WC_READ_IMM_DATA, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -233,6 +248,7 @@ typedef struct {
 uint32_t ibv_wc_read_invalidated_rkey(struct ibv_cq_ex * cq) {
 	uhyve_ibv_wc_read_invalidated_rkey_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_WC_READ_INVALIDATED_RKEY, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -250,6 +266,7 @@ typedef struct {
 uint32_t ibv_wc_read_qp_num(struct ibv_cq_ex * cq) {
 	uhyve_ibv_wc_read_qp_num_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_WC_READ_QP_NUM, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -267,6 +284,7 @@ typedef struct {
 uint32_t ibv_wc_read_src_qp(struct ibv_cq_ex * cq) {
 	uhyve_ibv_wc_read_src_qp_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_WC_READ_SRC_QP, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -284,6 +302,7 @@ typedef struct {
 int ibv_wc_read_wc_flags(struct ibv_cq_ex * cq) {
 	uhyve_ibv_wc_read_wc_flags_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_WC_READ_WC_FLAGS, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -301,6 +320,7 @@ typedef struct {
 uint32_t ibv_wc_read_slid(struct ibv_cq_ex * cq) {
 	uhyve_ibv_wc_read_slid_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_WC_READ_SLID, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -318,6 +338,7 @@ typedef struct {
 uint8_t ibv_wc_read_sl(struct ibv_cq_ex * cq) {
 	uhyve_ibv_wc_read_sl_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_WC_READ_SL, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -335,6 +356,7 @@ typedef struct {
 uint8_t ibv_wc_read_dlid_path_bits(struct ibv_cq_ex * cq) {
 	uhyve_ibv_wc_read_dlid_path_bits_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_WC_READ_DLID_PATH_BITS, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -352,6 +374,7 @@ typedef struct {
 uint64_t ibv_wc_read_completion_ts(struct ibv_cq_ex * cq) {
 	uhyve_ibv_wc_read_completion_ts_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_WC_READ_COMPLETION_TS, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -369,6 +392,7 @@ typedef struct {
 uint16_t ibv_wc_read_cvlan(struct ibv_cq_ex * cq) {
 	uhyve_ibv_wc_read_cvlan_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_WC_READ_CVLAN, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -386,6 +410,7 @@ typedef struct {
 uint32_t ibv_wc_read_flow_tag(struct ibv_cq_ex * cq) {
 	uhyve_ibv_wc_read_flow_tag_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq_ex *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_WC_READ_FLOW_TAG, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -407,6 +432,7 @@ int ibv_post_wq_recv(struct ibv_wq * wq, struct ibv_recv_wr * recv_wr, struct ib
 	uhyve_args->wq = (struct ibv_wq *) virt_to_phys((size_t) wq);
 	uhyve_args->recv_wr = (struct ibv_recv_wr *) virt_to_phys((size_t) recv_wr);
 	// TODO: Take care of ** parameter.
+
 	uhyve_send(UHYVE_PORT_IBV_POST_WQ_RECV, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -424,7 +450,9 @@ typedef struct {
 struct verbs_context * verbs_get_ctx(struct ibv_context * ctx) {
 	uhyve_verbs_get_ctx_t uhyve_args;
 	uhyve_args->ctx = (struct ibv_context *) virt_to_phys((size_t) ctx);
+
 	uhyve_args->ret = kmalloc(sizeof(struct verbs_context));
+
 	uhyve_send(UHYVE_PORT_VERBS_GET_CTX, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -442,7 +470,9 @@ typedef struct {
 struct ibv_device ** ibv_get_device_list(int * num_devices) {
 	uhyve_ibv_get_device_list_t uhyve_args;
 	uhyve_args->num_devices = (int *) virt_to_phys((size_t) num_devices);
+
 	// TODO: Take care of return value.
+
 	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_LIST, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -460,6 +490,7 @@ typedef struct {
 void ibv_free_device_list(struct ibv_device ** list) {
 	uhyve_ibv_free_device_list_t uhyve_args;
 	// TODO: Take care of ** parameter.
+
 	uhyve_send(UHYVE_PORT_IBV_FREE_DEVICE_LIST, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -477,7 +508,9 @@ typedef struct {
 const char * ibv_get_device_name(struct ibv_device * device) {
 	uhyve_ibv_get_device_name_t uhyve_args;
 	uhyve_args->device = (struct ibv_device *) virt_to_phys((size_t) device);
+
 	uhyve_args->ret = kmalloc(sizeof(const char));
+
 	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_NAME, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -495,6 +528,7 @@ typedef struct {
 __be64 ibv_get_device_guid(struct ibv_device * device) {
 	uhyve_ibv_get_device_guid_t uhyve_args;
 	uhyve_args->device = (struct ibv_device *) virt_to_phys((size_t) device);
+
 	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_GUID, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -512,7 +546,9 @@ typedef struct {
 struct ibv_context * ibv_open_device(struct ibv_device * device) {
 	uhyve_ibv_open_device_t uhyve_args;
 	uhyve_args->device = (struct ibv_device *) virt_to_phys((size_t) device);
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_context));
+
 	uhyve_send(UHYVE_PORT_IBV_OPEN_DEVICE, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -530,6 +566,7 @@ typedef struct {
 int ibv_close_device(struct ibv_context * context) {
 	uhyve_ibv_close_device_t uhyve_args;
 	uhyve_args->context = (struct ibv_context *) virt_to_phys((size_t) context);
+
 	uhyve_send(UHYVE_PORT_IBV_CLOSE_DEVICE, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -549,6 +586,7 @@ int ibv_get_async_event(struct ibv_context * context, struct ibv_async_event * e
 	uhyve_ibv_get_async_event_t uhyve_args;
 	uhyve_args->context = (struct ibv_context *) virt_to_phys((size_t) context);
 	uhyve_args->event = (struct ibv_async_event *) virt_to_phys((size_t) event);
+
 	uhyve_send(UHYVE_PORT_IBV_GET_ASYNC_EVENT, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -566,6 +604,7 @@ typedef struct {
 void ibv_ack_async_event(struct ibv_async_event * event) {
 	uhyve_ibv_ack_async_event_t uhyve_args;
 	uhyve_args->event = (struct ibv_async_event *) virt_to_phys((size_t) event);
+
 	uhyve_send(UHYVE_PORT_IBV_ACK_ASYNC_EVENT, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -585,6 +624,7 @@ int ibv_query_device(struct ibv_context * context, struct ibv_device_attr * devi
 	uhyve_ibv_query_device_t uhyve_args;
 	uhyve_args->context = (struct ibv_context *) virt_to_phys((size_t) context);
 	uhyve_args->device_attr = (struct ibv_device_attr *) virt_to_phys((size_t) device_attr);
+
 	uhyve_send(UHYVE_PORT_IBV_QUERY_DEVICE, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -606,6 +646,7 @@ int ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_po
 	uhyve_args->context = (struct ibv_context *) virt_to_phys((size_t) context);
 	uhyve_args->port_num = port_num;
 	uhyve_args->port_attr = (struct ibv_port_attr *) virt_to_phys((size_t) port_attr);
+
 	uhyve_send(UHYVE_PORT_IBV_QUERY_PORT, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -627,6 +668,7 @@ int ___ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv
 	uhyve_args->context = (struct ibv_context *) virt_to_phys((size_t) context);
 	uhyve_args->port_num = port_num;
 	uhyve_args->port_attr = (struct ibv_port_attr *) virt_to_phys((size_t) port_attr);
+
 	uhyve_send(UHYVE_PORT____IBV_QUERY_PORT, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -650,6 +692,7 @@ int ibv_query_gid(struct ibv_context * context, uint8_t port_num, int index, uni
 	uhyve_args->port_num = port_num;
 	uhyve_args->index = index;
 	uhyve_args->gid = (union ibv_gid *) virt_to_phys((size_t) gid);
+
 	uhyve_send(UHYVE_PORT_IBV_QUERY_GID, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -673,6 +716,7 @@ int ibv_query_pkey(struct ibv_context * context, uint8_t port_num, int index, __
 	uhyve_args->port_num = port_num;
 	uhyve_args->index = index;
 	uhyve_args->pkey = (__be16 *) virt_to_phys((size_t) pkey);
+
 	uhyve_send(UHYVE_PORT_IBV_QUERY_PKEY, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -690,7 +734,9 @@ typedef struct {
 struct ibv_pd * ibv_alloc_pd(struct ibv_context * context) {
 	uhyve_ibv_alloc_pd_t uhyve_args;
 	uhyve_args->context = (struct ibv_context *) virt_to_phys((size_t) context);
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_pd));
+
 	uhyve_send(UHYVE_PORT_IBV_ALLOC_PD, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -708,6 +754,7 @@ typedef struct {
 int ibv_dealloc_pd(struct ibv_pd * pd) {
 	uhyve_ibv_dealloc_pd_t uhyve_args;
 	uhyve_args->pd = (struct ibv_pd *) virt_to_phys((size_t) pd);
+
 	uhyve_send(UHYVE_PORT_IBV_DEALLOC_PD, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -727,7 +774,9 @@ struct ibv_flow * ibv_create_flow(struct ibv_qp * qp, struct ibv_flow_attr * flo
 	uhyve_ibv_create_flow_t uhyve_args;
 	uhyve_args->qp = (struct ibv_qp *) virt_to_phys((size_t) qp);
 	uhyve_args->flow = (struct ibv_flow_attr *) virt_to_phys((size_t) flow);
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_flow));
+
 	uhyve_send(UHYVE_PORT_IBV_CREATE_FLOW, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -745,6 +794,7 @@ typedef struct {
 int ibv_destroy_flow(struct ibv_flow * flow_id) {
 	uhyve_ibv_destroy_flow_t uhyve_args;
 	uhyve_args->flow_id = (struct ibv_flow *) virt_to_phys((size_t) flow_id);
+
 	uhyve_send(UHYVE_PORT_IBV_DESTROY_FLOW, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -764,7 +814,9 @@ struct ibv_xrcd * ibv_open_xrcd(struct ibv_context * context, struct ibv_xrcd_in
 	uhyve_ibv_open_xrcd_t uhyve_args;
 	uhyve_args->context = (struct ibv_context *) virt_to_phys((size_t) context);
 	uhyve_args->xrcd_init_attr = (struct ibv_xrcd_init_attr *) virt_to_phys((size_t) xrcd_init_attr);
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_xrcd));
+
 	uhyve_send(UHYVE_PORT_IBV_OPEN_XRCD, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -782,6 +834,7 @@ typedef struct {
 int ibv_close_xrcd(struct ibv_xrcd * xrcd) {
 	uhyve_ibv_close_xrcd_t uhyve_args;
 	uhyve_args->xrcd = (struct ibv_xrcd *) virt_to_phys((size_t) xrcd);
+
 	uhyve_send(UHYVE_PORT_IBV_CLOSE_XRCD, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -805,7 +858,9 @@ struct ibv_mr * ibv_reg_mr(struct ibv_pd * pd, void * addr, int length, int acce
 	uhyve_args->addr = (void *) virt_to_phys((size_t) addr);
 	uhyve_args->length = length;
 	uhyve_args->access = access;
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_mr));
+
 	uhyve_send(UHYVE_PORT_IBV_REG_MR, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -833,6 +888,7 @@ int ibv_rereg_mr(struct ibv_mr * mr, int flags, struct ibv_pd * pd, void * addr,
 	uhyve_args->addr = (void *) virt_to_phys((size_t) addr);
 	uhyve_args->length = length;
 	uhyve_args->access = access;
+
 	uhyve_send(UHYVE_PORT_IBV_REREG_MR, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -850,6 +906,7 @@ typedef struct {
 int ibv_dereg_mr(struct ibv_mr * mr) {
 	uhyve_ibv_dereg_mr_t uhyve_args;
 	uhyve_args->mr = (struct ibv_mr *) virt_to_phys((size_t) mr);
+
 	uhyve_send(UHYVE_PORT_IBV_DEREG_MR, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -869,7 +926,9 @@ struct ibv_mw * ibv_alloc_mw(struct ibv_pd * pd, enum ibv_mw_type type) {
 	uhyve_ibv_alloc_mw_t uhyve_args;
 	uhyve_args->pd = (struct ibv_pd *) virt_to_phys((size_t) pd);
 	uhyve_args->type = type;
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_mw));
+
 	uhyve_send(UHYVE_PORT_IBV_ALLOC_MW, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -887,6 +946,7 @@ typedef struct {
 int ibv_dealloc_mw(struct ibv_mw * mw) {
 	uhyve_ibv_dealloc_mw_t uhyve_args;
 	uhyve_args->mw = (struct ibv_mw *) virt_to_phys((size_t) mw);
+
 	uhyve_send(UHYVE_PORT_IBV_DEALLOC_MW, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -904,6 +964,7 @@ typedef struct {
 uint32_t ibv_inc_rkey(uint32_t rkey) {
 	uhyve_ibv_inc_rkey_t uhyve_args;
 	uhyve_args->rkey = rkey;
+
 	uhyve_send(UHYVE_PORT_IBV_INC_RKEY, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -925,6 +986,7 @@ int ibv_bind_mw(struct ibv_qp * qp, struct ibv_mw * mw, struct ibv_mw_bind * mw_
 	uhyve_args->qp = (struct ibv_qp *) virt_to_phys((size_t) qp);
 	uhyve_args->mw = (struct ibv_mw *) virt_to_phys((size_t) mw);
 	uhyve_args->mw_bind = (struct ibv_mw_bind *) virt_to_phys((size_t) mw_bind);
+
 	uhyve_send(UHYVE_PORT_IBV_BIND_MW, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -942,7 +1004,9 @@ typedef struct {
 struct ibv_comp_channel * ibv_create_comp_channel(struct ibv_context * context) {
 	uhyve_ibv_create_comp_channel_t uhyve_args;
 	uhyve_args->context = (struct ibv_context *) virt_to_phys((size_t) context);
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_comp_channel));
+
 	uhyve_send(UHYVE_PORT_IBV_CREATE_COMP_CHANNEL, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -960,6 +1024,7 @@ typedef struct {
 int ibv_destroy_comp_channel(struct ibv_comp_channel * channel) {
 	uhyve_ibv_destroy_comp_channel_t uhyve_args;
 	uhyve_args->channel = (struct ibv_comp_channel *) virt_to_phys((size_t) channel);
+
 	uhyve_send(UHYVE_PORT_IBV_DESTROY_COMP_CHANNEL, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -985,7 +1050,9 @@ struct ibv_cq * ibv_create_cq(struct ibv_context * context, int cqe, void * cq_c
 	uhyve_args->cq_context = (void *) virt_to_phys((size_t) cq_context);
 	uhyve_args->channel = (struct ibv_comp_channel *) virt_to_phys((size_t) channel);
 	uhyve_args->comp_vector = comp_vector;
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_cq));
+
 	uhyve_send(UHYVE_PORT_IBV_CREATE_CQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1005,7 +1072,9 @@ struct ibv_cq_ex * ibv_create_cq_ex(struct ibv_context * context, struct ibv_cq_
 	uhyve_ibv_create_cq_ex_t uhyve_args;
 	uhyve_args->context = (struct ibv_context *) virt_to_phys((size_t) context);
 	uhyve_args->cq_attr = (struct ibv_cq_init_attr_ex *) virt_to_phys((size_t) cq_attr);
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_cq_ex));
+
 	uhyve_send(UHYVE_PORT_IBV_CREATE_CQ_EX, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1025,6 +1094,7 @@ int ibv_resize_cq(struct ibv_cq * cq, int cqe) {
 	uhyve_ibv_resize_cq_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq *) virt_to_phys((size_t) cq);
 	uhyve_args->cqe = cqe;
+
 	uhyve_send(UHYVE_PORT_IBV_RESIZE_CQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1042,6 +1112,7 @@ typedef struct {
 int ibv_destroy_cq(struct ibv_cq * cq) {
 	uhyve_ibv_destroy_cq_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq *) virt_to_phys((size_t) cq);
+
 	uhyve_send(UHYVE_PORT_IBV_DESTROY_CQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1063,6 +1134,7 @@ int ibv_get_cq_event(struct ibv_comp_channel * channel, struct ibv_cq ** cq, voi
 	uhyve_args->channel = (struct ibv_comp_channel *) virt_to_phys((size_t) channel);
 	// TODO: Take care of ** parameter.
 	// TODO: Take care of ** parameter.
+
 	uhyve_send(UHYVE_PORT_IBV_GET_CQ_EVENT, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1082,6 +1154,7 @@ void ibv_ack_cq_events(struct ibv_cq * cq, unsigned int nevents) {
 	uhyve_ibv_ack_cq_events_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq *) virt_to_phys((size_t) cq);
 	uhyve_args->nevents = nevents;
+
 	uhyve_send(UHYVE_PORT_IBV_ACK_CQ_EVENTS, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1103,6 +1176,7 @@ int ibv_poll_cq(struct ibv_cq * cq, int num_entries, struct ibv_wc * wc) {
 	uhyve_args->cq = (struct ibv_cq *) virt_to_phys((size_t) cq);
 	uhyve_args->num_entries = num_entries;
 	uhyve_args->wc = (struct ibv_wc *) virt_to_phys((size_t) wc);
+
 	uhyve_send(UHYVE_PORT_IBV_POLL_CQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1122,6 +1196,7 @@ int ibv_req_notify_cq(struct ibv_cq * cq, int solicited_only) {
 	uhyve_ibv_req_notify_cq_t uhyve_args;
 	uhyve_args->cq = (struct ibv_cq *) virt_to_phys((size_t) cq);
 	uhyve_args->solicited_only = solicited_only;
+
 	uhyve_send(UHYVE_PORT_IBV_REQ_NOTIFY_CQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1141,7 +1216,9 @@ struct ibv_srq * ibv_create_srq(struct ibv_pd * pd, struct ibv_srq_init_attr * s
 	uhyve_ibv_create_srq_t uhyve_args;
 	uhyve_args->pd = (struct ibv_pd *) virt_to_phys((size_t) pd);
 	uhyve_args->srq_init_attr = (struct ibv_srq_init_attr *) virt_to_phys((size_t) srq_init_attr);
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_srq));
+
 	uhyve_send(UHYVE_PORT_IBV_CREATE_SRQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1161,7 +1238,9 @@ struct ibv_srq * ibv_create_srq_ex(struct ibv_context * context, struct ibv_srq_
 	uhyve_ibv_create_srq_ex_t uhyve_args;
 	uhyve_args->context = (struct ibv_context *) virt_to_phys((size_t) context);
 	uhyve_args->srq_init_attr_ex = (struct ibv_srq_init_attr_ex *) virt_to_phys((size_t) srq_init_attr_ex);
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_srq));
+
 	uhyve_send(UHYVE_PORT_IBV_CREATE_SRQ_EX, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1183,6 +1262,7 @@ int ibv_modify_srq(struct ibv_srq * srq, struct ibv_srq_attr * srq_attr, int srq
 	uhyve_args->srq = (struct ibv_srq *) virt_to_phys((size_t) srq);
 	uhyve_args->srq_attr = (struct ibv_srq_attr *) virt_to_phys((size_t) srq_attr);
 	uhyve_args->srq_attr_mask = srq_attr_mask;
+
 	uhyve_send(UHYVE_PORT_IBV_MODIFY_SRQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1202,6 +1282,7 @@ int ibv_query_srq(struct ibv_srq * srq, struct ibv_srq_attr * srq_attr) {
 	uhyve_ibv_query_srq_t uhyve_args;
 	uhyve_args->srq = (struct ibv_srq *) virt_to_phys((size_t) srq);
 	uhyve_args->srq_attr = (struct ibv_srq_attr *) virt_to_phys((size_t) srq_attr);
+
 	uhyve_send(UHYVE_PORT_IBV_QUERY_SRQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1221,6 +1302,7 @@ int ibv_get_srq_num(struct ibv_srq * srq, uint32_t * srq_num) {
 	uhyve_ibv_get_srq_num_t uhyve_args;
 	uhyve_args->srq = (struct ibv_srq *) virt_to_phys((size_t) srq);
 	uhyve_args->srq_num = (uint32_t *) virt_to_phys((size_t) srq_num);
+
 	uhyve_send(UHYVE_PORT_IBV_GET_SRQ_NUM, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1238,6 +1320,7 @@ typedef struct {
 int ibv_destroy_srq(struct ibv_srq * srq) {
 	uhyve_ibv_destroy_srq_t uhyve_args;
 	uhyve_args->srq = (struct ibv_srq *) virt_to_phys((size_t) srq);
+
 	uhyve_send(UHYVE_PORT_IBV_DESTROY_SRQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1259,6 +1342,7 @@ int ibv_post_srq_recv(struct ibv_srq * srq, struct ibv_recv_wr * recv_wr, struct
 	uhyve_args->srq = (struct ibv_srq *) virt_to_phys((size_t) srq);
 	uhyve_args->recv_wr = (struct ibv_recv_wr *) virt_to_phys((size_t) recv_wr);
 	// TODO: Take care of ** parameter.
+
 	uhyve_send(UHYVE_PORT_IBV_POST_SRQ_RECV, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1278,7 +1362,9 @@ struct ibv_qp * ibv_create_qp(struct ibv_pd * pd, struct ibv_qp_init_attr * qp_i
 	uhyve_ibv_create_qp_t uhyve_args;
 	uhyve_args->pd = (struct ibv_pd *) virt_to_phys((size_t) pd);
 	uhyve_args->qp_init_attr = (struct ibv_qp_init_attr *) virt_to_phys((size_t) qp_init_attr);
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_qp));
+
 	uhyve_send(UHYVE_PORT_IBV_CREATE_QP, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1298,7 +1384,9 @@ struct ibv_qp * ibv_create_qp_ex(struct ibv_context * context, struct ibv_qp_ini
 	uhyve_ibv_create_qp_ex_t uhyve_args;
 	uhyve_args->context = (struct ibv_context *) virt_to_phys((size_t) context);
 	uhyve_args->qp_init_attr_ex = (struct ibv_qp_init_attr_ex *) virt_to_phys((size_t) qp_init_attr_ex);
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_qp));
+
 	uhyve_send(UHYVE_PORT_IBV_CREATE_QP_EX, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1318,6 +1406,7 @@ int ibv_query_rt_values_ex(struct ibv_context * context, struct ibv_values_ex * 
 	uhyve_ibv_query_rt_values_ex_t uhyve_args;
 	uhyve_args->context = (struct ibv_context *) virt_to_phys((size_t) context);
 	uhyve_args->values = (struct ibv_values_ex *) virt_to_phys((size_t) values);
+
 	uhyve_send(UHYVE_PORT_IBV_QUERY_RT_VALUES_EX, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1339,6 +1428,7 @@ int ibv_query_device_ex(struct ibv_context * context, const struct ibv_query_dev
 	uhyve_args->context = (struct ibv_context *) virt_to_phys((size_t) context);
 	uhyve_args->input = (const struct ibv_query_device_ex_input *) virt_to_phys((size_t) input);
 	uhyve_args->attr = (struct ibv_device_attr_ex *) virt_to_phys((size_t) attr);
+
 	uhyve_send(UHYVE_PORT_IBV_QUERY_DEVICE_EX, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1358,7 +1448,9 @@ struct ibv_qp * ibv_open_qp(struct ibv_context * context, struct ibv_qp_open_att
 	uhyve_ibv_open_qp_t uhyve_args;
 	uhyve_args->context = (struct ibv_context *) virt_to_phys((size_t) context);
 	uhyve_args->qp_open_attr = (struct ibv_qp_open_attr *) virt_to_phys((size_t) qp_open_attr);
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_qp));
+
 	uhyve_send(UHYVE_PORT_IBV_OPEN_QP, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1380,6 +1472,7 @@ int ibv_modify_qp(struct ibv_qp * qp, struct ibv_qp_attr * attr, int attr_mask) 
 	uhyve_args->qp = (struct ibv_qp *) virt_to_phys((size_t) qp);
 	uhyve_args->attr = (struct ibv_qp_attr *) virt_to_phys((size_t) attr);
 	uhyve_args->attr_mask = attr_mask;
+
 	uhyve_send(UHYVE_PORT_IBV_MODIFY_QP, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1403,6 +1496,7 @@ int ibv_query_qp(struct ibv_qp * qp, struct ibv_qp_attr * attr, int attr_mask, s
 	uhyve_args->attr = (struct ibv_qp_attr *) virt_to_phys((size_t) attr);
 	uhyve_args->attr_mask = attr_mask;
 	uhyve_args->init_attr = (struct ibv_qp_init_attr *) virt_to_phys((size_t) init_attr);
+
 	uhyve_send(UHYVE_PORT_IBV_QUERY_QP, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1420,6 +1514,7 @@ typedef struct {
 int ibv_destroy_qp(struct ibv_qp * qp) {
 	uhyve_ibv_destroy_qp_t uhyve_args;
 	uhyve_args->qp = (struct ibv_qp *) virt_to_phys((size_t) qp);
+
 	uhyve_send(UHYVE_PORT_IBV_DESTROY_QP, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1439,7 +1534,9 @@ struct ibv_wq * ibv_create_wq(struct ibv_context * context, struct ibv_wq_init_a
 	uhyve_ibv_create_wq_t uhyve_args;
 	uhyve_args->context = (struct ibv_context *) virt_to_phys((size_t) context);
 	uhyve_args->wq_init_attr = (struct ibv_wq_init_attr *) virt_to_phys((size_t) wq_init_attr);
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_wq));
+
 	uhyve_send(UHYVE_PORT_IBV_CREATE_WQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1459,6 +1556,7 @@ int ibv_modify_wq(struct ibv_wq * wq, struct ibv_wq_attr * wq_attr) {
 	uhyve_ibv_modify_wq_t uhyve_args;
 	uhyve_args->wq = (struct ibv_wq *) virt_to_phys((size_t) wq);
 	uhyve_args->wq_attr = (struct ibv_wq_attr *) virt_to_phys((size_t) wq_attr);
+
 	uhyve_send(UHYVE_PORT_IBV_MODIFY_WQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1476,6 +1574,7 @@ typedef struct {
 int ibv_destroy_wq(struct ibv_wq * wq) {
 	uhyve_ibv_destroy_wq_t uhyve_args;
 	uhyve_args->wq = (struct ibv_wq *) virt_to_phys((size_t) wq);
+
 	uhyve_send(UHYVE_PORT_IBV_DESTROY_WQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1495,7 +1594,9 @@ struct ibv_rwq_ind_table * ibv_create_rwq_ind_table(struct ibv_context * context
 	uhyve_ibv_create_rwq_ind_table_t uhyve_args;
 	uhyve_args->context = (struct ibv_context *) virt_to_phys((size_t) context);
 	uhyve_args->init_attr = (struct ibv_rwq_ind_table_init_attr *) virt_to_phys((size_t) init_attr);
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_rwq_ind_table));
+
 	uhyve_send(UHYVE_PORT_IBV_CREATE_RWQ_IND_TABLE, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1513,6 +1614,7 @@ typedef struct {
 int ibv_destroy_rwq_ind_table(struct ibv_rwq_ind_table * rwq_ind_table) {
 	uhyve_ibv_destroy_rwq_ind_table_t uhyve_args;
 	uhyve_args->rwq_ind_table = (struct ibv_rwq_ind_table *) virt_to_phys((size_t) rwq_ind_table);
+
 	uhyve_send(UHYVE_PORT_IBV_DESTROY_RWQ_IND_TABLE, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1534,6 +1636,7 @@ int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_w
 	uhyve_args->qp = (struct ibv_qp *) virt_to_phys((size_t) qp);
 	uhyve_args->wr = (struct ibv_send_wr *) virt_to_phys((size_t) wr);
 	// TODO: Take care of ** parameter.
+
 	uhyve_send(UHYVE_PORT_IBV_POST_SEND, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1555,6 +1658,7 @@ int ibv_post_recv(struct ibv_qp * qp, struct ibv_recv_wr * wr, struct ibv_recv_w
 	uhyve_args->qp = (struct ibv_qp *) virt_to_phys((size_t) qp);
 	uhyve_args->wr = (struct ibv_recv_wr *) virt_to_phys((size_t) wr);
 	// TODO: Take care of ** parameter.
+
 	uhyve_send(UHYVE_PORT_IBV_POST_RECV, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1574,7 +1678,9 @@ struct ibv_ah * ibv_create_ah(struct ibv_pd * pd, struct ibv_ah_attr * attr) {
 	uhyve_ibv_create_ah_t uhyve_args;
 	uhyve_args->pd = (struct ibv_pd *) virt_to_phys((size_t) pd);
 	uhyve_args->attr = (struct ibv_ah_attr *) virt_to_phys((size_t) attr);
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_ah));
+
 	uhyve_send(UHYVE_PORT_IBV_CREATE_AH, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1600,6 +1706,7 @@ int ibv_init_ah_from_wc(struct ibv_context * context, uint8_t port_num, struct i
 	uhyve_args->wc = (struct ibv_wc *) virt_to_phys((size_t) wc);
 	uhyve_args->grh = (struct ibv_grh *) virt_to_phys((size_t) grh);
 	uhyve_args->ah_attr = (struct ibv_ah_attr *) virt_to_phys((size_t) ah_attr);
+
 	uhyve_send(UHYVE_PORT_IBV_INIT_AH_FROM_WC, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1623,7 +1730,9 @@ struct ibv_ah * ibv_create_ah_from_wc(struct ibv_pd * pd, struct ibv_wc * wc, st
 	uhyve_args->wc = (struct ibv_wc *) virt_to_phys((size_t) wc);
 	uhyve_args->grh = (struct ibv_grh *) virt_to_phys((size_t) grh);
 	uhyve_args->port_num = port_num;
+
 	uhyve_args->ret = kmalloc(sizeof(struct ibv_ah));
+
 	uhyve_send(UHYVE_PORT_IBV_CREATE_AH_FROM_WC, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1641,6 +1750,7 @@ typedef struct {
 int ibv_destroy_ah(struct ibv_ah * ah) {
 	uhyve_ibv_destroy_ah_t uhyve_args;
 	uhyve_args->ah = (struct ibv_ah *) virt_to_phys((size_t) ah);
+
 	uhyve_send(UHYVE_PORT_IBV_DESTROY_AH, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1662,6 +1772,7 @@ int ibv_attach_mcast(struct ibv_qp * qp, const union ibv_gid * gid, uint16_t lid
 	uhyve_args->qp = (struct ibv_qp *) virt_to_phys((size_t) qp);
 	uhyve_args->gid = (const union ibv_gid *) virt_to_phys((size_t) gid);
 	uhyve_args->lid = lid;
+
 	uhyve_send(UHYVE_PORT_IBV_ATTACH_MCAST, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1683,6 +1794,7 @@ int ibv_detach_mcast(struct ibv_qp * qp, const union ibv_gid * gid, uint16_t lid
 	uhyve_args->qp = (struct ibv_qp *) virt_to_phys((size_t) qp);
 	uhyve_args->gid = (const union ibv_gid *) virt_to_phys((size_t) gid);
 	uhyve_args->lid = lid;
+
 	uhyve_send(UHYVE_PORT_IBV_DETACH_MCAST, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1700,6 +1812,7 @@ typedef struct {
 int ibv_fork_init() {
 	uhyve_ibv_fork_init_t uhyve_args;
 	uhyve_args-> = ;
+
 	uhyve_send(UHYVE_PORT_IBV_FORK_INIT, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1717,7 +1830,9 @@ typedef struct {
 const char * ibv_node_type_str(enum ibv_node_type node_type) {
 	uhyve_ibv_node_type_str_t uhyve_args;
 	uhyve_args->node_type = node_type;
+
 	uhyve_args->ret = kmalloc(sizeof(const char));
+
 	uhyve_send(UHYVE_PORT_IBV_NODE_TYPE_STR, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1735,7 +1850,9 @@ typedef struct {
 const char * ibv_port_state_str(enum ibv_port_state port_state) {
 	uhyve_ibv_port_state_str_t uhyve_args;
 	uhyve_args->port_state = port_state;
+
 	uhyve_args->ret = kmalloc(sizeof(const char));
+
 	uhyve_send(UHYVE_PORT_IBV_PORT_STATE_STR, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1753,7 +1870,9 @@ typedef struct {
 const char * ibv_event_type_str(enum ibv_event_type event) {
 	uhyve_ibv_event_type_str_t uhyve_args;
 	uhyve_args->event = event;
+
 	uhyve_args->ret = kmalloc(sizeof(const char));
+
 	uhyve_send(UHYVE_PORT_IBV_EVENT_TYPE_STR, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1777,6 +1896,7 @@ int ibv_resolve_eth_l2_from_gid(struct ibv_context * context, struct ibv_ah_attr
 	uhyve_args->attr = (struct ibv_ah_attr *) virt_to_phys((size_t) attr);
 	uhyve_args->eth_mac = eth_mac;
 	uhyve_args->vid = (uint16_t *) virt_to_phys((size_t) vid);
+
 	uhyve_send(UHYVE_PORT_IBV_RESOLVE_ETH_L2_FROM_GID, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
@@ -1796,6 +1916,7 @@ int ibv_is_qpt_supported(uint32_t caps, enum ibv_qp_type qpt) {
 	uhyve_ibv_is_qpt_supported_t uhyve_args;
 	uhyve_args->caps = caps;
 	uhyve_args->qpt = qpt;
+
 	uhyve_send(UHYVE_PORT_IBV_IS_QPT_SUPPORTED, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	// TODO: Fix pointers in returned data structures.
