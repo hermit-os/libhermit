@@ -212,17 +212,14 @@ def generate_kernel_function(ret, function_name, params):
   return function
 
 
-def generate_uhyve_cases(function_name):
-  """ TODO
-  Generates a switch-case that catches a KVM exit IO for the given function in uhyve.
+def generate_uhyve_cases(function_names):
+  """ Generates all switch-cases for uhyve's KVM exit IO.
 
   Args:
-    ret: Return type as string.
-    function_name: Function name as string.
-    params: Parameters as list of strings.
+    function_names: All function names as a list of strings.
 
   Returns:
-    Generated switch-case code as string.
+    Generated switch-cases as one single string.
   """
   cases = ""
 
