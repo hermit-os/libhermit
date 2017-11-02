@@ -97,9 +97,13 @@ UHYVE_CASES_GEN_PATH = "GEN-tools-uhyve.c"
 UHYVE_IBV_HEADER_GEN_PATH = "GEN-tools-uhyve-ibv-ports.h"
 INCLUDE_STDDEF_GEN_PATH = "GEN-include-hermit-stddef.h"
 UHYVE_IBV_HEADER_STRUCTS_GEN_PATH = "GEN-tools-uhyve-ibv-structs.h"
+UHYVE_HOST_FCNS_GEN_PATH = "GEN-tools-uhyve-ibv.c"
 
 # Starting number of the sequence used for IBV ports.
 PORT_NUMBER_START = 0x510
+
+TABS = ["", "\t", "\t\t", "\t\t\t", "\t\t\t\t"]
+NEWLINES = ["", "\n", "\n\n"]
 
 
 def get_struct_name(function_name):
@@ -208,7 +212,32 @@ def generate_kernel_function(ret, function_name, params):
   return function
 
 
-def generate_uhyve_case(ret, function_name, params):
+def generate_uhyve_cases(function_name):
+  """ TODO
+  Generates a switch-case that catches a KVM exit IO for the given function in uhyve.
+
+  Args:
+    ret: Return type as string.
+    function_name: Function name as string.
+    params: Parameters as list of strings.
+
+  Returns:
+    Generated switch-case code as string.
+  """
+  cases = ""
+
+  for function_name in function_names:
+    port_name = "UHYVE_PORT_" + function_name.upper()
+    struct_name = get_struct_name(function_name)
+
+    cases += "{0}{1}case {2}:".format(NEWLINES[1], TABS[3], port_name)
+    cases += "{0}{1}call_{2}(run, guest_mem);".format(NEWLINES[1], TABS[4], function_name)
+    cases += "{0}{1}break;".format(NEWLINES[1], TABS[4])
+
+  return cases
+
+
+def generate_uhyve_host_function(ret, function_name, params):
   """Generates a switch-case that catches a KVM exit IO for the given function in uhyve.
 
   Args:
@@ -243,31 +272,31 @@ def generate_uhyve_case(ret, function_name, params):
       host_param = "{0}".format(param_name)
 
     return host_param
-
-  port_name = "UHYVE_PORT_" + function_name.upper()
+    
   struct_name = get_struct_name(function_name)
 
-  case = "\n\t\t\tcase {0}: {{".format(port_name)
-  case += "\n\t\t\t\tunsigned data = *((unsigned*)((size_t)run+run->io.data_offset));"
-  case += "\n\t\t\t\t{0} * args = ({0} *) (guest_mem + data);".format(struct_name)
-  case += "\n\n\t\t\t\t{0} host_ret = {1}(".format(ret, function_name)
+  fcn = "{0}void call_{1}(struct kvm_run * run, uint8_t * guest_mem) {{".format(NEWLINES[1], function_name)
+  fcn += "{0}{1}unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));".format(NEWLINES[1], TABS[1])
+  fcn += "{0}{1}{2} * args = ({2} *) (guest_mem + data);".format(NEWLINES[1], TABS[1], struct_name)
+  fcn += "{0}{1}{2} host_ret = {1}(".format(NEWLINES[2], TABS[1], ret, function_name)
 
   for param in params[:-1]:
-    case += generate_host_call_parameter(param) + ", "
+    fcn += generate_host_call_parameter(param) + ", "
   else:
-    case += generate_host_call_parameter(params[-1]) + ");"
+    fcn += generate_host_call_parameter(params[-1]) + ");"
   
   if "**" in ret:
-    case += "\n\t\t\t\t// TODO: Take care of {0} return value.".format(ret)
+    fcn += "{0}{1}// TODO: Take care of {2} return value.".format(NEWLINES[1], TABS[1], ret)
   elif "*" in ret:
-    case += "\n\t\t\t\tmemcpy(guest_mem+(size_t)args->ret, host_ret, sizeof(host_ret));"
+    fcn += "{0}{1}memcpy(guest_mem+(size_t)args->ret, host_ret, sizeof(host_ret));".format(NEWLINES[1], TABS[1])
+    fcn += "{0}{1}// TODO: Convert ptrs contained in return value.".format(NEWLINES[1], TABS[1])
+    fcn += "{0}{1}// TODO: Delete host_ret data structure.".format(NEWLINES[1], TABS[1])
   else:
-    case += "\n\t\t\t\targs->ret = host_ret;"
+    fcn += "{0}{1}args->ret = host_ret;".format(NEWLINES[1], TABS[1])
 
-  case += "\n\t\t\t\tbreak;"
-  case += "\n\t\t\t}\n"
+  fcn += "{0}}}{0}".format(NEWLINES[1])
 
-  return case
+  return fcn
 
 
 def generate_port_enum(function_names):
@@ -307,7 +336,7 @@ def generate_port_macros(function_names):
 if __name__ == "__main__":
   with open(SRC_PATH, "r") as f_src, \
           open(IBV_GEN_PATH, "w") as f_ibv, \
-          open(UHYVE_CASES_GEN_PATH, "w") as f_uhyve, \
+          open(UHYVE_HOST_FCNS_GEN_PATH, "w") as f_uhyve_host_fncs, \
           open(UHYVE_IBV_HEADER_STRUCTS_GEN_PATH, "w") as f_structs:
     function_names = []
     for line in f_src:
@@ -321,12 +350,16 @@ if __name__ == "__main__":
       kernel_function = generate_kernel_function(ret, function_name, params)
       f_ibv.write(kernel_function)
 
-      uhyve_case = generate_uhyve_case(ret, function_name, params)
-      f_uhyve.write(uhyve_case)
+      uhyve_fnc = generate_uhyve_host_function(ret, function_name, params)
+      f_uhyve_host_fncs.write(uhyve_fnc)
 
   with open(UHYVE_IBV_HEADER_GEN_PATH, "w") as f_uhyve_ibv:
     port_enum = generate_port_enum(function_names)
     f_uhyve_ibv.write(port_enum)
+
+  with open(UHYVE_CASES_GEN_PATH, "w") as f_cases:
+    uhyve_cases = generate_uhyve_cases(function_names)
+    f_cases.write(uhyve_cases)
 
   with open(INCLUDE_STDDEF_GEN_PATH, "w") as f_stddef:
     port_macros = generate_port_macros(function_names)

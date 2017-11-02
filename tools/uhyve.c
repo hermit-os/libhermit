@@ -967,84 +967,57 @@ static int vcpu_loop(void)
 				}
 
 			// InfiniBand
-
-			case UHYVE_PORT_IBV_GET_DEVICE_LIST: {
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-					uhyve_ibv_get_device_list_t* args = (uhyve_ibv_get_device_list_t*) (guest_mem+data);
-
-					// Call IBV function from hypervisor
-					int num_devices;
-					struct ibv_device **temp_dev_list = ibv_get_device_list(&num_devices);
-
-					// Copy number of devices to kernel memory	
-					memcpy(guest_mem+(size_t)args->num_devices, &num_devices, sizeof(num_devices));
-
-					for (int d = 0; d < num_devices; d++) {
-						printf("uhyve.c: before memcpy list[d].\n");
-						// Copy array entry containing ibv_device struct to kernel memory
-						memcpy(guest_mem + (size_t)args->dev_phys_ptr_list[d], temp_dev_list[d], sizeof(struct ibv_device));
-					}
-					break;
-				}
-
-			case UHYVE_PORT_IBV_OPEN_DEVICE: {
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-					uhyve_ibv_open_device_t* args = (uhyve_ibv_open_device_t*) (guest_mem+data);
-
-					struct ibv_context* context = ibv_open_device(guest_mem+(size_t)args->device);
-
-					// Copy return value to memory location allocated in kernel space.
-					memcpy(guest_mem+(size_t)args->ret, context, sizeof(context));
-
-					break;
-				}
-
-			case UHYVE_PORT_IBV_MODIFY_QP: {
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-					uhyve_ibv_get_device_list_t* args = (uhyve_ibv_get_device_list_t*) (guest_mem+data);
-
-					// Call IBV function from hypervisor
-					int num_devices;
-					struct ibv_device **temp_dev_list = ibv_get_device_list(&num_devices);
-
-					// Copy number of devices to kernel memory	
-					memcpy(guest_mem+(size_t)args->num_devices, &num_devices, sizeof(num_devices));
-
-					for (int d = 0; d < num_devices; d++) { // TODO switch to num devices
-						printf("uhyve.c: before memcpy list[d].\n");
-						// Copy array entry containing ibv_device struct to kernel memory
-						memcpy(guest_mem + (size_t)args->dev_phys_ptr_list[d], temp_dev_list[d], sizeof(struct ibv_device));
-					}
-					break;
-				}
-
-			case UHYVE_PORT_IBV_CREATE_AH: {
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-					uhyve_ibv_get_device_list_t* args = (uhyve_ibv_get_device_list_t*) (guest_mem+data);
-
-					// Call IBV function from hypervisor
-					int num_devices;
-					struct ibv_device **temp_dev_list = ibv_get_device_list(&num_devices);
-
-					// Copy number of devices to kernel memory	
-					memcpy(guest_mem+(size_t)args->num_devices, &num_devices, sizeof(num_devices));
-
-					for (int d = 0; d < num_devices; d++) { // TODO switch to num devices
-						printf("uhyve.c: before memcpy list[d].\n");
-						// Copy array entry containing ibv_device struct to kernel memory
-						memcpy(guest_mem + (size_t)args->dev_phys_ptr_list[d], temp_dev_list[d], sizeof(struct ibv_device));
-					}
-					break;
-				}
-
-			/*case UHYVE_PORT_IBV_GET_DEVICE_NAME: {*/
-					/*unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));*/
-					/*uhyve_ibv_get_device_name_t* args = (uhyve_ibv_get_device_name_t*) (guest_mem+data);*/
-
-					/*args->ret = ibv_get_device_name((struct ibv_device*)(guest_mem+(size_t)args->device));*/
-					/*printf("UHYVE_PORT_IBV_GET_DEVICE_NAME\n");*/
-					/*break;*/
-				/*}*/
+			case UHYVE_PORT_IBV_OPEN_DEVICE:
+				call_ibv_open_device(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_GET_DEVICE_LIST:
+				call_ibv_get_device_list(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_GET_DEVICE_NAME:
+				call_ibv_get_device_name(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_QUERY_PORT:
+				call_ibv_query_port(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_CREATE_COMP_CHANNEL:
+				call_ibv_create_comp_channel(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_ALLOC_PD:
+				call_ibv_alloc_pd(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_REG_MR:
+				call_ibv_reg_mr(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_CREATE_CQ:
+				call_ibv_create_cq(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_CREATE_QP:
+				call_ibv_create_qp(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_QUERY_QP:
+				call_ibv_query_qp(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_MODIFY_QP:
+				call_ibv_modify_qp(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_DESTROY_QP:
+				call_ibv_destroy_qp(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_DESTROY_CQ:
+				call_ibv_destroy_cq(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_DEREG_MR:
+				call_ibv_dereg_mr(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_DEALLOC_PD:
+				call_ibv_dealloc_pd(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_DESTROY_COMP_CHANNEL:
+				call_ibv_destroy_comp_channel(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_CLOSE_DEVICE:
+				call_ibv_close_device(run, guest_mem);
+				break;
 
 			default:
 				err(1, "KVM: unhandled KVM_EXIT_IO at port 0x%x, direction %d\n", run->io.port, run->io.direction);
