@@ -163,8 +163,7 @@ void tss_init(void)
 	LOG_INFO("Initialized the task state segments\n");
 
 	for(int i=0; i<MAX_CORES; i++) {
-		if (task_state_segments[i].ist1 == 0)
-			task_state_segments[i].ist1 = (size_t) create_stack(KERNEL_STACK_SIZE) + KERNEL_STACK_SIZE - 0x10;
+		// ist1 will created per task
 		if (task_state_segments[i].ist2 == 0)
 			task_state_segments[i].ist2 = (size_t) create_stack(KERNEL_STACK_SIZE) + KERNEL_STACK_SIZE - 0x10;
 		if (task_state_segments[i].ist2 == 0)
