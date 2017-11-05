@@ -107,16 +107,13 @@ static int hermit_init(void)
 		memcpy((char*) &percore_start + i*sz, (char*) &percore_start, sz);
 
 	koutput_init();
-#ifndef __x86_64__
-	kputs("Hello from aarch64\n");
-	while(1);
-#endif
-	system_init();
-	irq_init();
-	timer_init();
+
+	//system_init();
+	//irq_init();
+	//timer_init();
 	multitasking_init();
-	memory_init();
-	signal_init();
+	//memory_init();
+	//signal_init();
 
 	return 0;
 }
@@ -286,9 +283,45 @@ int smp_main(void)
 
 int libc_start(int argc, char** argv, char** env);
 
-// init task => creates all other tasks an initialize the LwIP
+char* itoa(int i, char b[]);
+
+// init task => creates all other tasks and initializes the LwIP
 static int initd(void* arg)
 {
+#if 0
+	kputs("Hello from initd!\nArgument: ");
+	kputs((char*) arg);
+	kputs("\n");
+
+	int v, x = 5;
+	x = x / 0;
+	/*asm volatile(
+		"mov x0, #0\n\t"
+		"udiv %0, %0, x0\n\t"
+		"brk"
+		: "+r"(v)
+		:
+		: "memory", "x0", "x1");*/
+	trigger_interrupt();
+	reschedule();
+	return x;
+#endif
+#if 1
+	int i = 0;
+	char str_i[100];
+
+	for(i=0; i<5; i++) {
+		kputs("\tHello from initd! Argument ");
+		kputs((char*) arg);
+		kputs(" in iteration ");
+		itoa(i, str_i);
+		kputs(str_i);
+		kputs("\n");
+		reschedule();
+	}
+#endif
+
+#if 0
 	int s = -1, c = -1;
 	int i, j, flag;
 	int len, err;
@@ -484,15 +517,35 @@ out:
 
 	if (s > 0)
 		lwip_close(s);
-
+#endif
 	return 0;
+}
+
+char* itoa(int i, char b[]){
+    char const digit[] = "0123456789";
+    char* p = b;
+    if(i<0){
+        *p++ = '-';
+        i *= -1;
+    }
+    int shifter = i;
+    do{ //Move to where representation ends
+        ++p;
+        shifter = shifter/10;
+    }while(shifter);
+    *p = '\0';
+    do{ //Move back, inserting digits as u go
+        *--p = digit[i%10];
+        i = i/10;
+    }while(i);
+    return b;
 }
 
 int hermit_main(void)
 {
 	hermit_init();
 	system_calibration(); // enables also interrupts
-
+#if 0
 	LOG_INFO("This is Hermit %s, build date %u\n", PACKAGE_VERSION, &__DATE__);
 	LOG_INFO("Isle %d of %d possible isles\n", isle, possible_isles);
 	LOG_INFO("Kernel starts at %p and ends at %p\n", &kernel_start, (size_t)&kernel_start + image_size);
@@ -510,6 +563,7 @@ int hermit_main(void)
 		LOG_INFO("Kernel cmdline: %s\n", get_cmdline());
 	//if (hbmem_base)
 	//	LOG_INFO("Found high bandwidth memory at 0x%zx (size 0x%zx)\n", hbmem_base, hbmem_size);
+#endif
 
 #if 0
 	print_pci_adapters();
@@ -526,11 +580,16 @@ int hermit_main(void)
 	print_cpu_status(isle);
 	//vma_dump();
 
-	create_kernel_task_on_core(NULL, initd, NULL, NORMAL_PRIO, boot_processor);
-
+	kputs("Hello from before create_kernel_task_on_core\n");
+	create_kernel_task_on_core(NULL, initd, "test0", NORMAL_PRIO, CORE_ID);
+	create_kernel_task_on_core(NULL, initd, "test1", NORMAL_PRIO, CORE_ID);
+	kputs("Hello from after create_kernel_task_on_core\n\n");
 	while(1) {
+		reschedule();
+	#if 0
 		check_workqueues();
 		wait_for_task();
+	#endif
 	}
 
 	return 0;

@@ -38,6 +38,7 @@
 #include <hermit/memory.h>
 #include <hermit/logging.h>
 #include <asm/processor.h>
+#include <../arch/aarch64/kernel/tasks.c>
 
 /*
  * Note that linker symbols are not variables, they have no memory allocated for
@@ -326,6 +327,7 @@ void finish_task_switch(void)
 	task_t* old;
 	const uint32_t core_id = CORE_ID;
 
+	kputs("Hello from the beginning of finish_task_switch\n");
 	spinlock_irqsave_lock(&readyqueues[core_id].lock);
 
 	if ((old = readyqueues[core_id].old_task) != NULL) {
@@ -334,7 +336,7 @@ void finish_task_switch(void)
 		if (old->status == TASK_FINISHED) {
 			/* cleanup task */
 			if (old->stack) {
-				LOG_INFO("Release stack at 0x%zx\n", old->stack);
+				//LOG_INFO("Release stack at 0x%zx\n", old->stack);
 				destroy_stack(old->stack, DEFAULT_STACK_SIZE);
 				old->stack = NULL;
 			}
@@ -548,6 +550,24 @@ int create_task(tid_t* id, entry_point_t ep, void* arg, uint8_t prio, uint32_t c
 
 	if (BUILTIN_EXPECT(!ep, 0))
 		return -EINVAL;
+	kputs("\tep != 0\n");
+	if (BUILTIN_EXPECT(prio == IDLE_PRIO, 0))
+		return -EINVAL;
+	kputs("\tprio != IDLE_PRIO\n");
+	if (BUILTIN_EXPECT(prio > MAX_PRIO, 0))
+		return -EINVAL;
+	kputs("\tprio <= MAX_PRIO\n");
+	if (BUILTIN_EXPECT(core_id >= MAX_CORES, 0))
+		return -EINVAL;
+	kputs("\tcore_id < MAX_CORES\n");
+	if (BUILTIN_EXPECT(!readyqueues[core_id].idle, 0))
+		return -EINVAL;
+	kputs("\treadyqueues[core_id].idle != 0\n");
+	kputs("Hello from after error check in create_task\n");
+
+#if 0
+	if (BUILTIN_EXPECT(!ep, 0))
+		return -EINVAL;
 	if (BUILTIN_EXPECT(prio == IDLE_PRIO, 0))
 		return -EINVAL;
 	if (BUILTIN_EXPECT(prio > MAX_PRIO, 0))
@@ -556,6 +576,7 @@ int create_task(tid_t* id, entry_point_t ep, void* arg, uint8_t prio, uint32_t c
 		return -EINVAL;
 	if (BUILTIN_EXPECT(!readyqueues[core_id].idle, 0))
 		return -EINVAL;
+#endif
 
 	stack = create_stack(DEFAULT_STACK_SIZE);
 	if (BUILTIN_EXPECT(!stack, 0))
@@ -567,13 +588,17 @@ int create_task(tid_t* id, entry_point_t ep, void* arg, uint8_t prio, uint32_t c
 		return -ENOMEM;
 	}
 
+#if 0
+	kputs("Hello from before kmalloc\n");
 	counter = kmalloc(sizeof(atomic_int64_t));
+	kputs("Hello from after kmalloc\n");
 	if (BUILTIN_EXPECT(!counter, 0)) {
 		destroy_stack(stack, KERNEL_STACK_SIZE);
 		destroy_stack(stack, DEFAULT_STACK_SIZE);
 		return -ENOMEM;
 	}
 	atomic_int64_set((atomic_int64_t*) counter, 0);
+#endif
 
 	spinlock_irqsave_lock(&table_lock);
 
@@ -599,6 +624,7 @@ int create_task(tid_t* id, entry_point_t ep, void* arg, uint8_t prio, uint32_t c
 				*id = i;
 
 			ret = create_default_frame(task_table+i, ep, arg, core_id);
+			kputs("Hello from after create_default_frame\n");
 			if (ret)
 				goto out;
 
@@ -622,7 +648,7 @@ int create_task(tid_t* id, entry_point_t ep, void* arg, uint8_t prio, uint32_t c
 	}
 
 	if (!ret)
-		LOG_INFO("start new task %d on core %d with stack address %p\n", i, core_id, stack);
+		//LOG_INFO("start new task %d on core %d with stack address %p\n", i, core_id, stack);
 
 out:
 	spinlock_irqsave_unlock(&table_lock);
@@ -630,7 +656,7 @@ out:
 	if (ret) {
 		destroy_stack(stack, DEFAULT_STACK_SIZE);
 		destroy_stack(ist, KERNEL_STACK_SIZE);
-		kfree(counter);
+		//kfree(counter);
 	}
 
 	return ret;
@@ -792,6 +818,7 @@ size_t** scheduler(void)
 	const uint32_t core_id = CORE_ID;
 	uint64_t prio;
 
+	kputs("Hello from the beginning of sheduler\n");
 	orig_task = curr_task = per_core(current_task);
 	curr_task->last_core = core_id;
 
@@ -835,10 +862,12 @@ size_t** scheduler(void)
 		curr_task = task_list_pop_front(&readyqueues[core_id].queue[prio-1]);
 
 		if(BUILTIN_EXPECT(curr_task == NULL, 0)) {
+			kputs("Kernel panic: No task in readyqueue\n");
 			LOG_ERROR("Kernel panic: No task in readyqueue\n");
 			while(1);
 		}
 		if (BUILTIN_EXPECT(curr_task->status == TASK_INVALID, 0)) {
+			kputs("Kernel panic: Invalid task\n");
 			LOG_ERROR("Kernel panic: Got invalid task %d, orig task %d\n",
 			        curr_task->id, orig_task->id);
 			while(1);

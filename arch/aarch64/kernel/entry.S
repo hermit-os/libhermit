@@ -57,15 +57,209 @@ image_size: .quad 0
 possible_isles: .dword 1
 
 start64:
+  /* Enable I caching */
+  mrs x0, sctlr_el1
+  orr x0, x0, #(1 << 12)
+  msr sctlr_el1, x0
+
+  /* Select sp_el0 as stack pointer */
+  msr  spsel, #0
+
+  /* Set exception table */
+  ldr x0, =vector_table_el1
+  msr vbar_el1, x0
+
   /* Pointer to stack base  */
   ldr x1, =(boot_stack+KERNEL_STACK_SIZE-0xF)
   mov sp, x1
+
+  /* Return current exception level */
+  bl koutput_init
+  mrs x0, CurrentEl
+  sub x0, x0, #3
+  bl irq_handler
+
+//   /* Enter user space */
+//   ldr x0, =el0_return
+//   msr elr_el1, x0
+//   eret
+// el0_return:
+//
+//   /* Return current exception level */
+//   mrs x0, CurrentEl
+//   sub x0, x0, #3
+//   bl irq_handler
+
   bl hermit_main
 
   /* halt */
 halt:
   wfe
   b halt
+
+.global switch_context
+.balign 16
+switch_context:
+  stp x29, x30, [sp, #-16]!
+  stp x27, x28, [sp, #-16]!
+  stp x25, x26, [sp, #-16]!
+  stp x23, x24, [sp, #-16]!
+  stp x21, x22, [sp, #-16]!
+  stp x19, x20, [sp, #-16]!
+  stp x17, x18, [sp, #-16]!
+  stp x15, x16, [sp, #-16]!
+  stp x13, x14, [sp, #-16]!
+  stp x11, x12, [sp, #-16]!
+  stp x9, x10, [sp, #-16]!
+  stp x7, x8, [sp, #-16]!
+  stp x5, x6, [sp, #-16]!
+  stp x3, x4, [sp, #-16]!
+  stp x1, x2, [sp, #-16]!
+  mrs x1, tpidr_el0
+  stp x1, x0, [sp, #-16]!
+  mrs x1, tpidrro_el0
+  mrs x2, nzcv
+  stp x1, x2, [sp, #-16]!
+
+  mov x1, sp
+  str x1, [x0]				/* store old sp */
+  bl get_current_stack		/* get new sp   */
+  mov sp, x0
+
+  /* call cleanup code */
+  bl finish_task_switch
+
+  ldp x0, x1, [sp], #16
+  msr tpidrro_el0, x0
+  msr nzcv, x1
+  ldp x1, x0, [sp], #16
+  msr tpidr_el0, x1
+  ldp x1, x2, [sp], #16
+  ldp x3, x4, [sp], #16
+  ldp x5, x6, [sp], #16
+  ldp x7, x8, [sp], #16
+  ldp x9, x10, [sp], #16
+  ldp x11, x12, [sp], #16
+  ldp x13, x14, [sp], #16
+  ldp x15, x16, [sp], #16
+  ldp x17, x18, [sp], #16
+  ldp x19, x20, [sp], #16
+  ldp x21, x22, [sp], #16
+  ldp x23, x24, [sp], #16
+  ldp x25, x26, [sp], #16
+  ldp x27, x28, [sp], #16
+  ldp x29, x30, [sp], #16
+
+  ret
+
+.global trigger_interrupt
+trigger_interrupt:
+  brk 0
+  ret
+
+
+asm_irq_handler:
+  /* Save caller-saved registers according to Procedure Call Standard */
+  stp x17, x18, [sp, #-16]!
+  stp x15, x16, [sp, #-16]!
+  stp x13, x14, [sp, #-16]!
+  stp x11, x12, [sp, #-16]!
+  stp x9, x10, [sp, #-16]!
+  stp x7, x8, [sp, #-16]!
+  stp x5, x6, [sp, #-16]!
+  stp x3, x4, [sp, #-16]!
+  stp x1, x2, [sp, #-16]!
+  stp x0, x1, [sp, #-16]!
+
+  //bl identify_and_clear_source
+  bl irq_handler
+
+  /* Restore caller-saved registers */
+  ldp x0, x1, [sp], #16
+  ldp x1, x2, [sp], #16
+  ldp x3, x4, [sp], #16
+  ldp x5, x6, [sp], #16
+  ldp x7, x8, [sp], #16
+  ldp x9, x10, [sp], #16
+  ldp x11, x12, [sp], #16
+  ldp x13, x14, [sp], #16
+  ldp x15, x16, [sp], #16
+  ldp x17, x18, [sp], #16
+
+  eret
+
+
+// Exception vector table
+// No nested implementation yet
+.balign 0x800
+vector_table_el1:
+/* Current exception level, sp_el0 */
+curr_el_sp0_sync:
+  bl asm_irq_handler
+
+.balign 0x80
+curr_el_sp0_irq:
+  bl asm_irq_handler
+
+.balign 0x80
+curr_el_sp0_fiq:
+  bl asm_irq_handler
+
+.balign 0x80
+curr_el_sp0_serror:
+  bl asm_irq_handler
+
+/* Current exception level, sp_elx */
+.balign 0x80
+curr_el_spx_sync:
+  bl asm_irq_handler
+
+.balign 0x80
+curr_el_spx_irq:
+  bl asm_irq_handler
+
+.balign 0x80
+curr_el_spx_fiq:
+  bl asm_irq_handler
+
+.balign 0x80
+curr_el_spx_serror:
+  bl asm_irq_handler
+
+/* Lower exception level, coming from AArch64 */
+.balign 0x80
+lower_el_aarch64_sync:
+  bl asm_irq_handler
+
+.balign 0x80
+lower_el_aarch64_irq:
+  bl asm_irq_handler
+
+.balign 0x80
+lower_el_aarch64_fiq:
+  bl asm_irq_handler
+
+.balign 0x80
+lower_el_aarch64_serror:
+  bl asm_irq_handler
+
+/* Lower exception level, coming from AArch32 */
+.balign 0x80
+lower_el_aarch32_sync:
+  bl asm_irq_handler
+
+.balign 0x80
+lower_el_aarch32_irq:
+  bl asm_irq_handler
+
+.balign 0x80
+lower_el_aarch32_fiq:
+  bl asm_irq_handler
+
+.balign 0x80
+lower_el_aarch32_serror:
+  bl asm_irq_handler
+
 
 .section .data
 .global boot_stack

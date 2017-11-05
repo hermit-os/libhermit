@@ -50,13 +50,125 @@ int cpu_detection(void);
  *
  * Helper function to get the TLS of the current task
  */
-static inline size_t get_tls(void) { return 0; }
+static inline size_t get_tls(void) {
+	uint64_t addr;
+	asm volatile(
+		"mrs %0, tpidr_el0"
+		: "+r"(addr)
+		:
+		: );
+	return addr;
+}
 
 /** @brief Set thread local storage
  *
  * Helper function to set the TLS of the current task
  */
-static inline void set_tls(size_t addr) {}
+static inline void set_tls(size_t addr) {
+	asm volatile(
+		"msr tpidr_el0, %0"
+		: "=r"(addr)
+		:
+		: );
+}
+
+/** @brief Read id_aa64mmfr0_el1 register
+ * @return id_aa64mmfr0_el1's value
+ */
+static inline size_t read_id_aa64mmfr0_el1(void) {
+        size_t val;
+        asm volatile("mrs %0, id_aa64mmfr0_el1" : "=r"(val) :: "memory");
+        return val;
+}
+
+/** @brief Read sctlr_el1 register
+ * @return sctlr_el1's value
+ */
+static inline size_t read_sctlr_el1(void) {
+        size_t val;
+        asm volatile("mrs %0, sctlr_el1" : "=r"(val) :: "memory");
+        return val;
+}
+
+/** @brief Write a value into sctlr_el1 register
+ * @param val The value you want to write into sctlr_el1
+ */
+static inline void write_sctlr_el1(size_t val) {
+	asm volatile("msr sctlr_el1, %0" :: "r"(val) : "memory");
+}
+
+/** @brief Read tcr_el1 register
+ * @return tcr_el1's value
+ */
+static inline size_t read_tcr_el1(void) {
+        size_t val;
+        asm volatile("mrs %0, tcr_el1" : "=r"(val) :: "memory");
+        return val;
+}
+
+/** @brief Write a value into tcr_el1 register
+ * @param val The value you want to write into tcr_el1
+ */
+static inline void write_tcr_el1(size_t val) {
+	asm volatile("msr tcr_el1, %0" :: "r"(val) : "memory");
+}
+
+/** @brief Read mair_el1 register
+ * @return mair_el1's value
+ */
+static inline size_t read_mair_el1(void) {
+        size_t val;
+        asm volatile("mrs %0, mair_el1" : "=r"(val) :: "memory");
+        return val;
+}
+
+/** @brief Write a value into mair_el1 register
+ * @param val The value you want to write into mair_el1
+ */
+static inline void write_mair_el1(size_t val) {
+	asm volatile("msr mair_el1, %0" :: "r"(val) : "memory");
+}
+
+/** @brief Read ttbr0_el1 register
+ * @return ttbr0_el1's value
+ */
+static inline size_t read_ttbr0_el1(void) {
+        size_t val;
+        asm volatile("mrs %0, ttbr0_el1" : "=r"(val) :: "memory");
+        return val;
+}
+
+/** @brief Write a value into ttbr0_el1 register
+ * @param val The value you want to write into ttbr0_el1
+ */
+static inline void write_ttbr0_el1(size_t val) {
+	asm volatile("msr ttbr0_el1, %0" :: "r"(val) : "memory");
+}
+
+/** @brief Read ttbr1_el1 register
+ * @return ttbr1_el1's value
+ */
+static inline size_t read_ttbr1_el1(void) {
+        size_t val;
+        asm volatile("mrs %0, ttbr1_el1" : "=r"(val) :: "memory");
+        return val;
+}
+
+/** @brief Write a value into ttbr1_el1 register
+ * @param val The value you want to write into ttbr1_el1
+ */
+static inline void write_ttbr1_el1(size_t val) {
+	asm volatile("msr ttbr1_el1, %0" :: "r"(val) : "memory");
+}
+
+/** @brief Read far_el1 register
+ * @return faulting virtual address
+ */
+static inline size_t read_far_el1(void) {
+        size_t val = 0;
+        asm volatile("mrs %0, far_el1" : "=r"(val) :: "memory");
+        return val;
+}
 
 /** @brief Read out time stamp counter
  *
@@ -81,12 +193,64 @@ void dump_pstate(void);
 /// The HALT instruction stops the processor until the next interrupt arrives
 #define HALT
 
+/** @brief Flush Translation Lookaside Buffer
+ */
+static inline void tlb_flush(uint8_t with_ipi)
+{
+	asm volatile(
+ 		"tlbi all\n\t"
+		"isb"
+ 		:
+ 		:
+ 		: "memory"
+ 	);
+
+#if MAX_CORES > 1
+	if (with_ipi)
+		ipi_tlb_flush();
+#endif
+}
+
+/** @brief Flush a specific page entry in TLB
+ * @param addr The (virtual) address of the page to flush
+ */
+ static inline void tlb_flush_one_page(size_t addr, uint8_t with_ipi)
+ {
+ 	asm volatile(
+ 		"tlbi vaae1, %0 \n\t"
+		"isb"
+ 		:
+ 		: "r" (addr)
+ 		: "memory"
+ 	);
+
+ 	#if MAX_CORES > 1
+ 		if (with_ipi)
+ 			ipi_tlb_flush();
+ 	#endif
+ }
+
 /// Force strict CPU ordering, serializes load and store operations.
 static inline void mb(void) { asm volatile ("dmb sy" : : : "memory"); }
 /// Force strict CPU ordering, serializes load operations.
 static inline void rmb(void) { asm volatile ("dmb ld" : : : "memory"); }
 /// Force strict CPU ordering, serializes store operations.
 static inline void wmb(void) { asm volatile ("dmb st" : : : "memory"); }
+
+static inline size_t msb(size_t i) {
+	size_t ret, tmp = 63;
+
+	if (!i)
+		return (sizeof(size_t)*8);
+	asm volatile (
+		"clz %0, %1\n\t"
+		"sub %0, %2, %0"
+	 	: "=r"(ret)
+	 	: "r"(i), "r"(tmp)
+	 	: "cc");
+
+	return ret;
+}
 
 /** @brief Init several subsystems
  *

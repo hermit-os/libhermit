@@ -43,14 +43,13 @@
 extern "C" {
 #endif
 
-static inline size_t msb(size_t i) { return 0; }
 
 /**
  * @brief Switch to current task
  *
  * @param stack Pointer to the old stack pointer
  */
-static inline void switch_context(size_t** stack) {}
+void switch_context(size_t** stack);
 
 /** @brief Setup a default frame for a new task
  *
@@ -62,7 +61,7 @@ static inline void switch_context(size_t** stack) {}
  * - 0 on success
  * - -EINVAL (-22) on failure
  */
-static inline int create_default_frame(task_t* task, entry_point_t ep, void* arg, uint32_t core_id) { return 0; }
+int create_default_frame(task_t* task, entry_point_t ep, void* arg, uint32_t core_id);
 
 /** @brief Jump to user code
  *

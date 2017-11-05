@@ -139,8 +139,8 @@ int timer_wait(unsigned int ticks)
 		}
 	}
 
-	return 0;
 #endif
+	return 0;
 }
 
 #if 0
@@ -211,4 +211,5 @@ int timer_init(void)
 
 	return pit_init();
 #endif
+	return 0;
 }

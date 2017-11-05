@@ -36,3 +36,13 @@ int enable_dynticks(void)
 {
 	return 0;
 }
+
+int irq_handler(int int_nr)
+{
+	kputs("\nWe made it to the irq_handler!\n");
+	char str[100];
+	itoa(int_nr, str);
+	kputs(str);
+	kputs("\n\n");
+	return 0;
+}
