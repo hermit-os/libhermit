@@ -451,7 +451,7 @@ int cpu_detection(void) {
 		kprintf("Syscall instruction: %s\n", (cpu_info.feature3 & CPU_FEATURE_SYSCALL) ? "available" : "unavailable");
 	}
 
-	//TODO: add check for SMEP and SMAP
+	//TODO: add check for SMEP, PCE and SMAP
 
 	// be sure that AM, NE and MP is enabled
 	cr0 = read_cr0();
@@ -476,7 +476,9 @@ int cpu_detection(void) {
 		cr4 |= CR4_MCE;		// enable machine check exceptions
 	//if (has_vmx())
 	//	cr4 |= CR4_VMXE;
-	cr4 &= ~CR4_TSD;		// => every privilege level is able to use rdtsc
+	cr4 &= ~(CR4_PCE|CR4_TSD);	// disable performance monitoring counter
+								// clear TSD => every privilege level is able
+								// to use rdtsc
 	write_cr4(cr4);
 
 
