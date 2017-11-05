@@ -35,18 +35,20 @@ int vma_arch_init(void)
 	int ret = 0;
 
 	if (mb_info) {
-		ret = vma_add((size_t)mb_info & PAGE_MASK, ((size_t)mb_info & PAGE_MASK) + PAGE_SIZE, VMA_READ|VMA_WRITE);
+		ret = vma_add((size_t)mb_info & PAGE_MASK, ((size_t)mb_info & PAGE_MASK) + PAGE_SIZE,
+			VMA_READ|VMA_WRITE|VMA_CACHEABLE);
 		if (BUILTIN_EXPECT(ret, 0))
 			goto out;
 
 		if ((mb_info->flags & MULTIBOOT_INFO_CMDLINE) && cmdline) {
-			LOG_INFO("vma_arch_init: map cmdline %p (size 0x%zd)", cmdline, cmdsize);
+			LOG_INFO("vma_arch_init: map cmdline %p (size 0x%zd)\n", cmdline, cmdsize);
 
 			size_t i = 0;
 			while(((size_t) cmdline + i) < ((size_t) cmdline + cmdsize))
 			{
 				if ((((size_t)cmdline + i) & PAGE_MASK) != ((size_t) mb_info & PAGE_MASK)) {
-					ret = vma_add(((size_t)cmdline + i) & PAGE_MASK, (((size_t)cmdline + i) & PAGE_MASK) + PAGE_SIZE, VMA_READ|VMA_WRITE);
+					ret = vma_add(((size_t)cmdline + i) & PAGE_MASK, (((size_t)cmdline + i) & PAGE_MASK) + PAGE_SIZE,
+						VMA_READ|VMA_WRITE|VMA_CACHEABLE);
 					if (BUILTIN_EXPECT(ret, 0))
 						goto out;
 				}
