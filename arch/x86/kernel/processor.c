@@ -635,7 +635,12 @@ int cpu_detection(void) {
 		LOG_INFO("Maximum input value for hypervisor: 0x%x\n", a);
 	}
 
+
 	if (first_time) {
+		// enable fast string operations
+		uint64_t misc = rdmsr(MSR_IA32_MISC_ENABLE);
+		wrmsr(MSR_IA32_MISC_ENABLE, misc | MSR_IA32_MISC_ENABLE_FAST_STRING);
+
 		LOG_INFO("CR0 0x%llx, CR4 0x%llx\n", read_cr0(), read_cr4());
 		LOG_INFO("size of xsave_t: %d\n", sizeof(xsave_t));
 		if (has_msr()) {
