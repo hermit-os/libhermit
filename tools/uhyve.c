@@ -1069,8 +1069,20 @@ static int vcpu_init(void)
 		kvm_ioctl(vcpufd, KVM_SET_XSAVE, &xsave);
 		kvm_ioctl(vcpufd, KVM_SET_VCPU_EVENTS, &events);
 	} else {
+		struct {
+			struct kvm_msrs info;
+			struct kvm_msr_entry entries[MAX_MSR_ENTRIES];
+		} msr_data;
+		struct kvm_msr_entry *msrs = msr_data.entries;
+
 		// be sure that the multiprocessor is runable
 		kvm_ioctl(vcpufd, KVM_SET_MP_STATE, &mp_state);
+
+		// enable fast string operations
+		msrs[0].index = MSR_IA32_MISC_ENABLE;
+		msrs[0].data = 1;
+		msr_data.info.nmsrs = 1;
+		kvm_ioctl(vcpufd, KVM_SET_MSRS, &msr_data);
 
 		/* Setup registers and memory. */
 		setup_system(vcpufd, guest_mem, cpuid);
