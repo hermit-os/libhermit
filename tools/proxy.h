@@ -28,6 +28,12 @@
 #ifndef __PROXY_H__
 #define __PROXY_H__
 
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
+#include <unistd.h>
+#include <stdlib.h>
 #include <stdint.h>
 
 #define HERMIT_ELFOSABI	0x42
@@ -41,5 +47,9 @@
 
 int uhyve_init(char *path);
 int uhyve_loop(void);
+
+// define some helper functions
+uint32_t get_cpufreq(void);
+ssize_t pread_in_full(int fd, void *buf, size_t count, off_t offset);
 
 #endif

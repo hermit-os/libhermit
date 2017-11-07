@@ -32,7 +32,7 @@
  *            remove memory limit
  */
 
-#define _GNU_SOURCE
+ #define _GNU_SOURCE
 
 #include <unistd.h>
 #include <stdio.h>
@@ -286,75 +286,6 @@ static void uhyve_atexit(void)
 	// clean up and close KVM
 	close_fd(&vmfd);
 	close_fd(&kvm);
-}
-
-static uint32_t get_cpufreq(void)
-{
-	char line[128];
-	uint32_t freq = 0;
-	char* match;
-
-	FILE* fp = fopen("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq", "r");
-	if (fp != NULL) {
-		if (fgets(line, sizeof(line), fp) != NULL) {
-			// cpuinfo_max_freq is in kHz
-			freq = (uint32_t) atoi(line) / 1000;
-		}
-
-		fclose(fp);
-	} else if( (fp = fopen("/proc/cpuinfo", "r")) ) {
-		// Resorting to /proc/cpuinfo, however on most systems this will only
-		// return the current frequency that might change over time.
-		// Currently only needed when running inside a VM
-
-		// read until we find the line indicating cpu frequency
-		while(fgets(line, sizeof(line), fp) != NULL) {
-			match = strstr(line, "cpu MHz");
-
-			if(match != NULL) {
-				// advance pointer to beginning of number
-				while( ((*match < '0') || (*match > '9')) && (*match != '\0') )
-					match++;
-
-				freq = (uint32_t) atoi(match);
-				break;
-			}
-		}
-
-		fclose(fp);
-	}
-
-	return freq;
-}
-
-static ssize_t pread_in_full(int fd, void *buf, size_t count, off_t offset)
-{
-	ssize_t total = 0;
-	char *p = buf;
-
-	if (count > SSIZE_MAX) {
-		errno = E2BIG;
-		return -1;
-	}
-
-	while (count > 0) {
-		ssize_t nr;
-
-		nr = pread(fd, p, count, offset);
-		if (nr == 0)
-			return total;
-		else if (nr == -1 && errno == EINTR)
-			continue;
-		else if (nr == -1)
-			return -1;
-
-		count -= nr;
-		total += nr;
-		p += nr;
-		offset += nr;
-	}
-
-	return total;
 }
 
 static int load_kernel(uint8_t* mem, char* path)
