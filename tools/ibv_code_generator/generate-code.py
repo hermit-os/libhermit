@@ -61,7 +61,7 @@ Required in: ./kernel/ibv.c
       return uhyve_args.ret;
   }
 
-3. The switch-case that catches the KVM exit IO sent to uhyve by the kernel.
+3. TODO The switch-case that catches the KVM exit IO sent to uhyve by the kernel.
 Required in: ./tool/uhyve.c
 
   Example:
@@ -87,6 +87,9 @@ Required in: ./tool/uhyve-ibv.h
   } uhyve_ibv_t;
 """
 
+from __future__ import print_function
+import pyparsing as pp
+
 
 # Path of the input file containing function prototypes.
 SRC_PATH = "function-prototypes-0.txt"
@@ -98,6 +101,7 @@ UHYVE_IBV_HEADER_GEN_PATH = "GEN-tools-uhyve-ibv-ports.h"
 INCLUDE_STDDEF_GEN_PATH = "GEN-include-hermit-stddef.h"
 UHYVE_IBV_HEADER_STRUCTS_GEN_PATH = "GEN-tools-uhyve-ibv-structs.h"
 UHYVE_HOST_FCNS_GEN_PATH = "GEN-tools-uhyve-ibv.c"
+VERBS_HEADER_PATH = "verbs-0.h"
 
 # Starting number of the sequence used for IBV ports.
 PORT_NUMBER_START = 0x510
@@ -329,13 +333,44 @@ def generate_port_macros(function_names):
                                                        format(num, "X"))
   return macros
 
+def generate_struct_conversions():
+  
+  word = pp.Word(pp.alphas+"_", bodyChars=pp.alphanums+"_")
+
+  struct_header = (pp.Literal("struct").suppress() + word +
+                   pp.Literal("{").suppress())
+  struct_footer = pp.Literal("};").suppress()
+
+  # member_name = word + pp.Literal(";")#.suppress()
+  # variable_type = (pp.OneOrMore(word) + pp.ZeroOrMore("*") +
+                   # pp.FollowedBy(member_name))
+  # variable_type = (pp.Combine(pp.OneOrMore(word)) + pp.ZeroOrMore("*") +
+                   # pp.FollowedBy(member_name))
+  # struct_member = variable_type + member_name
+  # struct_body = pp.OneOrMore(struct_member)
+
+  member = pp.OneOrMore(word) + pp.Literal(";")
+  ptr_member = pp.OneOrMore(word) + pp.OneOrMore("*") + word + pp.Literal(";")
+  struct_body = pp.OneOrMore(member ^ ptr_member)
+
+
+  struct = struct_header + struct_body + struct_footer
+  
+  with open(VERBS_HEADER_PATH, "r") as f_verbs:
+    code = f_verbs.read()
+    res = struct.parseString(code)
+    print(res)
+
 
 if __name__ == "__main__":
+  """TODO: Doc
+  """
   with open(SRC_PATH, "r") as f_src, \
-          open(IBV_GEN_PATH, "w") as f_ibv, \
-          open(UHYVE_HOST_FCNS_GEN_PATH, "w") as f_uhyve_host_fncs, \
-          open(UHYVE_IBV_HEADER_STRUCTS_GEN_PATH, "w") as f_structs:
+       open(IBV_GEN_PATH, "w") as f_ibv, \
+       open(UHYVE_HOST_FCNS_GEN_PATH, "w") as f_uhyve_host_fncs, \
+       open(UHYVE_IBV_HEADER_STRUCTS_GEN_PATH, "w") as f_structs:
     function_names = []
+    # Make this like the structure below.
     for line in f_src:
       ret, function_name, params = parse_line(line)
       function_names.append(function_name)
@@ -361,3 +396,9 @@ if __name__ == "__main__":
   with open(INCLUDE_STDDEF_GEN_PATH, "w") as f_stddef:
     port_macros = generate_port_macros(function_names)
     f_stddef.write(port_macros)
+
+  generate_struct_conversions()
+
+  
+
+
