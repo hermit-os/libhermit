@@ -91,6 +91,8 @@ size_t vma_alloc(size_t size, uint32_t flags)
 	size_t base = VMA_MIN;
 	size_t limit = VMA_MAX;
 
+	size = PAGE_CEIL(size);
+
 	spinlock_irqsave_lock(lock);
 
 	// first fit search for free memory area
@@ -237,7 +239,7 @@ int vma_add(size_t start, size_t end, uint32_t flags)
 
 	if (pred && (pred->end == start) && (pred->flags == flags)) {
 		pred->end = end; // resize VMA
-		LOG_DEBUG("vma_alloc: resize vma, start 0x%zx, pred->start 0x%zx, pred->end 0x%zx\n", start, pred->start, pred->end);
+		LOG_DEBUG("vma_add: resize vma, start 0x%zx, pred->start 0x%zx, pred->end 0x%zx\n", start, pred->start, pred->end);
 	} else {
 		// insert new VMA
 		vma_t* new = kmalloc(sizeof(vma_t));
@@ -251,9 +253,11 @@ int vma_add(size_t start, size_t end, uint32_t flags)
 		new->flags = flags;
 		new->next = succ;
 		new->prev = pred;
+		LOG_DEBUG("vma_add: create new vma, new->start 0x%zx, new->end 0x%zx\n", new->start, new->end);
 
 		if (succ)
 			succ->prev = new;
+
 		if (pred)
 			pred->next = new;
 		else
@@ -266,21 +270,22 @@ fail:
 	return ret;
 }
 
+static void print_vma(vma_t *vma)
+{
+	while (vma) {
+		LOG_INFO("0x%lx - 0x%lx: size=0x%x, flags=%c%c%c%s\n", vma->start, vma->end, vma->end - vma->start,
+			(vma->flags & VMA_READ) ? 'r' : '-',
+			(vma->flags & VMA_WRITE) ? 'w' : '-',
+			(vma->flags & VMA_EXECUTE) ? 'x' : '-',
+			(vma->flags & VMA_CACHEABLE) ? "" : " (uncached)");
+		vma = vma->next;
+	}
+}
+
 void vma_dump(void)
 {
-	void print_vma(vma_t *vma) {
-		while (vma) {
-			LOG_INFO("0x%lx - 0x%lx: size=0x%x, flags=%c%c%c%s\n", vma->start, vma->end, vma->end - vma->start,
-				(vma->flags & VMA_READ) ? 'r' : '-',
-				(vma->flags & VMA_WRITE) ? 'w' : '-',
-				(vma->flags & VMA_EXECUTE) ? 'x' : '-',
-				(vma->flags & VMA_CACHEABLE) ? "" : " (uncached)");
-			vma = vma->next;
-		}
-	}
-
 	LOG_INFO("VMAs:\n");
 	spinlock_irqsave_lock(&hermit_mm_lock);
-	print_vma(&vma_boot);
+	print_vma(vma_list);
 	spinlock_irqsave_unlock(&hermit_mm_lock);
 }

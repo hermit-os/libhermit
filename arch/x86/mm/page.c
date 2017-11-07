@@ -331,7 +331,8 @@ int page_init(void)
 
 		while(((size_t) cmdline + i) <= ((size_t) cmdline + cmdsize))
 		{
-			page_map(((size_t) cmdline + i) & PAGE_MASK, ((size_t) cmdline + i) & PAGE_MASK, 1, PG_GLOBAL|PG_RW|PG_PRESENT);
+			page_map(((size_t) cmdline + i) & PAGE_MASK, ((size_t) cmdline + i) & PAGE_MASK,
+				1, PG_NX|PG_GLOBAL|PG_RW|PG_PRESENT);
 			i += PAGE_SIZE;
 		}
 	} else cmdline = 0;

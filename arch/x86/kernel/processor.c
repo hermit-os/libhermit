@@ -416,7 +416,7 @@ int cpu_detection(void) {
 		cpuid(0x80000000, &extended, &b, &c, &d);
 		if (extended >= 0x80000001)
 			cpuid(0x80000001, &a, &b, &c, &cpu_info.feature3);
-		if (extended >= 0x80000008) {
+		if (extended >= 0x80000004) {
 			uint32_t* bint = (uint32_t*) cpu_brand;
 
 			cpuid(0x80000002, bint+0, bint+1, bint+2, bint+3);
@@ -451,7 +451,7 @@ int cpu_detection(void) {
 		kprintf("Syscall instruction: %s\n", (cpu_info.feature3 & CPU_FEATURE_SYSCALL) ? "available" : "unavailable");
 	}
 
-	//TODO: add check for SMEP and SMAP
+	//TODO: add check for SMEP, PCE and SMAP
 
 	// be sure that AM, NE and MP is enabled
 	cr0 = read_cr0();
@@ -476,7 +476,9 @@ int cpu_detection(void) {
 		cr4 |= CR4_MCE;		// enable machine check exceptions
 	//if (has_vmx())
 	//	cr4 |= CR4_VMXE;
-	cr4 &= ~CR4_TSD;		// => every privilege level is able to use rdtsc
+	cr4 &= ~(CR4_PCE|CR4_TSD);	// disable performance monitoring counter
+								// clear TSD => every privilege level is able
+								// to use rdtsc
 	write_cr4(cr4);
 
 
@@ -632,6 +634,7 @@ int cpu_detection(void) {
 		LOG_INFO("Hypervisor Vendor Id: %s\n", vendor_id);
 		LOG_INFO("Maximum input value for hypervisor: 0x%x\n", a);
 	}
+
 
 	if (first_time) {
 		LOG_INFO("CR0 0x%llx, CR4 0x%llx\n", read_cr0(), read_cr4());

@@ -129,33 +129,13 @@ static void exit_handler(int sig)
 
 static char* get_append_string(void)
 {
-	char line[2048];
-	char* match;
-	char* point;
+	uint32_t freq = get_cpufreq();
+	if (freq == 0)
+		return "-freq0 -proxy";
 
-	FILE* fp = fopen("/proc/cpuinfo", "r");
-	if (!fp)
-		return "-freq0";
+	snprintf(cmdline, MAX_PATH, "\"-freq%u -proxy\"", freq);
 
-	while(fgets(line, 2048, fp)) {
-		if ((match = strstr(line, "cpu MHz")) == NULL)
-			continue;
-
-		// scan strinf for the next number
-		for(; (*match < 0x30) || (*match > 0x39); match++)
-			;
-
-		for(point = match; ((*point != '.') && (*point != '\0')); point++)
-			;
-		*point = '\0';
-
-		snprintf(cmdline, MAX_PATH, "\"-freq%s -proxy\"", match);
-		fclose(fp);
-
-		return cmdline;
-	}
-
-	return "-freq0";
+	return cmdline;
 }
 
 static int env_init(char *path)

@@ -31,6 +31,7 @@
 #include <hermit/tasks.h>
 #include <hermit/errno.h>
 #include <hermit/processor.h>
+#include <hermit/logging.h>
 #include <asm/gdt.h>
 #include <asm/tss.h>
 #include <asm/page.h>
@@ -41,7 +42,6 @@ gdt_ptr_t		gp;
 // currently, our kernel has full access to the ioports
 static gdt_entry_t	gdt[GDT_ENTRIES] = {[0 ... GDT_ENTRIES-1] = {0, 0, 0, 0, 0, 0}};
 static tss_t		task_state_segments[MAX_CORES] __attribute__ ((aligned (PAGE_SIZE)));
-static uint8_t		stack_table[MAX_CORES][KERNEL_STACK_SIZE*MAX_IST] __attribute__ ((aligned (PAGE_SIZE)));
 
 extern const void boot_stack;
 
@@ -94,7 +94,8 @@ void gdt_install(void)
 {
 	int i, num = 0;
 
-	memset(task_state_segments, 0x00, MAX_CORES*sizeof(tss_t));
+	// part of bss => already initialized
+	//memset(task_state_segments, 0x00, MAX_CORES*sizeof(tss_t));
 
 	/* Setup the GDT pointer and limit */
 	gp.limit = (sizeof(gdt_entry_t) * GDT_ENTRIES) - 1;
@@ -148,10 +149,6 @@ void gdt_install(void)
 	 */
 	for(i=0; i<MAX_CORES; i++) {
 		task_state_segments[i].rsp0 = (size_t)&boot_stack + (i+1) * KERNEL_STACK_SIZE - 0x10;
-		task_state_segments[i].ist1 = 0; // ist will created per task
-		task_state_segments[i].ist2 = (size_t) stack_table[i] + (2 /*IST number */ - 1) * KERNEL_STACK_SIZE - 0x10;
-		task_state_segments[i].ist3 = (size_t) stack_table[i] + (3 /*IST number */ - 1) * KERNEL_STACK_SIZE - 0x10;
-		task_state_segments[i].ist4 = (size_t) stack_table[i] + (4 /*IST number */ - 1) * KERNEL_STACK_SIZE - 0x10;
 
 		gdt_set_gate(num+i*2, (unsigned long) (task_state_segments+i), sizeof(tss_t),
 			GDT_FLAG_PRESENT | GDT_FLAG_TSS | GDT_FLAG_RING0, 0);
@@ -159,4 +156,21 @@ void gdt_install(void)
 
 	/* Flush out the old GDT and install the new changes! */
 	gdt_flush();
+}
+
+void tss_init(void)
+{
+	LOG_INFO("Initialized the task state segments\n");
+
+	for(int i=0; i<MAX_CORES; i++) {
+		// ist1 will created per task
+		if (task_state_segments[i].ist2 == 0)
+			task_state_segments[i].ist2 = (size_t) create_stack(KERNEL_STACK_SIZE) + KERNEL_STACK_SIZE - 0x10;
+		if (task_state_segments[i].ist2 == 0)
+			task_state_segments[i].ist2 = (size_t) create_stack(KERNEL_STACK_SIZE) + KERNEL_STACK_SIZE - 0x10;
+		if (task_state_segments[i].ist3 == 0)
+			task_state_segments[i].ist3 = (size_t) create_stack(KERNEL_STACK_SIZE) + KERNEL_STACK_SIZE - 0x10;
+		if (task_state_segments[i].ist4 == 0)
+			task_state_segments[i].ist4 = (size_t) create_stack(KERNEL_STACK_SIZE) + KERNEL_STACK_SIZE - 0x10;
+	}
 }
