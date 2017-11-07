@@ -416,7 +416,7 @@ int cpu_detection(void) {
 		cpuid(0x80000000, &extended, &b, &c, &d);
 		if (extended >= 0x80000001)
 			cpuid(0x80000001, &a, &b, &c, &cpu_info.feature3);
-		if (extended >= 0x80000008) {
+		if (extended >= 0x80000004) {
 			uint32_t* bint = (uint32_t*) cpu_brand;
 
 			cpuid(0x80000002, bint+0, bint+1, bint+2, bint+3);
