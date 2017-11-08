@@ -1028,7 +1028,7 @@ int main(int argc, char **argv)
 
 	switch(monitor) {
 	case UHYVE:
-		return uhyve_loop();
+		return uhyve_loop(argc, argv);
 
 	case BAREMETAL:
 	case QEMU:

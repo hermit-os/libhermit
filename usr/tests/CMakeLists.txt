@@ -5,6 +5,7 @@ project(hermit_tests C CXX Fortran Go)
 
 add_executable(hello hello.c)
 add_executable(jacobi jacobi.c)
+add_executable(argv_envp argv_envp.c)
 add_executable(hello++ hello++.cpp)
 add_executable(hellof hellof.f90)
 add_executable(pi pi.go)
