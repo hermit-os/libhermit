@@ -203,9 +203,9 @@ char **uhyve_envp = NULL;
 
 typedef struct {
 	int argc;
-	int argsz[128];
+	int argsz[MAX_ARGC_ENVC];
 	int envc;
-	int envsz[128];
+	int envsz[MAX_ARGC_ENVC];
 } __attribute__ ((packed)) uhyve_cmdsize_t;
 
 typedef struct {
@@ -1604,6 +1604,13 @@ int uhyve_loop(int argc, char **argv)
 	while(uhyve_envp[i] != NULL)
 		i++;
 	uhyve_envc = i;
+
+	if(uhyve_argc > MAX_ARGC_ENVC || uhyve_envc > MAX_ARGC_ENVC) {
+		fprintf(stderr, "uhyve cannot forward more than %d command line "
+			"arguments or environment variables, please consider increasing "
+				"the MAX_ARGC_ENVP cmake argument\n", MAX_ARGC_ENVC);
+		return -1;
+	}
 
 	if (hermit_check)
 		ts = atoi(hermit_check);
