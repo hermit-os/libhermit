@@ -279,7 +279,7 @@ def generate_uhyve_host_function(ret, function_name, params):
   fcn = "{0}void call_{1}(struct kvm_run * run, uint8_t * guest_mem) {{".format(NEWLINES[1], function_name)
   fcn += "{0}{1}unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));".format(NEWLINES[1], TABS[1])
   fcn += "{0}{1}{2} * args = ({2} *) (guest_mem + data);".format(NEWLINES[1], TABS[1], struct_name)
-  fcn += "{0}{1}{2} host_ret = {1}(".format(NEWLINES[2], TABS[1], ret, function_name)
+  fcn += "{0}{1}{2} host_ret = {3}(".format(NEWLINES[2], TABS[1], ret, function_name)
 
   for param in params[:-1]:
     fcn += generate_host_call_parameter(param) + ", "
@@ -341,25 +341,26 @@ def generate_struct_conversions():
                    pp.Literal("{").suppress())
   struct_footer = pp.Literal("};").suppress()
 
-  # member_name = word + pp.Literal(";")#.suppress()
-  # variable_type = (pp.OneOrMore(word) + pp.ZeroOrMore("*") +
-                   # pp.FollowedBy(member_name))
-  # variable_type = (pp.Combine(pp.OneOrMore(word)) + pp.ZeroOrMore("*") +
-                   # pp.FollowedBy(member_name))
-  # struct_member = variable_type + member_name
-  # struct_body = pp.OneOrMore(struct_member)
+  member_var = word + pp.Literal(";").suppress()
+  member_type = (pp.Combine(pp.OneOrMore(word + ~pp.FollowedBy(pp.Literal(";"))),
+                            joinString=" ", adjacent=False) 
+                 + pp.ZeroOrMore("*") + pp.FollowedBy(member_var))
+  
+  member = pp.Group(member_type + member_var)
+  body = pp.OneOrMore(member)
 
-  member = pp.OneOrMore(word) + pp.Literal(";")
-  ptr_member = pp.OneOrMore(word) + pp.OneOrMore("*") + word + pp.Literal(";")
-  struct_body = pp.OneOrMore(member ^ ptr_member)
+  struct = struct_header + body + struct_footer
 
-
-  struct = struct_header + struct_body + struct_footer
+  # TODO: Not bullet proof yet.
+  comment = pp.Or([pp.Literal("/*") + pp.SkipTo(pp.Literal("*/")),
+                   pp.Literal("//") + pp.SkipTo(pp.LineEnd())])
+  struct.ignore(comment)
   
   with open(VERBS_HEADER_PATH, "r") as f_verbs:
     code = f_verbs.read()
-    res = struct.parseString(code)
-    print(res)
+
+  # for result, _, _ in struct.scanString(code):
+    # print("{0}".format(result))
 
 
 if __name__ == "__main__":

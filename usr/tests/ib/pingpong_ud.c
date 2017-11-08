@@ -346,95 +346,95 @@ static struct pingpong_context *pp_init_ctx(struct ibv_device *ib_dev, int size,
 	} else
 		ctx->channel = NULL;
 
-	ctx->pd = ibv_alloc_pd(ctx->context);
-	if (!ctx->pd) {
-		fprintf(stderr, "Couldn't allocate PD\n");
-		goto clean_comp_channel;
-	}
+	/*ctx->pd = ibv_alloc_pd(ctx->context);*/
+	/*if (!ctx->pd) {*/
+		/*fprintf(stderr, "Couldn't allocate PD\n");*/
+		/*goto clean_comp_channel;*/
+	/*}*/
 
-	ctx->mr = ibv_reg_mr(ctx->pd, ctx->buf, size + 40, IBV_ACCESS_LOCAL_WRITE);
-	if (!ctx->mr) {
-		fprintf(stderr, "Couldn't register MR\n");
-		goto clean_pd;
-	}
+	/*ctx->mr = ibv_reg_mr(ctx->pd, ctx->buf, size + 40, IBV_ACCESS_LOCAL_WRITE);*/
+	/*if (!ctx->mr) {*/
+		/*fprintf(stderr, "Couldn't register MR\n");*/
+		/*goto clean_pd;*/
+	/*}*/
 
-	ctx->cq = ibv_create_cq(ctx->context, rx_depth + 1, NULL,
-				ctx->channel, 0);
-	if (!ctx->cq) {
-		fprintf(stderr, "Couldn't create CQ\n");
-		goto clean_mr;
-	}
+	/*ctx->cq = ibv_create_cq(ctx->context, rx_depth + 1, NULL,*/
+				/*ctx->channel, 0);*/
+	/*if (!ctx->cq) {*/
+		/*fprintf(stderr, "Couldn't create CQ\n");*/
+		/*goto clean_mr;*/
+	/*}*/
 
-	{
-		struct ibv_qp_attr attr;
-		struct ibv_qp_init_attr init_attr = {
-			.send_cq = ctx->cq,
-			.recv_cq = ctx->cq,
-			.cap     = {
-				.max_send_wr  = 1,
-				.max_recv_wr  = rx_depth,
-				.max_send_sge = 1,
-				.max_recv_sge = 1
-			},
-			.qp_type = IBV_QPT_UD,
-		};
+	/*{*/
+		/*struct ibv_qp_attr attr;*/
+		/*struct ibv_qp_init_attr init_attr = {*/
+			/*.send_cq = ctx->cq,*/
+			/*.recv_cq = ctx->cq,*/
+			/*.cap     = {*/
+				/*.max_send_wr  = 1,*/
+				/*.max_recv_wr  = rx_depth,*/
+				/*.max_send_sge = 1,*/
+				/*.max_recv_sge = 1*/
+			/*},*/
+			/*.qp_type = IBV_QPT_UD,*/
+		/*};*/
 
-		ctx->qp = ibv_create_qp(ctx->pd, &init_attr);
-		if (!ctx->qp)  {
-			fprintf(stderr, "Couldn't create QP\n");
-			goto clean_cq;
-		}
+		/*ctx->qp = ibv_create_qp(ctx->pd, &init_attr);*/
+		/*if (!ctx->qp)  {*/
+			/*fprintf(stderr, "Couldn't create QP\n");*/
+			/*goto clean_cq;*/
+		/*}*/
 
-		ibv_query_qp(ctx->qp, &attr, IBV_QP_CAP, &init_attr);
-		if (init_attr.cap.max_inline_data >= size) {
-			ctx->send_flags |= IBV_SEND_INLINE;
-		}
-	}
+		/*ibv_query_qp(ctx->qp, &attr, IBV_QP_CAP, &init_attr);*/
+		/*if (init_attr.cap.max_inline_data >= size) {*/
+			/*ctx->send_flags |= IBV_SEND_INLINE;*/
+		/*}*/
+	/*}*/
 
-	{
-		struct ibv_qp_attr attr = {
-			.qp_state        = IBV_QPS_INIT,
-			.pkey_index      = 0,
-			.port_num        = port,
-			.qkey            = 0x11111111
-		};
+	/*{*/
+		/*struct ibv_qp_attr attr = {*/
+			/*.qp_state        = IBV_QPS_INIT,*/
+			/*.pkey_index      = 0,*/
+			/*.port_num        = port,*/
+			/*.qkey            = 0x11111111*/
+		/*};*/
 
-		if (ibv_modify_qp(ctx->qp, &attr,
-				  IBV_QP_STATE              |
-				  IBV_QP_PKEY_INDEX         |
-				  IBV_QP_PORT               |
-				  IBV_QP_QKEY)) {
-			fprintf(stderr, "Failed to modify QP to INIT\n");
-			goto clean_qp;
-		}
-	}
+		/*if (ibv_modify_qp(ctx->qp, &attr,*/
+					/*IBV_QP_STATE              |*/
+					/*IBV_QP_PKEY_INDEX         |*/
+					/*IBV_QP_PORT               |*/
+					/*IBV_QP_QKEY)) {*/
+			/*fprintf(stderr, "Failed to modify QP to INIT\n");*/
+			/*goto clean_qp;*/
+		/*}*/
+	/*}*/
 
-	return ctx;
+	/*return ctx;*/
 
 clean_qp:
-	ibv_destroy_qp(ctx->qp);
+	/*ibv_destroy_qp(ctx->qp);*/
 
 clean_cq:
-	ibv_destroy_cq(ctx->cq);
+	/*ibv_destroy_cq(ctx->cq);*/
 
 clean_mr:
-	ibv_dereg_mr(ctx->mr);
+	/*ibv_dereg_mr(ctx->mr);*/
 
 clean_pd:
-	ibv_dealloc_pd(ctx->pd);
+	/*ibv_dealloc_pd(ctx->pd);*/
 
 clean_comp_channel:
-	if (ctx->channel)
-		ibv_destroy_comp_channel(ctx->channel);
+	/*if (ctx->channel)*/
+		/*ibv_destroy_comp_channel(ctx->channel);*/
 
 clean_device:
-	ibv_close_device(ctx->context);
+	/*ibv_close_device(ctx->context);*/
 
 clean_buffer:
-	free(ctx->buf);
+	/*free(ctx->buf);*/
 
 clean_ctx:
-	free(ctx);
+	/*free(ctx);*/
 
 	return NULL;
 }
