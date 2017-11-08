@@ -41,6 +41,7 @@
 #include <asm/page.h>
 #include <asm/uart.h>
 #include <asm/multiboot.h>
+#include <asm/uhyve.h>
 
 #include <lwip/init.h>
 #include <lwip/sys.h>
@@ -64,6 +65,22 @@
 
 #define HERMIT_PORT	0x494E
 #define HERMIT_MAGIC	0x7E317
+
+/* Ports and data structures for command line args + envp forwarding to uhyve */
+#define UHYVE_PORT_CMDSIZE	0x509
+#define UHYVE_PORT_CMDVAL	0x510
+
+typedef struct {
+	int argc;
+	int argsz[MAX_ARGC_ENVC];
+	int envc;
+	int envsz[MAX_ARGC_ENVC];
+} __attribute__ ((packed)) uhyve_cmdsize_t;
+
+typedef struct {
+	char **argv;
+	char **envp;
+} __attribute__ ((packed)) uhyve_cmdval_t;
 
 static struct netif	default_netif;
 static const int sobufsize = 131072;
@@ -369,6 +386,37 @@ static int initd(void* arg)
 
 	// initialize network
 	err = init_netifs();
+
+	if(is_uhyve()) {
+		int i;
+		uhyve_cmdsize_t uhyve_cmdsize;
+		uhyve_cmdval_t uhyve_cmdval;
+
+		uhyve_send(UHYVE_PORT_CMDSIZE,
+				(unsigned)virt_to_phys((size_t)&uhyve_cmdsize));
+
+		uhyve_cmdval.argv = kmalloc(uhyve_cmdsize.argc * sizeof(char *));
+		for(i=0; i<uhyve_cmdsize.argc; i++)
+			uhyve_cmdval.argv[i] = kmalloc(uhyve_cmdsize.argsz[i] * sizeof(char));
+		uhyve_cmdval.envp = kmalloc(uhyve_cmdsize.envc * sizeof(char *));
+		for(i=0; i<uhyve_cmdsize.envc; i++)
+			uhyve_cmdval.envp[i] = kmalloc(uhyve_cmdsize.envsz[i] * sizeof(char));
+
+		uhyve_send(UHYVE_PORT_CMDVAL,
+				(unsigned)virt_to_phys((size_t)&uhyve_cmdval));
+
+		LOG_INFO("Boot time: %d ms\n", (get_clock_tick() * 1000) / TIMER_FREQ);
+		libc_start(uhyve_cmdsize.argc, uhyve_cmdval.argv, uhyve_cmdval.envp);
+
+		for(i=0; i<argc; i++)
+			kfree(uhyve_cmdval.argv[i]);
+		kfree(uhyve_cmdval.argv);
+		for(i=0; i<envc; i++)
+			kfree(uhyve_cmdval.envp[i]);
+		kfree(uhyve_cmdval.envp);
+
+		return 0;
+	}
 
 	if ((err != 0) || !is_proxy())
 	{

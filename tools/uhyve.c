@@ -190,6 +190,29 @@ static __thread struct kvm_run *run = NULL;
 static __thread int vcpufd = -1;
 static __thread uint32_t cpuid = 0;
 
+int uhyve_argc = -1;
+int uhyve_envc = -1;
+char **uhyve_argv = NULL;
+extern char **environ;
+char **uhyve_envp = NULL;
+
+/* Ports and data structures for uhyve command line arguments and envp
+ * forwarding */
+#define UHYVE_PORT_CMDSIZE	0x509
+#define UHYVE_PORT_CMDVAL	0x510
+
+typedef struct {
+	int argc;
+	int argsz[MAX_ARGC_ENVC];
+	int envc;
+	int envsz[MAX_ARGC_ENVC];
+} __attribute__ ((packed)) uhyve_cmdsize_t;
+
+typedef struct {
+	char **argv;
+	char **envp;
+} __attribute__ ((packed)) uhyve_cmdval_t;
+
 static uint64_t memparse(const char *ptr)
 {
 	// local pointer to end of parsed string
@@ -894,6 +917,65 @@ static int vcpu_loop(void)
 					break;
 				}
 
+			case UHYVE_PORT_CMDSIZE: {
+					int i;
+					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
+					uhyve_cmdsize_t *val = (uhyve_cmdsize_t *) (guest_mem+data);
+
+					val->argc = uhyve_argc;
+					for(i=0; i<uhyve_argc; i++)
+						val->argsz[i] = strlen(uhyve_argv[i]);
+
+					val->envc = uhyve_envc;
+					for(i=0; i<uhyve_envc; i++)
+						val->envsz[i] = strlen(uhyve_envp[i]);
+
+					break;
+				}
+
+			case UHYVE_PORT_CMDVAL: {
+					int i;
+					char **argv_ptr, **env_ptr;
+					struct kvm_translation kt;
+					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
+					uhyve_cmdval_t *val = (uhyve_cmdval_t *) (guest_mem+data);
+
+					/* buffers inside uhyve_cmdval are not directlty mapped
+					 * (they are allocated through kmalloc) so we cannot
+					 * used a simple offset as the guest to host, we have to
+					 * walk the guest page table to find the physical address,
+					 * then we can use the offset
+					 */
+
+					/* argv */
+					kt.linear_address = (unsigned long long)val->argv;
+					kvm_ioctl(vcpufd, KVM_TRANSLATE, &kt);
+					argv_ptr = (char **)(guest_mem +
+							(size_t)kt.physical_address);
+
+					for(i=0; i<uhyve_argc; i++) {
+						kt.linear_address = (unsigned long long)argv_ptr[i];
+						kvm_ioctl(vcpufd, KVM_TRANSLATE, &kt);
+						strcpy(guest_mem + (size_t)kt.physical_address,
+								uhyve_argv[i]);
+					}
+
+					/* env */
+					kt.linear_address = (unsigned long long)val->envp;
+					kvm_ioctl(vcpufd, KVM_TRANSLATE, &kt);
+					env_ptr = (char **)(guest_mem +
+							(size_t)kt.physical_address);
+
+					for(i=0; i<uhyve_envc; i++) {
+						kt.linear_address = (unsigned long long)env_ptr[i];
+						kvm_ioctl(vcpufd, KVM_TRANSLATE, &kt);
+						strcpy(guest_mem + (size_t)kt.physical_address,
+								uhyve_envp[i]);
+					}
+
+					break;
+				}
+
 			default:
 				err(1, "KVM: unhandled KVM_EXIT_IO at port 0x%x, direction %d\n", run->io.port, run->io.direction);
 				break;
@@ -1510,10 +1592,25 @@ nextslot:
 	no_checkpoint++;
 }
 
-int uhyve_loop(void)
+int uhyve_loop(int argc, char **argv)
 {
 	const char* hermit_check = getenv("HERMIT_CHECKPOINT");
-	int ts = 0;
+	int ts = 0, i = 0;
+
+	/* argv[0] is 'proxy', do not count it */
+	uhyve_argc = argc-1;
+	uhyve_argv = &argv[1];
+	uhyve_envp = environ;
+	while(uhyve_envp[i] != NULL)
+		i++;
+	uhyve_envc = i;
+
+	if(uhyve_argc > MAX_ARGC_ENVC || uhyve_envc > MAX_ARGC_ENVC) {
+		fprintf(stderr, "uhyve cannot forward more than %d command line "
+			"arguments or environment variables, please consider increasing "
+				"the MAX_ARGC_ENVP cmake argument\n", MAX_ARGC_ENVC);
+		return -1;
+	}
 
 	if (hermit_check)
 		ts = atoi(hermit_check);

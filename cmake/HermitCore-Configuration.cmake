@@ -19,6 +19,10 @@ set(KERNEL_STACK_SIZE 8192 CACHE STRING
 set(DEFAULT_STACK_SIZE 262144 CACHE STRING
 	"Task stack size in bytes")
 
+set(MAX_ARGC_ENVC 128 CACHE STRING
+	"Maximum number of command line parameters and enviroment variables
+	forwarded to uhyve")
+
 option(DYNAMIC_TICKS
 	"Don't use a periodic timer event to keep track of time" ON)
 

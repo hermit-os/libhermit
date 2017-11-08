@@ -36,6 +36,9 @@ foreach(MODULE ${KERNEL_MODULES})
 	target_compile_definitions(${MODULE}
 		PRIVATE -D__KERNEL__)
 
+	target_compile_definitions(${MODULE}
+		PRIVATE -DMAX_ARGC_ENVC=${MAX_ARGC_ENVC})
+
 	target_compile_options(${MODULE}
 		PRIVATE ${HERMIT_KERNEL_FLAGS})
 
