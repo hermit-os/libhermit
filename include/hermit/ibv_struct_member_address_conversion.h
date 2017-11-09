@@ -23,35 +23,17 @@
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * TODO: Documentation
+ *
  */
 
-/**
- * @author Annika Wierichs
- * @file include/hermit/ibv.h
- * @brief TODO
- */
-
-#ifndef __IBV_H__
-#define __IBV_H__
 
 #include <hermit/verbs.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
+void virt_to_phys_ibv_device(struct ibv_device * device);
+void virt_to_phys_ibv_context(struct ibv_contect * context);
+void virt_to_phys_ibv_context_ops(struct ibv_context_ops * context_ops);
+void virt_to_phys_ibv_port_attr(struct ibv_port_attr * port_attr);
 
-//struct ibv_device**     ibv_get_device_list(int *num_devices);
-
-const char* ibv_get_device_name(struct ibv_device *device);
-struct ibv_context * ibv_open_device(struct ibv_device * device);
-int ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_port_attr * port_attr);
-struct ibv_comp_channel * ibv_create_comp_channel(struct ibv_context * context);
-
-
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* __IBV_H__ */
