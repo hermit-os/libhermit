@@ -391,6 +391,7 @@ static int initd(void* arg)
 		int i;
 		uhyve_cmdsize_t uhyve_cmdsize;
 		uhyve_cmdval_t uhyve_cmdval;
+		uhyve_cmdval_t uhyve_cmdval_phys;
 
 		uhyve_send(UHYVE_PORT_CMDSIZE,
 				(unsigned)virt_to_phys((size_t)&uhyve_cmdsize));
@@ -402,8 +403,21 @@ static int initd(void* arg)
 		for(i=0; i<uhyve_cmdsize.envc; i++)
 			uhyve_cmdval.envp[i] = kmalloc(uhyve_cmdsize.envsz[i] * sizeof(char));
 
+		// create a similar structure with guest physical addresses
+		char** argv_virt = uhyve_cmdval_phys.argv = kmalloc(uhyve_cmdsize.argc * sizeof(char *));
+		for(i=0; i<uhyve_cmdsize.argc; i++)
+			uhyve_cmdval_phys.argv[i] = (char*) virt_to_phys((size_t) uhyve_cmdval.argv[i]);
+		uhyve_cmdval_phys.argv = (char**) virt_to_phys((size_t) uhyve_cmdval_phys.argv);
+
+		char** envp_virt = uhyve_cmdval_phys.envp = kmalloc(uhyve_cmdsize.envc * sizeof(char *));
+		for(i=0; i<uhyve_cmdsize.envc-1; i++)
+			uhyve_cmdval_phys.envp[i] = (char*) virt_to_phys((size_t) uhyve_cmdval.envp[i]);
+		// the last element is always NULL
+		uhyve_cmdval_phys.envp[uhyve_cmdsize.envc-1] = NULL;
+		uhyve_cmdval_phys.envp = (char**) virt_to_phys((size_t) uhyve_cmdval_phys.envp);
+
 		uhyve_send(UHYVE_PORT_CMDVAL,
-				(unsigned)virt_to_phys((size_t)&uhyve_cmdval));
+				(unsigned)virt_to_phys((size_t)&uhyve_cmdval_phys));
 
 		LOG_INFO("Boot time: %d ms\n", (get_clock_tick() * 1000) / TIMER_FREQ);
 		libc_start(uhyve_cmdsize.argc, uhyve_cmdval.argv, uhyve_cmdval.envp);
@@ -414,6 +428,8 @@ static int initd(void* arg)
 		for(i=0; i<envc; i++)
 			kfree(uhyve_cmdval.envp[i]);
 		kfree(uhyve_cmdval.envp);
+		kfree(argv_virt);
+		kfree(envp_virt);
 
 		return 0;
 	}

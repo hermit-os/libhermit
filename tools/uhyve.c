@@ -924,11 +924,11 @@ static int vcpu_loop(void)
 
 					val->argc = uhyve_argc;
 					for(i=0; i<uhyve_argc; i++)
-						val->argsz[i] = strlen(uhyve_argv[i]);
+						val->argsz[i] = strlen(uhyve_argv[i]) + 1;
 
 					val->envc = uhyve_envc;
 					for(i=0; i<uhyve_envc; i++)
-						val->envsz[i] = strlen(uhyve_envp[i]);
+						val->envsz[i] = strlen(uhyve_envp[i]) + 1;
 
 					break;
 				}
@@ -936,42 +936,18 @@ static int vcpu_loop(void)
 			case UHYVE_PORT_CMDVAL: {
 					int i;
 					char **argv_ptr, **env_ptr;
-					struct kvm_translation kt;
 					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 					uhyve_cmdval_t *val = (uhyve_cmdval_t *) (guest_mem+data);
 
-					/* buffers inside uhyve_cmdval are not directlty mapped
-					 * (they are allocated through kmalloc) so we cannot
-					 * used a simple offset as the guest to host, we have to
-					 * walk the guest page table to find the physical address,
-					 * then we can use the offset
-					 */
-
 					/* argv */
-					kt.linear_address = (unsigned long long)val->argv;
-					kvm_ioctl(vcpufd, KVM_TRANSLATE, &kt);
-					argv_ptr = (char **)(guest_mem +
-							(size_t)kt.physical_address);
-
-					for(i=0; i<uhyve_argc; i++) {
-						kt.linear_address = (unsigned long long)argv_ptr[i];
-						kvm_ioctl(vcpufd, KVM_TRANSLATE, &kt);
-						strcpy(guest_mem + (size_t)kt.physical_address,
-								uhyve_argv[i]);
-					}
+					argv_ptr = (char **)(guest_mem + (size_t)val->argv);
+					for(i=0; i<uhyve_argc; i++)
+						strcpy(guest_mem + (size_t)argv_ptr[i], uhyve_argv[i]);
 
 					/* env */
-					kt.linear_address = (unsigned long long)val->envp;
-					kvm_ioctl(vcpufd, KVM_TRANSLATE, &kt);
-					env_ptr = (char **)(guest_mem +
-							(size_t)kt.physical_address);
-
-					for(i=0; i<uhyve_envc; i++) {
-						kt.linear_address = (unsigned long long)env_ptr[i];
-						kvm_ioctl(vcpufd, KVM_TRANSLATE, &kt);
-						strcpy(guest_mem + (size_t)kt.physical_address,
-								uhyve_envp[i]);
-					}
+					env_ptr = (char **)(guest_mem + (size_t)val->envp);
+					for(i=0; i<uhyve_envc; i++)
+						strcpy(guest_mem + (size_t)env_ptr[i], uhyve_envp[i]);
 
 					break;
 				}
@@ -1604,6 +1580,17 @@ int uhyve_loop(int argc, char **argv)
 	while(uhyve_envp[i] != NULL)
 		i++;
 	uhyve_envc = i;
+
+	if (uhyve_argc > MAX_ARGC_ENVC) {
+		fprintf(stderr, "uhyve downsiize envc from %d to %d\n", uhyve_argc, MAX_ARGC_ENVC);
+		uhyve_argc = MAX_ARGC_ENVC;
+	}
+
+	if (uhyve_envc > MAX_ARGC_ENVC-1) {
+		fprintf(stderr, "uhyve downsiize envc from %d to %d\n", uhyve_envc, MAX_ARGC_ENVC-1);
+		uhyve_envc = MAX_ARGC_ENVC-1;
+	}
+printf("envc %d\n", uhyve_envc);
 
 	if(uhyve_argc > MAX_ARGC_ENVC || uhyve_envc > MAX_ARGC_ENVC) {
 		fprintf(stderr, "uhyve cannot forward more than %d command line "
