@@ -51,6 +51,13 @@
 	/*}*/
 /*}*/
 
+
+struct ibv_context * ibv_open_device(struct ibv_device * device);
+const char* ibv_get_device_name(struct ibv_device *device);
+int ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_port_attr * port_attr);
+struct ibv_comp_channel * ibv_create_comp_channel(struct ibv_context * context);
+
+
 void call_ibv_open_device(struct kvm_run * run, uint8_t * guest_mem) {
 	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 	uhyve_ibv_open_device_t * args = (uhyve_ibv_open_device_t *) (guest_mem + data);
@@ -58,19 +65,23 @@ void call_ibv_open_device(struct kvm_run * run, uint8_t * guest_mem) {
 	struct ibv_context * host_ret = ibv_open_device(guest_mem+(size_t)args->device);
 	memcpy(guest_mem+(size_t)args->ret, host_ret, sizeof(host_ret));
 	// TODO: Convert ptrs contained in return value.
-	// TODO: Delete host_ret data structure.
+	free(host_ret);
 }
+
 
 void call_ibv_get_device_name(struct kvm_run * run, uint8_t * guest_mem) {
 	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 	uhyve_ibv_get_device_name_t * args = (uhyve_ibv_get_device_name_t *) (guest_mem + data);
 
+	// TODO: Tricky because char ptr isn't allocated in called function.
 	const char * host_ret = ibv_get_device_name(guest_mem+(size_t)args->device);
 	memcpy(guest_mem+(size_t)args->ret, host_ret, sizeof(host_ret));
 	// TODO: Convert ptrs contained in return value.
-	// TODO: Delete host_ret data structure.
+	// TODO: How to tell if ret needs to be deleted?
 }
 
+
+// Return done
 void call_ibv_query_port(struct kvm_run * run, uint8_t * guest_mem) {
 	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 	uhyve_ibv_query_port_t * args = (uhyve_ibv_query_port_t *) (guest_mem + data);
@@ -79,12 +90,16 @@ void call_ibv_query_port(struct kvm_run * run, uint8_t * guest_mem) {
 	args->ret = host_ret;
 }
 
+
+// Return done
 void call_ibv_create_comp_channel(struct kvm_run * run, uint8_t * guest_mem) {
 	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 	uhyve_ibv_create_comp_channel_t * args = (uhyve_ibv_create_comp_channel_t *) (guest_mem + data);
 
 	struct ibv_comp_channel * host_ret = ibv_create_comp_channel(guest_mem+(size_t)args->context);
-	memcpy(guest_mem+(size_t)args->ret, host_ret, sizeof(host_ret));
+	host_ret->context -= guest_mem; // Should be in separate function.
 	// TODO: Convert ptrs contained in return value.
-	// TODO: Delete host_ret data structure.
+
+	memcpy(guest_mem+(size_t)args->ret, host_ret, sizeof(host_ret));
+	free(host_ret); // TODO add to code gen
 }

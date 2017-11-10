@@ -35,8 +35,9 @@
 #include <hermit/stdio.h>
 #include <hermit/stdlib.h>
 
-#include <hermit/ibv.h>		// GEHT
-#include <hermit/ibv_struct_member_address_conversion.h>
+#include <hermit/ibv.h>
+#include <hermit/ibv_struct_address_conversion.h>
+
 
 // TODO: Can/should we separate ibv_get_device_list into two KVM exit IOs to
 // allocate the right amount of memory?
@@ -129,8 +130,8 @@ typedef struct {
 
 int ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_port_attr * port_attr) {
 	uhyve_ibv_query_port_t uhyve_args;
-	uhyve_args->context = virt_to_phys_ibv_context(context);
-	uhyve_args->port_num = port_num;
+	uhyve_args->context   = virt_to_phys_ibv_context(context);
+	uhyve_args->port_num  = port_num;
 	uhyve_args->port_attr = virt_to_phys_ibv_port_attr(port_attr);
 
 	uhyve_send(UHYVE_PORT_IBV_QUERY_PORT, (unsigned) virt_to_phys((size_t) &uhyve_args));
