@@ -40,6 +40,7 @@
 extern "C" {
 #endif
 
+// TODO: File necessary?
 
 //struct ibv_device**     ibv_get_device_list(int *num_devices);
 

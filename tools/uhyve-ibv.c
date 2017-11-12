@@ -57,6 +57,11 @@ const char* ibv_get_device_name(struct ibv_device *device);
 int ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_port_attr * port_attr);
 struct ibv_comp_channel * ibv_create_comp_channel(struct ibv_context * context);
 
+inline unsigned get_parameter_data(struct kvm_run * run) {
+	unsigned data = guest_mem + *((unsigned*)((size_t)run+run->io.data_offset));
+	return data;
+}
+
 
 void call_ibv_open_device(struct kvm_run * run, uint8_t * guest_mem) {
 	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
@@ -91,10 +96,16 @@ void call_ibv_query_port(struct kvm_run * run, uint8_t * guest_mem) {
 }
 
 
-// Return done
+void guest_to_host_ibv_create_comp_channel_t(struct uhyve_ibv_create_comp_channel_t * args, uint8_t * guest_mem) {
+	args->context += guest_mem;
+	args->ret += guest_mem;
+}
+
+
 void call_ibv_create_comp_channel(struct kvm_run * run, uint8_t * guest_mem) {
-	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-	uhyve_ibv_create_comp_channel_t * args = (uhyve_ibv_create_comp_channel_t *) (guest_mem + data);
+	unsigned data = get_parameter_data(run);
+	uhyve_ibv_create_comp_channel_t * args = (uhyve_ibv_create_comp_channel_t *) data;
+	guest_to_host_ibv_create_comp_channel_t(args);
 
 	struct ibv_comp_channel * host_ret = ibv_create_comp_channel(guest_mem+(size_t)args->context);
 	host_ret->context -= guest_mem; // Should be in separate function.
