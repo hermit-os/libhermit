@@ -32,13 +32,15 @@
 #include <hermit/verbs.h>
 
 
-struct ibv_device *      virt_to_phys_ibv_device(struct ibv_device * device);
-struct ibv_contect *     virt_to_phys_ibv_context(struct ibv_contect * context);
-struct ibv_context_ops * virt_to_phys_ibv_context_ops(struct ibv_context_ops * context_ops);
-struct ibv_port_attr *   virt_to_phys_ibv_port_attr(struct ibv_port_attr * port_attr);
+struct ibv_device *        virt_to_phys_ibv_device(struct ibv_device * device);
+struct ibv_context *       virt_to_phys_ibv_context(struct ibv_contect * context);
+struct ibv_context_ops *   virt_to_phys_ibv_context_ops(struct ibv_context_ops * context_ops);
+struct ibv_port_attr *     virt_to_phys_ibv_port_attr(struct ibv_port_attr * port_attr);
+struct ibv_abi_compat_v2 * virt_to_phys_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat);
 
 void phys_to_virt_ibv_device(struct ibv_device * device);
 void phys_to_virt_ibv_context(struct ibv_contect * context);
 void phys_to_virt_ibv_context_ops(struct ibv_context_ops * context_ops);
 void phys_to_virt_ibv_port_attr(struct ibv_port_attr * port_attr);
+void phys_to_virt_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat);
 

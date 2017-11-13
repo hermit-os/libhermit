@@ -32,6 +32,12 @@ typedef enum {
 } uhyve_ibv_t;
 
 
+inline unsigned get_data(struct kvm_run * run, uint8_t guest_mem) {
+	unsigned data = guest_mem + *((unsigned*)((size_t)run+run->io.data_offset));
+	return data;
+}
+
+
 //typedef struct { // CHECKED
 	//// In:
 	//int								*num_devices;
