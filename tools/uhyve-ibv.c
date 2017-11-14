@@ -33,6 +33,69 @@
 #include <infiniband/verbs.h>		// Linux include
 
 
+struct ibv_context * ibv_open_device(struct ibv_device * device);
+const char* ibv_get_device_name(struct ibv_device *device);
+int ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_port_attr * port_attr);
+struct ibv_comp_channel * ibv_create_comp_channel(struct ibv_context * context);
+
+
+/*
+ * ibv_open_device
+ */
+
+void call_ibv_open_device(struct kvm_run * run) {
+	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
+	uhyve_ibv_open_device_t * args = (uhyve_ibv_open_device_t *) (guest_mem + data);
+
+	struct ibv_context * host_ret = ibv_open_device(guest_mem+(size_t)args->device);
+	memcpy(guest_mem+(size_t)args->ret, host_ret, sizeof(host_ret));
+	// TODO: Convert ptrs contained in return value.
+	free(host_ret);
+}
+
+
+/*
+ * ibv_get_device_name
+ */
+
+void call_ibv_get_device_name(struct kvm_run * run) {
+	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
+	uhyve_ibv_get_device_name_t * args = (uhyve_ibv_get_device_name_t *) (guest_mem + data);
+
+	// TODO: Tricky because char ptr isn't allocated in called function.
+	const char * host_ret = ibv_get_device_name(guest_mem+(size_t)args->device);
+	memcpy(guest_mem+(size_t)args->ret, host_ret, sizeof(host_ret));
+	// TODO: Convert ptrs contained in return value.
+	// TODO: How to tell if ret needs to be deleted?
+}
+
+
+/*
+ * ibv_query_port
+ */
+
+void call_ibv_query_port(struct kvm_run * run) {
+	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
+	uhyve_ibv_query_port_t * args = (uhyve_ibv_query_port_t *) (guest_mem + data);
+
+	int host_ret = ibv_query_port(guest_mem+(size_t)args->context, port_num, guest_mem+(size_t)args->port_attr);
+	args->ret = host_ret;
+}
+
+
+/*
+ * ibv_create_comp_channel
+ */
+
+void call_ibv_create_comp_channel(struct kvm_run * run) {
+	uhyve_ibv_create_comp_channel_t * args = (uhyve_ibv_create_comp_channel_t *) get_data(run);
+
+	struct ibv_comp_channel * host_ret = ibv_create_comp_channel(args->context);
+	memcpy(args->ret, host_ret, sizeof(host_ret)); // TODO: This will only work for ABI ver > 2.
+	free(host_ret);
+}
+
+
 /*void call_ibv_get_device_list(struct kvm_run * run, uint8_t * guest_mem) {*/
 	/*unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));*/
 	/*uhyve_ibv_get_device_list_t* args = (uhyve_ibv_get_device_list_t*) (guest_mem+data);*/
@@ -50,86 +113,3 @@
 		/*memcpy(guest_mem + (size_t)args->dev_phys_ptr_list[d], temp_dev_list[d], sizeof(struct ibv_device));*/
 	/*}*/
 /*}*/
-
-
-struct ibv_context * ibv_open_device(struct ibv_device * device);
-const char* ibv_get_device_name(struct ibv_device *device);
-int ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_port_attr * port_attr);
-struct ibv_comp_channel * ibv_create_comp_channel(struct ibv_context * context);
-
-
-/*
- * ibv_open_device
- */
-
-void call_ibv_open_device(struct kvm_run * run, uint8_t * guest_mem) {
-	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-	uhyve_ibv_open_device_t * args = (uhyve_ibv_open_device_t *) (guest_mem + data);
-
-	struct ibv_context * host_ret = ibv_open_device(guest_mem+(size_t)args->device);
-	memcpy(guest_mem+(size_t)args->ret, host_ret, sizeof(host_ret));
-	// TODO: Convert ptrs contained in return value.
-	free(host_ret);
-}
-
-
-/*
- * ibv_get_device_name
- */
-
-void call_ibv_get_device_name(struct kvm_run * run, uint8_t * guest_mem) {
-	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-	uhyve_ibv_get_device_name_t * args = (uhyve_ibv_get_device_name_t *) (guest_mem + data);
-
-	// TODO: Tricky because char ptr isn't allocated in called function.
-	const char * host_ret = ibv_get_device_name(guest_mem+(size_t)args->device);
-	memcpy(guest_mem+(size_t)args->ret, host_ret, sizeof(host_ret));
-	// TODO: Convert ptrs contained in return value.
-	// TODO: How to tell if ret needs to be deleted?
-}
-
-
-/*
- * ibv_query_port
- */
-
-void call_ibv_query_port(struct kvm_run * run, uint8_t * guest_mem) {
-	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-	uhyve_ibv_query_port_t * args = (uhyve_ibv_query_port_t *) (guest_mem + data);
-
-	int host_ret = ibv_query_port(guest_mem+(size_t)args->context, port_num, guest_mem+(size_t)args->port_attr);
-	args->ret = host_ret;
-}
-
-
-/*
- * ibv_create_comp_channel
- */
-
-/*void guest_to_host_ibv_create_comp_channel_t(struct uhyve_ibv_create_comp_channel_t * args, uint8_t * guest_mem) {*/
-	/*[>args->context = (size_t)args->context + guest_mem;<]*/
-	/*args->context = guest_to_host(args->context);*/
-	/*args->ret = (size_t)args->ret + guest_mem;*/
-/*}*/
-
-/*void host_to_guest_ibv_create_comp_channel_t(struct uhyve_ibv_create_comp_channel_t * args, uint8_t * guest_mem) {*/
-	/*args->context = (size_t)args->context - guest_mem;*/
-	/*args->ret = (size_t)args->ret - guest_mem;*/
-/*}*/
-
-void call_ibv_create_comp_channel(struct kvm_run * run, uint8_t * guest_mem) {
-	uhyve_ibv_create_comp_channel_t * args = (uhyve_ibv_create_comp_channel_t *) get_data(run, guest_mem);
-	guest_to_host_ibv_create_comp_channel_t(args, guest_mem);
-
-	/*args->context = (size_t)args->context + guest_mem;*/
-	args->context = guest_to_host(args->context);
-	args->ret = (size_t)args->ret + guest_mem;
-
-	struct ibv_comp_channel * host_ret = ibv_create_comp_channel(args->context);
-	memcpy(args->ret, host_ret, sizeof(host_ret)); // TODO: This will only work for ABI ver > 2.
-	free(host_ret);
-
-	args->context = (size_t)args->context - guest_mem;
-	args->ret = (size_t)args->ret - guest_mem;
-	/*host_to_guest_ibv_create_comp_channel_t(args, guest_mem);*/
-}

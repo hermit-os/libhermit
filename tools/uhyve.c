@@ -868,6 +868,14 @@ static int vcpu_loop(void)
 		case KVM_EXIT_IO:
 			//printf("port 0x%x\n", run->io.port);
 			switch (run->io.port) {
+			case UHYVE_PORT_KERNEL_START: {
+					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset)); 
+					uint8_t ** ret = (uint8_t **) (guest_mem+data);
+					&ret = guest_mem;
+					printf("Guest mem in uhyve: %p", guest_mem);
+					break;
+				}
+
 			case UHYVE_PORT_WRITE: {
 					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 					uhyve_write_t* uhyve_write = (uhyve_write_t*) (guest_mem+data);
@@ -970,9 +978,6 @@ static int vcpu_loop(void)
 			case UHYVE_PORT_IBV_OPEN_DEVICE:
 				call_ibv_open_device(run, guest_mem);
 				break;
-			/*case UHYVE_PORT_IBV_GET_DEVICE_LIST:*/
-				/*call_ibv_get_device_list(run, guest_mem);*/
-				/*break;*/
 			case UHYVE_PORT_IBV_GET_DEVICE_NAME:
 				call_ibv_get_device_name(run, guest_mem);
 				break;
@@ -982,7 +987,9 @@ static int vcpu_loop(void)
 			case UHYVE_PORT_IBV_CREATE_COMP_CHANNEL:
 				call_ibv_create_comp_channel(run, guest_mem);
 				break;
-
+			/*case UHYVE_PORT_IBV_GET_DEVICE_LIST:*/
+				/*call_ibv_get_device_list(run, guest_mem);*/
+				/*break;*/
 
 			default:
 				err(1, "KVM: unhandled KVM_EXIT_IO at port 0x%x, direction %d\n", run->io.port, run->io.direction);

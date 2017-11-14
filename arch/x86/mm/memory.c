@@ -54,6 +54,8 @@ typedef struct free_list {
  */
 extern const void kernel_start;
 
+uint8_t * host_kernel_start = NULL;
+
 static spinlock_t list_lock = SPINLOCK_INIT;
 
 static free_list_t init_list = {0, 0, NULL, NULL};
@@ -247,6 +249,9 @@ void page_free(void* viraddr, size_t sz)
 int memory_init(void)
 {
 	int ret = 0;
+
+	// guest_mem_workaround
+	uhyve_send(UHYVE_PORT_KERNEL_START, (unsigned) guest_to_host((size_t) &host_kernel_start));
 
 	// enable paging and map Multiboot modules etc.
 	ret = page_init();
