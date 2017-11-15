@@ -329,7 +329,7 @@ def generate_port_macros(function_names):
   """
   macros = ""
   for num, function_name in enumerate(function_names, PORT_NUMBER_START):
-    macros += "\n#define UHYVE_PORT_{0} 0x{1},".format(function_name.upper(),
+    macros += "\n#define UHYVE_PORT_{0} 0x{1}".format(function_name.upper(),
                                                        format(num, "X"))
   return macros
 

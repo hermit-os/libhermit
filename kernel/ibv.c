@@ -36,7 +36,7 @@
 #include <hermit/stdlib.h>
 
 #include <hermit/ibv.h>
-#include <hermit/ibv_virt_phys.h>
+#include <hermit/ibv_guest_host.h>
 
 
 // TODO: Can/should we separate ibv_get_device_list into two KVM exit IOs to

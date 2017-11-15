@@ -250,9 +250,6 @@ int memory_init(void)
 {
 	int ret = 0;
 
-	// guest_mem_workaround
-	uhyve_send(UHYVE_PORT_KERNEL_START, (unsigned) guest_to_host((size_t) &host_kernel_start));
-
 	// enable paging and map Multiboot modules etc.
 	ret = page_init();
 	if (BUILTIN_EXPECT(ret, 0)) {

@@ -28,14 +28,16 @@
  *
  */
 
+#ifndef __IBV_GUEST_HOST_H__
+#define __IBV_GUEST_HOST_H__
 
 #include <hermit/verbs.h>
 
-extern uint8_t * host_kernel_start;
+extern uint8_t * kernel_start_host;
 
 
 inline size_t guest_to_host(size_t address) {
-	return virt_to_phys(address) + host_kernel_start;
+	return virt_to_phys(address) + (size_t) kernel_start_host;
 }
 
 
@@ -43,6 +45,7 @@ struct ibv_device *        guest_to_host_ibv_device(struct ibv_device * device);
 struct ibv_context *       guest_to_host_ibv_context(struct ibv_context * context);
 struct ibv_context_ops *   guest_to_host_ibv_context_ops(struct ibv_context_ops * context_ops);
 struct ibv_port_attr *     guest_to_host_ibv_port_attr(struct ibv_port_attr * port_attr);
+struct ibv_comp_channel *  guest_to_host_ibv_comp_channel(struct ibv_comp_channel * channel);
 struct ibv_abi_compat_v2 * guest_to_host_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat);
 
 void host_to_guest_ibv_device(struct ibv_device * device);
@@ -51,3 +54,4 @@ void host_to_guest_ibv_context_ops(struct ibv_context_ops * context_ops);
 void host_to_guest_ibv_port_attr(struct ibv_port_attr * port_attr);
 void host_to_guest_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat);
 
+#endif // __IBV_GUEST_HOST_H__

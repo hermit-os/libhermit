@@ -24,8 +24,6 @@
 #define MAX_NUM_OF_IBV_DEVICES 16
 
 typedef enum {
-	UHYVE_PORT_KERNEL_START = 0x505,
-
 	UHYVE_PORT_IBV_OPEN_DEVICE = 0x510,
 	//UHYVE_PORT_IBV_GET_DEVICE_LIST = 0x511,
 	UHYVE_PORT_IBV_GET_DEVICE_NAME = 0x512,
@@ -78,3 +76,12 @@ typedef struct {
 	//struct ibv_device *dev_phys_ptr_list[MAX_NUM_OF_IBV_DEVICES];
 	////struct ibv_device **device_list;
 //} __attribute__((packed)) uhyve_ibv_get_device_list_t;
+
+
+void call_ibv_open_device(struct kvm_run * run);
+void call_ibv_get_device_name(struct kvm_run * run);
+void call_ibv_query_port(struct kvm_run * run);
+void call_ibv_create_comp_channel(struct kvm_run * run);
+/*void call_ibv_get_device_list(struct kvm_run * run, uint8_t * guest_mem);*/
+
+#endif // UHYVE_IBV_H

@@ -114,6 +114,8 @@ struct timespec {
 	__kernel_time_t	tv_sec;			/* seconds */
 	long		tv_nsec;		/* nanoseconds */
 };
+
+
 #endif
 
 
@@ -1121,6 +1123,14 @@ struct ibv_comp_channel {
 	int			fd;
 	int			refcnt;
 };
+
+#ifdef __KERNEL__
+// Only in ibverbs.h
+struct ibv_abi_compat_v2 {
+	struct ibv_comp_channel	channel;
+	pthread_mutex_t		in_use;
+};
+#endif // __KERNEL__
 
 struct ibv_cq {
 	struct ibv_context     *context;

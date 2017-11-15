@@ -431,14 +431,14 @@ static int load_kernel(uint8_t* mem, char* path)
 		if (first_load) {
 			first_load = 0;
 
-			// initialize kernel
-			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x08)) = paddr; // physical start address
-			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x10)) = guest_size;   // physical limit
-			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x18)) = get_cpufreq();
-			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x24)) = 1; // number of used cpus
-			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x30)) = 0; // apicid
-			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x60)) = 1; // numa nodes
-			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x94)) = 1; // announce uhyve
+			// initialize kernel (corresponding asm vars given in parenthesis)
+			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x08)) = paddr; // physical start address (base)
+			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x10)) = guest_size;   // physical limit (limit)
+			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x18)) = get_cpufreq(); // (cpu_freq)
+			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x24)) = 1; // number of used cpus (possible_cpus)
+			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x30)) = 0; // apicid (current_boot_id)
+			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x60)) = 1; // numa nodes (possible_isles)
+			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x94)) = 1; // announce uhyve (uhyve)
 
 
 			char* str = getenv("HERMIT_IP");
@@ -472,6 +472,9 @@ static int load_kernel(uint8_t* mem, char* path)
 				*((uint8_t*) (mem+paddr-GUEST_OFFSET + 0xBA)) = (uint8_t) ip[2];
 				*((uint8_t*) (mem+paddr-GUEST_OFFSET + 0xBB)) = (uint8_t) ip[3];
 			}
+
+			// TODO: Compiler Warning
+			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0xBC)) = guest_mem; // host-virtual start address (kernel_start_host)
 
 		}
 		*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x38)) += memsz; // total kernel size
@@ -868,13 +871,6 @@ static int vcpu_loop(void)
 		case KVM_EXIT_IO:
 			//printf("port 0x%x\n", run->io.port);
 			switch (run->io.port) {
-			case UHYVE_PORT_KERNEL_START: {
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset)); 
-					uint8_t ** ret = (uint8_t **) (guest_mem+data);
-					&ret = guest_mem;
-					printf("Guest mem in uhyve: %p", guest_mem);
-					break;
-				}
 
 			case UHYVE_PORT_WRITE: {
 					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
@@ -976,20 +972,17 @@ static int vcpu_loop(void)
 
 			// InfiniBand
 			case UHYVE_PORT_IBV_OPEN_DEVICE:
-				call_ibv_open_device(run, guest_mem);
+				call_ibv_open_device(run);
 				break;
 			case UHYVE_PORT_IBV_GET_DEVICE_NAME:
-				call_ibv_get_device_name(run, guest_mem);
+				call_ibv_get_device_name(run);
 				break;
 			case UHYVE_PORT_IBV_QUERY_PORT:
-				call_ibv_query_port(run, guest_mem);
+				call_ibv_query_port(run);
 				break;
 			case UHYVE_PORT_IBV_CREATE_COMP_CHANNEL:
-				call_ibv_create_comp_channel(run, guest_mem);
+				call_ibv_create_comp_channel(run);
 				break;
-			/*case UHYVE_PORT_IBV_GET_DEVICE_LIST:*/
-				/*call_ibv_get_device_list(run, guest_mem);*/
-				/*break;*/
 
 			default:
 				err(1, "KVM: unhandled KVM_EXIT_IO at port 0x%x, direction %d\n", run->io.port, run->io.direction);
@@ -1312,9 +1305,9 @@ int uhyve_init(char *path)
 		if (guest_mem == MAP_FAILED)
 			err(1, "mmap failed");
 
-		/*
-		 * We mprotect the gap PROT_NONE so that if we accidently write to it, we will know.
-		 */
+	 /*
+	  * We mprotect the gap PROT_NONE so that if we accidently write to it, we will know.
+	  */
 		mprotect(guest_mem + KVM_32BIT_GAP_START, KVM_32BIT_GAP_SIZE, PROT_NONE);
 	}
 

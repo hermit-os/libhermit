@@ -31,42 +31,19 @@
 
 #include <asm/page.h>
 
-#include <hermit/ibv_virt_phys.h>
+#include <hermit/ibv_guest_host.h>
 
 
 /*
  * struct ibv_device
  */
 
-static struct {
-	char * name;
-	char * dev_name;
-	char * dev_path;
-	char * ibdev_path;
-} ibv_device_virt_ptrs; // TODO: Proper naming
-
 struct ibv_device * guest_to_host_ibv_device(struct ibv_device * device) {
-	ibv_device_virt_ptrs.name       = device->name;;
-	ibv_device_virt_ptrs.dev_name   = device->dev_name;
-	ibv_device_virt_ptrs.dev_path   = device->dev_path;
-	ibv_device_virt_ptrs.ibdev_path = device->ibdev_path;
-
-	device->name       = (char *) guest_to_host((size_t) device->name);
-	device->dev_name   = (char *) guest_to_host((size_t) device->dev_name);
-	device->dev_path   = (char *) guest_to_host((size_t) device->dev_path);
-	device->ibdev_path = (char *) guest_to_host((size_t) device->ibdev_path);
 	// _ops obsolete.
-
 	return (struct ibv_device *) guest_to_host((size_t) device);
 }
 
-void host_to_guest_ibv_device(struct ibv_device * device) {
-	device->name       = ibv_device_virt_ptrs.name;
-	device->dev_name   = ibv_device_virt_ptrs.dev_name;
-	device->dev_path   = ibv_device_virt_ptrs.dev_path;
-	device->ibdev_path = ibv_device_virt_ptrs.ibdev_path;
-	// _ops obsolete.
-}
+void host_to_guest_ibv_device(struct ibv_device * device) { }
 
 
 /*
@@ -140,38 +117,38 @@ static struct {
 } ibv_context_ops_virt_ptrs;
 
 struct ibv_context_ops * guest_to_host_ibv_context_ops(struct ibv_context_ops * context_ops) {
-	ibv_context_virt_ptrs.query_device  = context_ops->query_device;
-	ibv_context_virt_ptrs.query_port    = context_ops->query_port;
-	ibv_context_virt_ptrs.alloc_pd      = context_ops->alloc_pd;
-	ibv_context_virt_ptrs.dealloc_pd    = context_ops->dealloc_pd;
-	ibv_context_virt_ptrs.reg_mr        = context_ops->reg_mr;
-	ibv_context_virt_ptrs.rereg_mr      = context_ops->rereg_mr;
-	ibv_context_virt_ptrs.dereg_mr      = context_ops->dereg_mr;
-	ibv_context_virt_ptrs.alloc_mw      = context_ops->alloc_mw;
-	ibv_context_virt_ptrs.bind_mw       = context_ops->bind_mw;
-	ibv_context_virt_ptrs.dealloc_mw    = context_ops->dealloc_mw;
-	ibv_context_virt_ptrs.create_cq     = context_ops->create_cq;
-	ibv_context_virt_ptrs.poll_cq       = context_ops->poll_cq;
-	ibv_context_virt_ptrs.req_notify_cq = context_ops->req_notify_cq;
-	ibv_context_virt_ptrs.cq_event      = context_ops->cq_event;
-	ibv_context_virt_ptrs.resize_cq     = context_ops->resize_cq;
-	ibv_context_virt_ptrs.destroy_cq    = context_ops->destroy_cq;
-	ibv_context_virt_ptrs.create_srq    = context_ops->create_srq;
-	ibv_context_virt_ptrs.modify_srq    = context_ops->modify_srq;
-	ibv_context_virt_ptrs.query_srq     = context_ops->query_srq;
-	ibv_context_virt_ptrs.destroy_srq   = context_ops->destroy_srq;
-	ibv_context_virt_ptrs.post_srq_recv = context_ops->post_srq_recv;
-	ibv_context_virt_ptrs.create_qp     = context_ops->create_qp;
-	ibv_context_virt_ptrs.query_qp      = context_ops->query_qp;
-	ibv_context_virt_ptrs.modify_qp     = context_ops->modify_qp;
-	ibv_context_virt_ptrs.destroy_qp    = context_ops->destroy_qp;
-	ibv_context_virt_ptrs.post_send     = context_ops->post_send;
-	ibv_context_virt_ptrs.post_recv     = context_ops->post_recv;
-	ibv_context_virt_ptrs.create_ah     = context_ops->create_ah;
-	ibv_context_virt_ptrs.destroy_ah    = context_ops->destroy_ah;
-	ibv_context_virt_ptrs.attach_mcast  = context_ops->attach_mcast;
-	ibv_context_virt_ptrs.detach_mcast  = context_ops->detach_mcast;
-	ibv_context_virt_ptrs.async_event   = context_ops->async_event;
+	ibv_context_ops_virt_ptrs.query_device  = context_ops->query_device;
+	ibv_context_ops_virt_ptrs.query_port    = context_ops->query_port;
+	ibv_context_ops_virt_ptrs.alloc_pd      = context_ops->alloc_pd;
+	ibv_context_ops_virt_ptrs.dealloc_pd    = context_ops->dealloc_pd;
+	ibv_context_ops_virt_ptrs.reg_mr        = context_ops->reg_mr;
+	ibv_context_ops_virt_ptrs.rereg_mr      = context_ops->rereg_mr;
+	ibv_context_ops_virt_ptrs.dereg_mr      = context_ops->dereg_mr;
+	ibv_context_ops_virt_ptrs.alloc_mw      = context_ops->alloc_mw;
+	ibv_context_ops_virt_ptrs.bind_mw       = context_ops->bind_mw;
+	ibv_context_ops_virt_ptrs.dealloc_mw    = context_ops->dealloc_mw;
+	ibv_context_ops_virt_ptrs.create_cq     = context_ops->create_cq;
+	ibv_context_ops_virt_ptrs.poll_cq       = context_ops->poll_cq;
+	ibv_context_ops_virt_ptrs.req_notify_cq = context_ops->req_notify_cq;
+	ibv_context_ops_virt_ptrs.cq_event      = context_ops->cq_event;
+	ibv_context_ops_virt_ptrs.resize_cq     = context_ops->resize_cq;
+	ibv_context_ops_virt_ptrs.destroy_cq    = context_ops->destroy_cq;
+	ibv_context_ops_virt_ptrs.create_srq    = context_ops->create_srq;
+	ibv_context_ops_virt_ptrs.modify_srq    = context_ops->modify_srq;
+	ibv_context_ops_virt_ptrs.query_srq     = context_ops->query_srq;
+	ibv_context_ops_virt_ptrs.destroy_srq   = context_ops->destroy_srq;
+	ibv_context_ops_virt_ptrs.post_srq_recv = context_ops->post_srq_recv;
+	ibv_context_ops_virt_ptrs.create_qp     = context_ops->create_qp;
+	ibv_context_ops_virt_ptrs.query_qp      = context_ops->query_qp;
+	ibv_context_ops_virt_ptrs.modify_qp     = context_ops->modify_qp;
+	ibv_context_ops_virt_ptrs.destroy_qp    = context_ops->destroy_qp;
+	ibv_context_ops_virt_ptrs.post_send     = context_ops->post_send;
+	ibv_context_ops_virt_ptrs.post_recv     = context_ops->post_recv;
+	ibv_context_ops_virt_ptrs.create_ah     = context_ops->create_ah;
+	ibv_context_ops_virt_ptrs.destroy_ah    = context_ops->destroy_ah;
+	ibv_context_ops_virt_ptrs.attach_mcast  = context_ops->attach_mcast;
+	ibv_context_ops_virt_ptrs.detach_mcast  = context_ops->detach_mcast;
+	ibv_context_ops_virt_ptrs.async_event   = context_ops->async_event;
 
 	// TODO: Does this work? Fcn returns size_t. Have to convert?
 	context_ops->query_device  = guest_to_host((size_t) context_ops->query_device);
@@ -258,6 +235,29 @@ void host_to_guest_ibv_port_attr(struct ibv_port_attr * port_attr) {}
 
 
 /*
+ * struct ibv_comp_channel 
+ */
+
+static struct {
+	struct ibv_context * context;
+} ibv_comp_channel_virt_ptrs;
+
+struct ibv_comp_channel * guest_to_host_ibv_comp_channel(struct ibv_comp_channel * channel) {
+	ibv_comp_channel_virt_ptrs.context = channel->context,
+
+	channel->context = guest_to_host_ibv_context(channel->context);
+
+	return (struct ibv_comp_channel *) guest_to_host((size_t) channel);
+}
+
+void host_to_guest_ibv_comp_channel(struct ibv_comp_channel * channel) {
+	channel->context = ibv_comp_channel_virt_ptrs.context;
+
+	host_to_guest_ibv_context(channel->context);
+}
+
+
+/*
  * struct ibv_abi_compat_v2
  */
 
@@ -272,29 +272,3 @@ void host_to_guest_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat) {
 	host_to_guest_ibv_comp_channel(&abi_compat->channel);
 	host_to_guest_pthread_mutex_t(&abi_compat->in_use);
 }
-
-
-/*
- * struct ibv_comp_channel 
- */
-
-static struct {
-	struct ibv_context * context;
-} ibv_comp_channel_virt_ptrs;
-
-struct ibv_comp_channel * guest_to_host_ibv_comp_channel(struct ibv_comp_channel * channel) {
-	ibv_comp_channel_virt_ptrs.context = channel->context,
-
-	channel->context = guest_to_host_ibv_device(channel->context);
-
-	return (struct ibv_comp_channel *) guest_to_host((size_t) channel);
-}
-
-void host_to_guest_ibv_comp_channel(struct ibv_comp_channel * channel) {
-	channel->context = ibv_comp_channel_virt_ptrs.context;
-
-	host_to_guest_ibv_device(channel->context);
-}
-
-
-
