@@ -20,22 +20,30 @@
 #define UHYVE_IBV_H
 
 #include <infiniband/verbs.h>		// Linux include
+#include <linux/kvm.h>
 
 #define MAX_NUM_OF_IBV_DEVICES 16
 
 typedef enum {
 	UHYVE_PORT_IBV_OPEN_DEVICE = 0x510,
-	//UHYVE_PORT_IBV_GET_DEVICE_LIST = 0x511,
+	UHYVE_PORT_IBV_GET_DEVICE_LIST = 0x511,
 	UHYVE_PORT_IBV_GET_DEVICE_NAME = 0x512,
 	UHYVE_PORT_IBV_QUERY_PORT = 0x513,
 	UHYVE_PORT_IBV_CREATE_COMP_CHANNEL = 0x514,
 } uhyve_ibv_t;
 
 
-inline unsigned get_data(struct kvm_run * run) {
-	return *((unsigned*)((size_t)run+run->io.data_offset));
-}
+//inline unsigned get_data(struct kvm_run * run) {
+	//return *((unsigned*)((size_t)run+run->io.data_offset));
+//}
 
+
+typedef struct {
+	// Parameters:
+	int * num_devices;
+	// Return value:
+	struct ibv_device * ret[MAX_NUM_OF_IBV_DEVICES];
+} __attribute__((packed)) uhyve_ibv_get_device_list_t;
 
 typedef struct {
 	// Parameters:
@@ -66,16 +74,6 @@ typedef struct {
 	// Return value:
 	struct ibv_comp_channel * ret;
 } __attribute__((packed)) uhyve_ibv_create_comp_channel_t;
-
-
-//typedef struct { // CHECKED
-	//// In:
-	//int								*num_devices;
-	//// Out:
-	////struct ibv_device devices[MAX_NUM_OF_IBV_DEVICES];
-	//struct ibv_device *dev_phys_ptr_list[MAX_NUM_OF_IBV_DEVICES];
-	////struct ibv_device **device_list;
-//} __attribute__((packed)) uhyve_ibv_get_device_list_t;
 
 
 void call_ibv_open_device(struct kvm_run * run);
