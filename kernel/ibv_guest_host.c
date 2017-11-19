@@ -263,12 +263,12 @@ void host_to_guest_ibv_comp_channel(struct ibv_comp_channel * channel) {
 
 struct ibv_abi_compat_v2 * guest_to_host_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat) {
 	guest_to_host_ibv_comp_channel(&abi_compat->channel);
-	guest_to_host_pthread_mutex_t(&abi_compat->in_use);
+	/* guest_to_host_pthread_mutex_t(&abi_compat->in_use); */
 
 	return (struct ibv_abi_compat_v2 *) guest_to_host((size_t) abi_compat);
 }
 
 void host_to_guest_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat) {
 	host_to_guest_ibv_comp_channel(&abi_compat->channel);
-	host_to_guest_pthread_mutex_t(&abi_compat->in_use);
+	/* host_to_guest_pthread_mutex_t(&abi_compat->in_use); */
 }

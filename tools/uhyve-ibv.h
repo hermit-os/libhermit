@@ -56,7 +56,7 @@ typedef struct {
 	// Parameters:
 	struct ibv_device * device;
 	// Return value:
-	const char * ret;
+	const char * ret; // TODO Should this be const?
 } __attribute__((packed)) uhyve_ibv_get_device_name_t;
 
 typedef struct {
@@ -80,6 +80,6 @@ void call_ibv_open_device(struct kvm_run * run);
 void call_ibv_get_device_name(struct kvm_run * run);
 void call_ibv_query_port(struct kvm_run * run);
 void call_ibv_create_comp_channel(struct kvm_run * run);
-/*void call_ibv_get_device_list(struct kvm_run * run, uint8_t * guest_mem);*/
+void call_ibv_get_device_list(struct kvm_run * run);
 
 #endif // UHYVE_IBV_H

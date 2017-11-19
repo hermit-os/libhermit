@@ -35,7 +35,7 @@
 
 // #include <stdio.h>
 // #include <stdlib.h>
-// #include <unistd.h>
+/* #include <unistd.h> */
 // #include <string.h>
 // #include <sys/types.h>
 // #include <sys/socket.h>
@@ -546,23 +546,23 @@ clean_ctx:
 	/*return ibv_post_send(ctx->qp, &wr, &bad_wr);*/
 /*}*/
 
-/*static void usage(const char *argv0)*/
-/*{*/
-	/*printf("Usage:\n");*/
-	/*printf("  %s            start a server and wait for connection\n", argv0);*/
-	/*printf("  %s <host>     connect to server at <host>\n", argv0);*/
-	/*printf("\n");*/
-	/*printf("Options:\n");*/
-	/*printf("  -p, --port=<port>      listen on/connect to port <port> (default 18515)\n");*/
-	/*printf("  -d, --ib-dev=<dev>     use IB device <dev> (default first device found)\n");*/
-	/*printf("  -i, --ib-port=<port>   use port <port> of IB device (default 1)\n");*/
-	/*printf("  -s, --size=<size>      size of message to exchange (default 2048)\n");*/
-	/*printf("  -r, --rx-depth=<dep>   number of receives to post at a time (default 500)\n");*/
-	/*printf("  -n, --iters=<iters>    number of exchanges (default 1000)\n");*/
-        /*printf("  -l, --sl=<SL>          send messages with service level <SL> (default 0)\n");*/
-	/*printf("  -e, --events           sleep on CQ events (default poll)\n");*/
-	/*printf("  -g, --gid-idx=<gid index> local port gid index\n");*/
-/*}*/
+static void usage(const char *argv0)
+{
+	printf("Usage:\n");
+	printf("  %s            start a server and wait for connection\n", argv0);
+	printf("  %s <host>     connect to server at <host>\n", argv0);
+	printf("\n");
+	printf("Options:\n");
+	printf("  -p, --port=<port>      listen on/connect to port <port> (default 18515)\n");
+	printf("  -d, --ib-dev=<dev>     use IB device <dev> (default first device found)\n");
+	printf("  -i, --ib-port=<port>   use port <port> of IB device (default 1)\n");
+	printf("  -s, --size=<size>      size of message to exchange (default 2048)\n");
+	printf("  -r, --rx-depth=<dep>   number of receives to post at a time (default 500)\n");
+	printf("  -n, --iters=<iters>    number of exchanges (default 1000)\n");
+				printf("  -l, --sl=<SL>          send messages with service level <SL> (default 0)\n");
+	printf("  -e, --events           sleep on CQ events (default poll)\n");
+	printf("  -g, --gid-idx=<gid index> local port gid index\n");
+}
 
 int main(int argc, char *argv[])
 {
@@ -668,7 +668,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	page_size = sysconf(_SC_PAGESIZE);
+	page_size = 4092; // TODO
 
 	dev_list = ibv_get_device_list(NULL);
 	if (!dev_list) {

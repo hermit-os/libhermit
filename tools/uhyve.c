@@ -983,6 +983,9 @@ static int vcpu_loop(void)
 			case UHYVE_PORT_IBV_CREATE_COMP_CHANNEL:
 				call_ibv_create_comp_channel(run);
 				break;
+			case UHYVE_PORT_IBV_GET_DEVICE_LIST:
+				call_ibv_get_device_list(run);
+				break;
 
 			default:
 				err(1, "KVM: unhandled KVM_EXIT_IO at port 0x%x, direction %d\n", run->io.port, run->io.direction);

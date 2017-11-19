@@ -55,27 +55,27 @@ int pp_get_port_info(struct ibv_context *context, int port,
 	return ibv_query_port(context, port, attr);
 }
 
-void wire_gid_to_gid(const char *wgid, union ibv_gid *gid)
-{
-	char tmp[9];
-	__be32 v32;
-	int i;
-	uint32_t tmp_gid[4];
+/* void wire_gid_to_gid(const char *wgid, union ibv_gid *gid) */
+/* { */
+	/* char tmp[9]; */
+	/* __be32 v32; */
+	/* int i; */
+	/* uint32_t tmp_gid[4]; */
 
-	for (tmp[8] = 0, i = 0; i < 4; ++i) {
-		memcpy(tmp, wgid + i * 8, 8);
-		sscanf(tmp, "%x", &v32);
-		tmp_gid[i] = be32toh(v32);
-	}
-	memcpy(gid, tmp_gid, sizeof(*gid));
-}
+	/* for (tmp[8] = 0, i = 0; i < 4; ++i) { */
+		/* memcpy(tmp, wgid + i * 8, 8); */
+		/* sscanf(tmp, "%x", &v32); */
+		/* tmp_gid[i] = be32toh(v32); */
+	/* } */
+	/* memcpy(gid, tmp_gid, sizeof(*gid)); */
+/* } */
 
-void gid_to_wire_gid(const union ibv_gid *gid, char wgid[])
-{
-	uint32_t tmp_gid[4];
-	int i;
+/* void gid_to_wire_gid(const union ibv_gid *gid, char wgid[]) */
+/* { */
+	/* uint32_t tmp_gid[4]; */
+	/* int i; */
 
-	memcpy(tmp_gid, gid, sizeof(tmp_gid));
-	for (i = 0; i < 4; ++i)
-		sprintf(&wgid[i * 8], "%08x", htobe32(tmp_gid[i]));
-}
+	/* memcpy(tmp_gid, gid, sizeof(tmp_gid)); */
+	/* for (i = 0; i < 4; ++i) */
+		/* sprintf(&wgid[i * 8], "%08x", htobe32(tmp_gid[i])); */
+/* } */
