@@ -40,13 +40,14 @@
 extern "C" {
 #endif
 
-// TODO: File necessary?
 
 const char *              ibv_get_device_name(struct ibv_device *device);
 struct ibv_context *      ibv_open_device(struct ibv_device * device);
 int												ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_port_attr * port_attr);
 struct ibv_comp_channel * ibv_create_comp_channel(struct ibv_context * context);
 struct ibv_device **      ibv_get_device_list(int * num_devices);
+
+void kernel_ibv_log();
 
 
 #ifdef __cplusplus

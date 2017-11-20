@@ -34,6 +34,7 @@
 #include <hermit/stddef.h>
 #include <hermit/stdio.h>
 #include <hermit/stdlib.h>
+#include <hermit/logging.h>
 
 #include <hermit/ibv.h>
 #include <hermit/ibv_guest_host.h>
@@ -41,7 +42,7 @@
 
 // TODO: Can/should we separate ibv_get_device_list into two KVM exit IOs to
 // allocate the right amount of memory?
-#define MAX_NUM_OF_IBV_DEVICES 16
+#define MAX_NUM_OF_IBV_DEVICES 16	
 
 
 static void * ret_guest_ptr;
@@ -171,7 +172,6 @@ typedef struct {
 } __attribute__((packed)) uhyve_ibv_get_device_list_t;
 
 struct ibv_device ** ibv_get_device_list(int * num_devices) {
-	/* printf("LOG: ibv_get_device_list"); */
 	// num_devices can be mapped to physical memory right away.
 	uhyve_ibv_get_device_list_t uhyve_args;
 	uhyve_args.num_devices = (int *) guest_to_host((size_t) num_devices);
@@ -190,4 +190,15 @@ struct ibv_device ** ibv_get_device_list(int * num_devices) {
 
 	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_LIST, (unsigned) guest_to_host((size_t) &uhyve_args));
 	return ret_guest_ptr;
+}
+
+
+/*
+ * IBV KERNEL LOG
+ */
+
+void kernel_ibv_log() {
+	char log_message[128];
+	ksprintf(log_message, "%p", kernel_start_host);
+	uhyve_send(UHYVE_PORT_KERNEL_IBV_LOG, (unsigned) virt_to_phys((size_t) log_message));
 }

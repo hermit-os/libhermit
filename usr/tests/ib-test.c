@@ -52,14 +52,15 @@ int main(int argc, char** argv)
 	int num_devices;
 
 	printf("ib_test.c: before get dev list.\n");
+	kernel_ibv_log();
 	dev_list = ibv_get_device_list(&num_devices);
 	printf("ib_test.c: after get dev list.\n");
 
-	printf("ib_test.c: num devices: %d\n", num_devices);
+	printf("ib-test.c: num devices: %d\n", num_devices);
 
-	for (int i=0; i < num_devices; i++) {
-		printf("ib_test.c: Device name No. %d: %s\n", i, dev_list[i]->name);
-	}
+	/* for (int i=0; i < num_devices; i++) { */
+		/* printf("ib_test.c: Device name No. %d: %s\n", i, dev_list[i]->name); */
+	/* } */
 
 	/*if (!dev_list) {*/
 		/*perror("Failed to get IB devices list");*/

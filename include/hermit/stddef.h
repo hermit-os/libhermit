@@ -73,6 +73,8 @@ extern const size_t image_size;
 #define UHYVE_PORT_IBV_QUERY_PORT          0x513
 #define UHYVE_PORT_IBV_CREATE_COMP_CHANNEL 0x514
 
+#define UHYVE_PORT_KERNEL_IBV_LOG         0x515
+
 
 #define BUILTIN_EXPECT(exp, b)		__builtin_expect((exp), (b))
 //#define BUILTIN_EXPECT(exp, b)	(exp)

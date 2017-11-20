@@ -474,7 +474,9 @@ static int load_kernel(uint8_t* mem, char* path)
 			}
 
 			// TODO: Compiler Warning
+			printf("LOG: GUEST_MEM\n");
 			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0xBC)) = guest_mem; // host-virtual start address (kernel_start_host)
+			printf("LOG: GUEST_MEM\n");
 
 		}
 		*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x38)) += memsz; // total kernel size
@@ -970,6 +972,13 @@ static int vcpu_loop(void)
 					break;
 				}
 
+			case UHYVE_PORT_KERNEL_IBV_LOG: {
+					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
+					char* str = (char*) (guest_mem + data);
+					printf("KERNEL IBV LOG: %s\n", str);
+					break;
+				}
+
 			// InfiniBand
 			case UHYVE_PORT_IBV_OPEN_DEVICE:
 				call_ibv_open_device(run);
@@ -984,7 +993,35 @@ static int vcpu_loop(void)
 				call_ibv_create_comp_channel(run);
 				break;
 			case UHYVE_PORT_IBV_GET_DEVICE_LIST:
-				call_ibv_get_device_list(run);
+				/* printf("LOG: UHYVE CASE"); */
+				/* call_ibv_get_device_list(run); */
+
+				printf("LOG: UHYVE CASE\n");
+				unsigned data = *((unsigned *)((size_t)run+run->io.data_offset));
+				printf("LOG: UHYVE CASE\n");
+				uhyve_ibv_get_device_list_t * args = (uhyve_ibv_get_device_list_t *) (data);
+
+				// Call IBV function from hypervisor
+				int num_devices;
+				printf("LOG: UHYVE CASE\n");
+				struct ibv_device **host_ret = ibv_get_device_list(&num_devices);
+
+				// Copy number of devices to kernel memory
+				printf("LOG: UHYVE CASE\n");
+				printf("LOG: UHYVE CASE - guest_mem correct: %p\n", guest_mem);
+				memcpy(args->num_devices, &num_devices, sizeof(num_devices));
+				/* if (args->num_devices) { */
+					/* printf("LOG: UHYVE CASE\n"); */
+					/* memcpy(args->num_devices, &num_devices, sizeof(num_devices)); */
+				/* } */
+
+				for (int d = 0; d < num_devices; d++) {
+					// Copy array entry containing ibv_device struct to kernel memory
+					printf("LOG: UHYVE CASE\n");
+					memcpy(args->ret[d], host_ret[d], sizeof(struct ibv_device));
+				}
+
+				printf("LOG: UHYVE CASE\n");
 				break;
 
 			default:
