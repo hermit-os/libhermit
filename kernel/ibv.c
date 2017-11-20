@@ -41,7 +41,7 @@
 
 // TODO: Can/should we separate ibv_get_device_list into two KVM exit IOs to
 // allocate the right amount of memory?
-#define MAX_NUM_OF_IBV_DEVICES 16	
+#define MAX_NUM_OF_IBV_DEVICES 16
 
 
 static void * ret_guest_ptr;
@@ -59,6 +59,7 @@ typedef struct {
 } __attribute__((packed)) uhyve_ibv_open_device_t;
 
 struct ibv_context * ibv_open_device(struct ibv_device * device) {
+	/* printf("LOG: ibv_open_device"); */
 	uhyve_ibv_open_device_t uhyve_args;
 	uhyve_args.device = guest_to_host_ibv_device(device);
 
@@ -115,6 +116,7 @@ typedef struct {
 } __attribute__((packed)) uhyve_ibv_query_port_t;
 
 int ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_port_attr * port_attr) {
+	/* printf("LOG: ibv_query_port"); */
 	uhyve_ibv_query_port_t uhyve_args;
 	uhyve_args.context   = guest_to_host_ibv_context(context);
 	uhyve_args.port_num  = port_num;
@@ -141,6 +143,7 @@ typedef struct {
 } __attribute__((packed)) uhyve_ibv_create_comp_channel_t;
 
 struct ibv_comp_channel * ibv_create_comp_channel(struct ibv_context * context) {
+	/* printf("LOG: ibv_create_comp_channel"); */
 	uhyve_ibv_create_comp_channel_t uhyve_args;
 	uhyve_args.context = guest_to_host_ibv_context(context);
 
@@ -168,6 +171,7 @@ typedef struct {
 } __attribute__((packed)) uhyve_ibv_get_device_list_t;
 
 struct ibv_device ** ibv_get_device_list(int * num_devices) {
+	/* printf("LOG: ibv_get_device_list"); */
 	// num_devices can be mapped to physical memory right away.
 	uhyve_ibv_get_device_list_t uhyve_args;
 	uhyve_args.num_devices = (int *) guest_to_host((size_t) num_devices);

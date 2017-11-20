@@ -310,8 +310,10 @@ static struct pingpong_context *pp_init_ctx(struct ibv_device *ib_dev, int size,
 					    int rx_depth, int port,
 					    int use_event)
 {
+	printf("LOG: PINGPONG - pp_init_ctx");
 	struct pingpong_context *ctx;
 
+	printf("LOG: PINGPONG - pp_init_ctx");
 	ctx = malloc(sizeof *ctx);
 	if (!ctx)
 		return NULL;
@@ -320,6 +322,7 @@ static struct pingpong_context *pp_init_ctx(struct ibv_device *ib_dev, int size,
 	ctx->send_flags = IBV_SEND_SIGNALED;
 	ctx->rx_depth   = rx_depth;
 
+	printf("LOG: PINGPONG - pp_init_ctx");
 	ctx->buf = memalign(page_size, size + 40);
 	if (!ctx->buf) {
 		fprintf(stderr, "Couldn't allocate work buf.\n");
@@ -329,6 +332,7 @@ static struct pingpong_context *pp_init_ctx(struct ibv_device *ib_dev, int size,
 	/* FIXME memset(ctx->buf, 0, size + 40); */
 	memset(ctx->buf, 0x7b, size + 40);
 
+	printf("LOG: PINGPONG - pp_init_ctx");
 	ctx->context = ibv_open_device(ib_dev);
 	if (!ctx->context) {
 		fprintf(stderr, "Couldn't get context for %s\n",
@@ -336,6 +340,7 @@ static struct pingpong_context *pp_init_ctx(struct ibv_device *ib_dev, int size,
 		goto clean_buffer;
 	}
 
+	printf("LOG: PINGPONG - pp_init_ctx");
 	{
 		struct ibv_port_attr port_info = {};
 		int mtu;
@@ -351,6 +356,7 @@ static struct pingpong_context *pp_init_ctx(struct ibv_device *ib_dev, int size,
 		}
 	}
 
+	printf("LOG: PINGPONG - pp_init_ctx");
 	if (use_event) {
 		ctx->channel = ibv_create_comp_channel(ctx->context);
 		if (!ctx->channel) {
@@ -566,6 +572,7 @@ static void usage(const char *argv0)
 
 int main(int argc, char *argv[])
 {
+	printf("LOG: PINGPONG - main");
 	struct ibv_device      **dev_list;
 	struct ibv_device	*ib_dev;
 	struct pingpong_context *ctx;
@@ -587,11 +594,14 @@ int main(int argc, char *argv[])
 	int			 gidx = -1;
 	char			 gid[33];
 
+	printf("LOG: PINGPONG - main");
 	srand48(getpid() * time(NULL));
 
+	printf("LOG: PINGPONG - main");
 	while (1) {
 		int c;
 
+		printf("LOG: PINGPONG - main");
 		static struct option long_options[] = {
 			{ .name = "port",     .has_arg = 1, .val = 'p' },
 			{ .name = "ib-dev",   .has_arg = 1, .val = 'd' },

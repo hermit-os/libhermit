@@ -62,7 +62,7 @@ struct ibv_context * guest_to_host_ibv_context(struct ibv_context * context) {
 	context->device     = guest_to_host_ibv_device(context->device);
 	context->abi_compat = guest_to_host_ibv_abi_compat_v2(context->abi_compat);
 	guest_to_host_ibv_context_ops(&context->ops);
-	/*guest_to_host_pthread_mutex_t(&context->mutex); // TODO*/
+	guest_to_host_pthread_mutex_t(&context->mutex); // TODO
 
 	return (struct ibv_context *) guest_to_host((size_t) context);
 }
@@ -243,7 +243,7 @@ static struct {
 } ibv_comp_channel_virt_ptrs;
 
 struct ibv_comp_channel * guest_to_host_ibv_comp_channel(struct ibv_comp_channel * channel) {
-	ibv_comp_channel_virt_ptrs.context = channel->context,
+	ibv_comp_channel_virt_ptrs.context = channel->context;
 
 	channel->context = guest_to_host_ibv_context(channel->context);
 
@@ -263,12 +263,33 @@ void host_to_guest_ibv_comp_channel(struct ibv_comp_channel * channel) {
 
 struct ibv_abi_compat_v2 * guest_to_host_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat) {
 	guest_to_host_ibv_comp_channel(&abi_compat->channel);
-	/* guest_to_host_pthread_mutex_t(&abi_compat->in_use); */
+	guest_to_host_pthread_mutex_t(&abi_compat->in_use);
 
 	return (struct ibv_abi_compat_v2 *) guest_to_host((size_t) abi_compat);
 }
 
 void host_to_guest_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat) {
 	host_to_guest_ibv_comp_channel(&abi_compat->channel);
-	/* host_to_guest_pthread_mutex_t(&abi_compat->in_use); */
+	host_to_guest_pthread_mutex_t(&abi_compat->in_use);
+}
+
+
+/*
+ * pthread_mutex_t
+ */
+
+static struct {
+	_pthread_descr __m_owner;
+} pthread_mutex_t_virt_ptrs;
+
+pthread_mutex_t * guest_to_host_pthread_mutex_t(pthread_mutex_t * mutex) {
+	pthread_mutex_t_virt_ptrs.__m_owner = mutex->__m_owner; // TODO: 
+
+	/* mutex->__m_owner = guest_to_host__pthread_descr(mutex->__m_owner); */
+
+	return (struct pthread_mutex_t *) guest_to_host((size_t) mutex);
+}
+
+void host_to_guest_pthread_mutex_t(pthread_mutex_t * mutex) {
+	/* host_to_guest__pthread_descr(mutex->__m_owner); */
 }

@@ -44,6 +44,7 @@
  */
 
 void call_ibv_open_device(struct kvm_run * run) {
+	printf("LOG: UHYVE - call_ibv_open_device");
 	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 	uhyve_ibv_open_device_t * args = (uhyve_ibv_open_device_t *) data;
 
@@ -59,6 +60,7 @@ void call_ibv_open_device(struct kvm_run * run) {
  */
 
 void call_ibv_get_device_name(struct kvm_run * run) {
+	printf("LOG: UHYVE - call_ibv_get_device_name");
 	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 	uhyve_ibv_get_device_name_t * args = (uhyve_ibv_get_device_name_t *) data;
 
@@ -75,6 +77,7 @@ void call_ibv_get_device_name(struct kvm_run * run) {
  */
 
 void call_ibv_query_port(struct kvm_run * run) {
+	printf("LOG: UHYVE - call_ibv_query_port");
 	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 	uhyve_ibv_query_port_t * args = (uhyve_ibv_query_port_t *) (data);
 
@@ -88,6 +91,7 @@ void call_ibv_query_port(struct kvm_run * run) {
  */
 
 void call_ibv_create_comp_channel(struct kvm_run * run) {
+	printf("LOG: UHYVE - call_ibv_create_comp_channel");
 	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 	uhyve_ibv_create_comp_channel_t * args = (uhyve_ibv_create_comp_channel_t *) data;
 	/*uhyve_ibv_create_comp_channel_t * args = (uhyve_ibv_create_comp_channel_t *) get_data(run);*/
@@ -99,6 +103,7 @@ void call_ibv_create_comp_channel(struct kvm_run * run) {
 
 
 void call_ibv_get_device_list(struct kvm_run * run) {
+	printf("LOG: UHYVE - call_ibv_get_device_list");
 	unsigned data = *((unsigned *)((size_t)run+run->io.data_offset));
 	uhyve_ibv_get_device_list_t * args = (uhyve_ibv_get_device_list_t *) data;
 

@@ -47,11 +47,13 @@ struct ibv_context_ops *   guest_to_host_ibv_context_ops(struct ibv_context_ops 
 struct ibv_port_attr *     guest_to_host_ibv_port_attr(struct ibv_port_attr * port_attr);
 struct ibv_comp_channel *  guest_to_host_ibv_comp_channel(struct ibv_comp_channel * channel);
 struct ibv_abi_compat_v2 * guest_to_host_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat);
+pthread_mutex_t *					 guest_to_host_pthread_mutex_t(pthread_mutex_t * mutex);
 
 void host_to_guest_ibv_device(struct ibv_device * device);
 void host_to_guest_ibv_context(struct ibv_context * context);
 void host_to_guest_ibv_context_ops(struct ibv_context_ops * context_ops);
 void host_to_guest_ibv_port_attr(struct ibv_port_attr * port_attr);
 void host_to_guest_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat);
+void host_to_guest_pthread_mutex_t(pthread_mutex_t * mutex);
 
 #endif // __IBV_GUEST_HOST_H__
