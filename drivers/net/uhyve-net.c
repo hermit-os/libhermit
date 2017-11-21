@@ -195,7 +195,7 @@ static void uhyve_netif_poll(void)
 	struct pbuf *p = NULL;
 	struct pbuf *q;
 
-	if (uhyve_net_read_sync(uhyve_netif->rx_buf, &len) == 0)
+	while (uhyve_net_read_sync(uhyve_netif->rx_buf, &len) == 0)
 	{
 #if ETH_PAD_SIZE
 		len += ETH_PAD_SIZE; /*allow room for Ethernet padding */

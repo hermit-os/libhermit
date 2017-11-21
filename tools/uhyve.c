@@ -46,6 +46,7 @@
 #include <signal.h>
 #include <limits.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <elf.h>
 #include <err.h>
 #include <poll.h>
@@ -189,6 +190,7 @@ static pthread_barrier_t barrier;
 static __thread struct kvm_run *run = NULL;
 static __thread int vcpufd = -1;
 static __thread uint32_t cpuid = 0;
+static sem_t net_sem;
 
 int uhyve_argc = -1;
 int uhyve_envc = -1;
@@ -754,6 +756,7 @@ static void* wait_for_packet(void* arg)
 		else if (ret) {
 			uint64_t event_counter = 1;
 			write(efd, &event_counter, sizeof(event_counter));
+			sem_wait(&net_sem);
 		}
 	}
 
@@ -770,6 +773,8 @@ static inline void check_network(void)
 		irqfd.fd = efd;
 		irqfd.gsi = UHYVE_IRQ;
 		kvm_ioctl(vmfd, KVM_IRQFD, &irqfd);
+
+		sem_init(&net_sem, 0, 0);
 
 		if (pthread_create(&net_thread, NULL, wait_for_packet, NULL))
 			err(1, "unable to create thread");
@@ -894,7 +899,10 @@ static int vcpu_loop(void)
 					if (ret > 0) {
 						uhyve_netread->len = ret;
 						uhyve_netread->ret = 0;
-					} else uhyve_netread->ret = -1;
+					} else {
+						uhyve_netread->ret = -1;
+						sem_post(&net_sem);
+					}
 					break;
 				}
 
