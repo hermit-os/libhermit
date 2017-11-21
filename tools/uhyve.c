@@ -981,48 +981,43 @@ static int vcpu_loop(void)
 
 			// InfiniBand
 			case UHYVE_PORT_IBV_OPEN_DEVICE:
-				call_ibv_open_device(run);
+				call_ibv_open_device(run, guest_mem);
 				break;
 			case UHYVE_PORT_IBV_GET_DEVICE_NAME:
-				call_ibv_get_device_name(run);
+				call_ibv_get_device_name(run, guest_mem);
 				break;
 			case UHYVE_PORT_IBV_QUERY_PORT:
-				call_ibv_query_port(run);
+				call_ibv_query_port(run, guest_mem);
 				break;
 			case UHYVE_PORT_IBV_CREATE_COMP_CHANNEL:
-				call_ibv_create_comp_channel(run);
+				call_ibv_create_comp_channel(run, guest_mem);
 				break;
-			case UHYVE_PORT_IBV_GET_DEVICE_LIST:
-				/* printf("LOG: UHYVE CASE"); */
-				/* call_ibv_get_device_list(run); */
 
-				printf("LOG: UHYVE CASE\n");
-				unsigned data = *((unsigned *)((size_t)run+run->io.data_offset));
-				printf("LOG: UHYVE CASE\n");
-				uhyve_ibv_get_device_list_t * args = (uhyve_ibv_get_device_list_t *) (data);
+			case UHYVE_PORT_IBV_GET_DEVICE_LIST: {
+				printf("LOG: UHYVE CASE");
+				call_ibv_get_device_list(run, guest_mem);
 
-				// Call IBV function from hypervisor
-				int num_devices;
-				printf("LOG: UHYVE CASE\n");
-				struct ibv_device **host_ret = ibv_get_device_list(&num_devices);
+				/* unsigned data = *((unsigned *)((size_t)run+run->io.data_offset)); */
+				/* uhyve_ibv_get_device_list_t * args = (uhyve_ibv_get_device_list_t *) (guest_mem + data); */
 
-				// Copy number of devices to kernel memory
-				printf("LOG: UHYVE CASE\n");
-				printf("LOG: UHYVE CASE - guest_mem correct: %p\n", guest_mem);
-				memcpy(args->num_devices, &num_devices, sizeof(num_devices));
+				/* // Call IBV function from hypervisor */
+				/* int num_devices; */
+				/* struct ibv_device **host_ret = ibv_get_device_list(&num_devices); */
+
+				/* // Copy number of devices to kernel memory */
 				/* if (args->num_devices) { */
-					/* printf("LOG: UHYVE CASE\n"); */
 					/* memcpy(args->num_devices, &num_devices, sizeof(num_devices)); */
 				/* } */
 
-				for (int d = 0; d < num_devices; d++) {
-					// Copy array entry containing ibv_device struct to kernel memory
-					printf("LOG: UHYVE CASE\n");
-					memcpy(args->ret[d], host_ret[d], sizeof(struct ibv_device));
-				}
+				/* for (int d = 0; d < num_devices; d++) { */
+					/* // Copy array entry containing ibv_device struct to kernel memory */
+					/* printf("LOG: UHYVE CASE FOR\n"); */
+					/* memcpy(args->ret[d], host_ret[d], sizeof(struct ibv_device)); */
+				/* } */
 
-				printf("LOG: UHYVE CASE\n");
+				/* printf("LOG: UHYVE CASE\n"); */
 				break;
+																					 }
 
 			default:
 				err(1, "KVM: unhandled KVM_EXIT_IO at port 0x%x, direction %d\n", run->io.port, run->io.direction);

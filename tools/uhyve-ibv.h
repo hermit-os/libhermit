@@ -41,13 +41,6 @@ typedef enum {
 
 typedef struct {
 	// Parameters:
-	int * num_devices;
-	// Return value:
-	struct ibv_device * ret[MAX_NUM_OF_IBV_DEVICES];
-} __attribute__((packed)) uhyve_ibv_get_device_list_t;
-
-typedef struct {
-	// Parameters:
 	struct ibv_device * device;
 	// Return value:
 	struct ibv_context * ret;
@@ -76,11 +69,17 @@ typedef struct {
 	struct ibv_comp_channel * ret;
 } __attribute__((packed)) uhyve_ibv_create_comp_channel_t;
 
+typedef struct {
+	// Parameters:
+	int * num_devices;
+	// Return value:
+	struct ibv_device * ret[MAX_NUM_OF_IBV_DEVICES];
+} __attribute__((packed)) uhyve_ibv_get_device_list_t;
 
-void call_ibv_open_device(struct kvm_run * run);
-void call_ibv_get_device_name(struct kvm_run * run);
-void call_ibv_query_port(struct kvm_run * run);
-void call_ibv_create_comp_channel(struct kvm_run * run);
-void call_ibv_get_device_list(struct kvm_run * run);
+void call_ibv_open_device(struct kvm_run * run, uint8_t * guest_mem);
+void call_ibv_get_device_name(struct kvm_run * run, uint8_t * guest_mem);
+void call_ibv_query_port(struct kvm_run * run, uint8_t * guest_mem);
+void call_ibv_create_comp_channel(struct kvm_run * run, uint8_t * guest_mem);
+void call_ibv_get_device_list(struct kvm_run * run, uint8_t * guest_mem);
 
 #endif // UHYVE_IBV_H

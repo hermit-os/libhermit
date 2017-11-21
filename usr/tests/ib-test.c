@@ -51,10 +51,11 @@ int main(int argc, char** argv)
 	struct ibv_device **dev_list;
 	int num_devices;
 
-	printf("ib_test.c: before get dev list.\n");
+	printf("ib-test.c: before kernel ibv_log\n");
 	kernel_ibv_log();
+	printf("ib-test.c: before get dev list.\n");
 	dev_list = ibv_get_device_list(&num_devices);
-	printf("ib_test.c: after get dev list.\n");
+	printf("ib-test.c: after get dev list.\n");
 
 	printf("ib-test.c: num devices: %d\n", num_devices);
 
