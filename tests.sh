@@ -25,7 +25,7 @@ kill $!
 # test connection via netio
 wget http://web.ars.de/wp-content/uploads/2017/04/netio132.zip
 unzip netio132.zip
-HERMIT_ISLE=qemu HERMIT_CPUS=1 HERMIT_KVM=0 HERMIT_VERBOSE=1 HERMIT_APP_PORT=18767 $PROXY $TDIR/benchmarks/netio &
+HERMIT_ISLE=qemu HERMIT_CPUS=2 HERMIT_KVM=0 HERMIT_VERBOSE=1 HERMIT_APP_PORT=18767 $PROXY $TDIR/benchmarks/netio &
 sleep 1
 chmod a+rx bin/linux-x86_64
 bin/linux-x86_64 -t 127.0.0.1
