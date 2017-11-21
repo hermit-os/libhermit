@@ -21,3 +21,7 @@ sleep 1
 
 # kill server
 kill $!
+
+wget http://web.ars.de/wp-content/uploads/2017/04/netio132.zip
+unzip netio132.zip
+ls -la
