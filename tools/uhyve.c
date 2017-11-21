@@ -1590,7 +1590,6 @@ int uhyve_loop(int argc, char **argv)
 		fprintf(stderr, "uhyve downsiize envc from %d to %d\n", uhyve_envc, MAX_ARGC_ENVC-1);
 		uhyve_envc = MAX_ARGC_ENVC-1;
 	}
-printf("envc %d\n", uhyve_envc);
 
 	if(uhyve_argc > MAX_ARGC_ENVC || uhyve_envc > MAX_ARGC_ENVC) {
 		fprintf(stderr, "uhyve cannot forward more than %d command line "
