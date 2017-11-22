@@ -474,9 +474,7 @@ static int load_kernel(uint8_t* mem, char* path)
 			}
 
 			// TODO: Compiler Warning
-			printf("LOG: GUEST_MEM\n");
 			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0xBC)) = guest_mem; // host-virtual start address (kernel_start_host)
-			printf("LOG: GUEST_MEM\n");
 
 		}
 		*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x38)) += memsz; // total kernel size
@@ -980,43 +978,27 @@ static int vcpu_loop(void)
 				}
 
 			// InfiniBand
-			case UHYVE_PORT_IBV_OPEN_DEVICE:
-				call_ibv_open_device(run, guest_mem);
+			case UHYVE_PORT_IBV_GET_DEVICE_LIST: {
+				printf("LOG: UHYVE CASE\n");
+				call_ibv_get_device_list(run, guest_mem);
 				break;
 			case UHYVE_PORT_IBV_GET_DEVICE_NAME:
+				printf("LOG: UHYVE CASE UHYVE_PORT_IBV_GET_DEVICE_NAME\n");
 				call_ibv_get_device_name(run, guest_mem);
 				break;
+			case UHYVE_PORT_IBV_OPEN_DEVICE:
+				printf("LOG: UHYVE CASE UHYVE_PORT_IBV_OPEN_DEVICE\n");
+				call_ibv_open_device(run, guest_mem);
+				break;
 			case UHYVE_PORT_IBV_QUERY_PORT:
+				printf("LOG: UHYVE CASE UHYVE_PORT_IBV_QUERY_PORT\n");
 				call_ibv_query_port(run, guest_mem);
 				break;
 			case UHYVE_PORT_IBV_CREATE_COMP_CHANNEL:
+				printf("LOG: UHYVE CASE UHYVE_PORT_IBV_CREATE_COMP_CHANNEL\n");
 				call_ibv_create_comp_channel(run, guest_mem);
 				break;
 
-			case UHYVE_PORT_IBV_GET_DEVICE_LIST: {
-				printf("LOG: UHYVE CASE");
-				call_ibv_get_device_list(run, guest_mem);
-
-				/* unsigned data = *((unsigned *)((size_t)run+run->io.data_offset)); */
-				/* uhyve_ibv_get_device_list_t * args = (uhyve_ibv_get_device_list_t *) (guest_mem + data); */
-
-				/* // Call IBV function from hypervisor */
-				/* int num_devices; */
-				/* struct ibv_device **host_ret = ibv_get_device_list(&num_devices); */
-
-				/* // Copy number of devices to kernel memory */
-				/* if (args->num_devices) { */
-					/* memcpy(args->num_devices, &num_devices, sizeof(num_devices)); */
-				/* } */
-
-				/* for (int d = 0; d < num_devices; d++) { */
-					/* // Copy array entry containing ibv_device struct to kernel memory */
-					/* printf("LOG: UHYVE CASE FOR\n"); */
-					/* memcpy(args->ret[d], host_ret[d], sizeof(struct ibv_device)); */
-				/* } */
-
-				/* printf("LOG: UHYVE CASE\n"); */
-				break;
 																					 }
 
 			default:

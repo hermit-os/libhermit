@@ -45,35 +45,47 @@
 #define MAX_NUM_OF_IBV_DEVICES 16
 
 
-static void * ret_guest_ptr;
+static void * ret_guest;
 
 
 /*
- * ibv_open_device
+ * ibv_get_device_list
  */
 
 typedef struct {
 	// Parameters:
-	struct ibv_device * device;
+	int * num_devices;
 	// Return value:
-	struct ibv_context * ret;
-} __attribute__((packed)) uhyve_ibv_open_device_t;
+	struct ibv_device * ret[MAX_NUM_OF_IBV_DEVICES];
+} __attribute__((packed)) uhyve_ibv_get_device_list_t;
 
-struct ibv_context * ibv_open_device(struct ibv_device * device) {
-	/* printf("LOG: ibv_open_device"); */
-	uhyve_ibv_open_device_t uhyve_args;
-	uhyve_args.device = guest_to_host_ibv_device(device);
+struct ibv_device ** ibv_get_device_list(int * num_devices) {
+	// num_devices can be mapped to physical memory right away.
+	uhyve_ibv_get_device_list_t uhyve_args;
+	uhyve_args.num_devices = (int *) guest_to_host((size_t) num_devices);
 
-	ret_guest_ptr = kmalloc(sizeof(struct ibv_context));
-	uhyve_args.ret = (struct ibv_context *) guest_to_host((size_t) ret_guest_ptr);
+	// Allocate memory for return value.
+	struct ibv_device * devs = kmalloc(MAX_NUM_OF_IBV_DEVICES * sizeof(struct ibv_device));
+	struct ibv_device ** ret_guest = kmalloc(MAX_NUM_OF_IBV_DEVICES * sizeof(struct ibv_device *));
 
-	uhyve_send(UHYVE_PORT_IBV_OPEN_DEVICE, (unsigned)guest_to_host((size_t)&uhyve_args));
+	// We keep a list of the virtual addresses, so we can return it later, and map
+	// to physical addresses for the args struct passed to uhyve.
+	for (int i = 0; i < MAX_NUM_OF_IBV_DEVICES; i++) {
+		struct ibv_device * device_address = devs + i;
+		ret_guest[i] = device_address;
+		uhyve_args.ret[i] = (struct ibv_device *) guest_to_host((size_t) device_address);
+	}
 
-	host_to_guest_ibv_device(device);
-	uhyve_args.ret = (struct ibv_context *) ret_guest_ptr;
-	// TODO: Fix pointers in returned data structures.
+	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_LIST, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
-	return uhyve_args.ret;
+	for (int i = 0; i < MAX_NUM_OF_IBV_DEVICES; i++) {
+		host_to_guest_ibv_device(ret_guest[i]);
+		struct ibv_device * device_address = devs + i;
+		ret_guest[i] = device_address;
+		uhyve_args.ret[i] = (struct ibv_device *) guest_to_host((size_t) device_address);
+	}
+
+	return ret_guest;
 }
 
 
@@ -92,14 +104,44 @@ const char * ibv_get_device_name(struct ibv_device * device) {
 	uhyve_ibv_get_device_name_t uhyve_args;
 	uhyve_args.device = guest_to_host_ibv_device(device);
 
-	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_NAME, (unsigned) guest_to_host((size_t) &uhyve_args));
+	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_NAME, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	host_to_guest_ibv_device(device);
+	ret_guest = host_to_guest((size_t) uhyve_args.ret);
 	// Lookup return address in hash map created earlier. Found? convert back.
-	// Hack for testing:
-	uhyve_args.ret = uhyve_args.device->name;
+	// Hack for testing, replace by line above.
+	ret_guest = device->name;
 
-	return uhyve_args.ret;
+	return ret_guest;
+}
+
+
+
+/*
+ * ibv_open_device
+ */
+
+typedef struct {
+	// Parameters:
+	struct ibv_device * device;
+	// Return value:
+	struct ibv_context * ret;
+} __attribute__((packed)) uhyve_ibv_open_device_t;
+
+struct ibv_context * ibv_open_device(struct ibv_device * device) {
+	/* printf("LOG: ibv_open_device"); */
+	uhyve_ibv_open_device_t uhyve_args;
+	uhyve_args.device = guest_to_host_ibv_device(device);
+
+	ret_guest = kmalloc(sizeof(struct ibv_context));
+	uhyve_args.ret = (struct ibv_context *) guest_to_host((size_t) ret_guest);
+
+	uhyve_send(UHYVE_PORT_IBV_OPEN_DEVICE, (unsigned)virt_to_phys((size_t)&uhyve_args));
+
+	host_to_guest_ibv_device(device);
+	host_to_guest_ibv_context((struct ibv_context * ) ret_guest);
+
+	return ret_guest;
 }
 
 
@@ -123,7 +165,7 @@ int ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_po
 	uhyve_args.port_num  = port_num;
 	uhyve_args.port_attr = guest_to_host_ibv_port_attr(port_attr);
 
-	uhyve_send(UHYVE_PORT_IBV_QUERY_PORT, (unsigned) guest_to_host((size_t) &uhyve_args));
+	uhyve_send(UHYVE_PORT_IBV_QUERY_PORT, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	host_to_guest_ibv_context(context);
 	host_to_guest_ibv_port_attr(port_attr);
@@ -148,80 +190,15 @@ struct ibv_comp_channel * ibv_create_comp_channel(struct ibv_context * context) 
 	uhyve_ibv_create_comp_channel_t uhyve_args;
 	uhyve_args.context = guest_to_host_ibv_context(context);
 
-	ret_guest_ptr = kmalloc(sizeof(struct ibv_comp_channel));
-	uhyve_args.ret = (struct ibv_comp_channel *) guest_to_host((size_t) ret_guest_ptr);
+	ret_guest = kmalloc(sizeof(struct ibv_comp_channel));
+	uhyve_args.ret = (struct ibv_comp_channel *) guest_to_host((size_t) ret_guest);
 
-	uhyve_send(UHYVE_PORT_IBV_CREATE_COMP_CHANNEL, (unsigned) guest_to_host((size_t) &uhyve_args));
+	uhyve_send(UHYVE_PORT_IBV_CREATE_COMP_CHANNEL, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	host_to_guest_ibv_context(context);
-	uhyve_args.ret = (struct ibv_comp_channel *) ret_guest_ptr;
+	host_to_guest_ibv_comp_channel(ret_guest);
 
-	return uhyve_args.ret;
-}
-
-
-/*
- * ibv_get_device_list
- */
-
-typedef struct {
-	// Parameters:
-	int * num_devices;
-	// Return value:
-	struct ibv_device * ret[MAX_NUM_OF_IBV_DEVICES];
-} __attribute__((packed)) uhyve_ibv_get_device_list_t;
-
-/* struct ibv_device ** ibv_get_device_list(int * num_devices) { */
-	/* // num_devices can be mapped to physical memory right away. */
-	/* uhyve_ibv_get_device_list_t uhyve_args; */
-	/* uhyve_args.test = 42; */
-
-	/* uhyve_args.num_devices = (int *) virt_to_phys((size_t) num_devices); */
-
-	/* // Allocate memory for return value. */
-	/* struct ibv_device * devs = kmalloc(MAX_NUM_OF_IBV_DEVICES * sizeof(struct ibv_device)); */
-	/* struct ibv_device ** ret_guest_ptr = kmalloc(MAX_NUM_OF_IBV_DEVICES * sizeof(struct ibv_device *)); */
-
-	/* for (int i = 0; i < MAX_NUM_OF_IBV_DEVICES; i++) { */
-		/* struct ibv_device * device_address = devs + i; */
-		/* ret_guest_ptr[i] = device_address; */
-		/* uhyve_args.ret[i] = (struct ibv_device *) virt_to_phys((size_t) device_address); */
-	/* } */
-	/* uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_LIST_OLD, (unsigned) virt_to_phys((size_t) &uhyve_args)); */
-
-	/* // -------------- */
-
-	/* uhyve_args.num_devices = (int *) guest_to_host((size_t) num_devices); */
-
-	/* for (int i = 0; i < MAX_NUM_OF_IBV_DEVICES; i++) { */
-		/* uhyve_args.ret[i] = (struct ibv_device *) guest_to_host((size_t) ret_guest_ptr[i]); */
-	/* } */
-
-	/* uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_LIST, (unsigned) guest_to_host((size_t) &uhyve_args)); */
-
-	/* return ret_guest_ptr; */
-/* } */
-
-
-struct ibv_device ** ibv_get_device_list(int * num_devices) {
-	// num_devices can be mapped to physical memory right away.
-	uhyve_ibv_get_device_list_t uhyve_args;
-	uhyve_args.num_devices = (int *) guest_to_host((size_t) num_devices);
-
-	// Allocate memory for return value.
-	struct ibv_device * devs = kmalloc(MAX_NUM_OF_IBV_DEVICES * sizeof(struct ibv_device));
-	struct ibv_device ** ret_guest_ptr = kmalloc(MAX_NUM_OF_IBV_DEVICES * sizeof(struct ibv_device *));
-
-	// We keep a list of the virtual addresses, so we can return it later, and map
-	// to physical addresses for the args struct passed to uhyve.
-	for (int i = 0; i < MAX_NUM_OF_IBV_DEVICES; i++) {
-		struct ibv_device * device_address = devs + i;
-		ret_guest_ptr[i] = device_address;
-		uhyve_args.ret[i] = (struct ibv_device *) guest_to_host((size_t) device_address);
-	}
-
-	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_LIST, (unsigned) virt_to_phys((size_t) &uhyve_args));
-	return ret_guest_ptr;
+	return ret_guest;
 }
 
 

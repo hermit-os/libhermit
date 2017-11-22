@@ -34,12 +34,12 @@
 
 #include <hermit/ibv.h>	// Geht per cmake copy workaround
 
-#define N	255
+/* #define N	255 */
 
-static void test_handler(int s)
-{
-	printf("Receive signal with number %d\n", s);
-}
+/* static void test_handler(int s) */
+/* { */
+	/* printf("Receive signal with number %d\n", s); */
+/* } */
 
 int main(int argc, char** argv)
 {
@@ -51,34 +51,19 @@ int main(int argc, char** argv)
 	struct ibv_device **dev_list;
 	int num_devices;
 
-	printf("ib-test.c: before kernel ibv_log\n");
-	kernel_ibv_log();
 	printf("ib-test.c: before get dev list.\n");
 	dev_list = ibv_get_device_list(&num_devices);
-	printf("ib-test.c: after get dev list.\n");
+	printf("after get device list -- ib-test.c: num devices: %d\n", num_devices);
 
-	printf("ib-test.c: num devices: %d\n", num_devices);
+	printf("before get device name.\n");
+	const char* dev_name = ibv_get_device_name(dev_list[0]);
+	printf("after get device name -- Device: %s", dev_name);
 
-	/* for (int i=0; i < num_devices; i++) { */
-		/* printf("ib_test.c: Device name No. %d: %s\n", i, dev_list[i]->name); */
-	/* } */
+	printf("before open_device\n");
+	ibv_context * context = ibv_open_device(dev_list[0]);
+	printf("after open device name -- Device: %s", dev_name);
 
-	/*if (!dev_list) {*/
-		/*perror("Failed to get IB devices list");*/
-		/*return 1;*/
-	/*}*/
-	/*printf("after dev list check.\n");*/
 
-	/*const char* dev_name = ibv_get_device_name(dev_list[0]);*/
-	/*printf("after get device name.\n");*/
-
-	/*if (!dev_name) {*/
-		/*perror("Failed to get devices name");*/
-		/*return 1;*/
-	/*}*/
-
-	/*printf("Device: %s", dev_name);*/
-	/*printf("\nafter get dev name.\n");*/
 
 	return 0;
 }

@@ -115,6 +115,38 @@ size_t virt_to_phys(size_t addr)
 	}
 }
 
+size_t phys_to_virt(size_t addr)
+{
+	size_t * pml4 = self[PAGE_LEVELS-1];
+	for(size_t i=0; i<(1 << PAGE_MAP_BITS); i++) {
+		if (!(pml4[i] & PG_PRESENT)) {
+			continue;
+		}
+
+		size_t * pdpt = (size_t *) (pml4[i] & PAGE_MASK);
+		for(size_t j=0; j<(1 << PAGE_MAP_BITS); j++) {
+			if (!(pdpt[j] & PG_PRESENT)) {
+				continue;
+			}
+
+			size_t * pgd = (size_t *) (pdpt[j] & PAGE_MASK);
+			for(size_t k=0; k<(1 << PAGE_MAP_BITS); k++) {
+				if (!(pgd[k] & PG_PRESENT)) {
+					continue;
+				}
+
+				size_t * pgt = (size_t *) (pgd[k] & PAGE_MASK);
+				for(size_t l=0; l<(1 << PAGE_MAP_BITS); l++) {
+					if (pgt[l] & PG_PRESENT) {
+						// TODO
+					}
+				}
+			}
+		}
+	}
+}
+
+
 /*
  * get memory page size
  */

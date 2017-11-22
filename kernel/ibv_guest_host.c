@@ -50,10 +50,10 @@ void host_to_guest_ibv_device(struct ibv_device * device) { }
  * struct ibv_context
  */
 
-static struct {
-	struct ibv_device * device;
-	void * abi_compat;
-} ibv_context_virt_ptrs;
+/* static struct { */
+	/* struct ibv_device * device; */
+	/* void * abi_compat; */
+/* } ibv_context_virt_ptrs; */
 
 struct ibv_context * guest_to_host_ibv_context(struct ibv_context * context) {
 	ibv_context_virt_ptrs.device     = context->device,
@@ -81,40 +81,40 @@ void host_to_guest_ibv_context(struct ibv_context * context) {
  * struct ibv_context_ops
  */
 
-static struct {
-	int	             (*query_device)(struct ibv_context *, struct ibv_device_attr *);
-	int              (*query_port)(struct ibv_context *, uint8_t, struct ibv_port_attr *);
-	struct ibv_pd *  (*alloc_pd)(struct ibv_context *);
-	int              (*dealloc_pd)(struct ibv_pd *);
-	struct ibv_mr *  (*reg_mr)(struct ibv_pd *, void *, size_t, int);
-	int	             (*rereg_mr)(struct ibv_mr *, int, struct ibv_pd *, void *, size_t, int);
-	int	             (*dereg_mr)(struct ibv_mr *);
-	struct ibv_mw *  (*alloc_mw)(struct ibv_pd *, enum ibv_mw_type);
-	int	             (*bind_mw)(struct ibv_qp *, struct ibv_mw *, struct ibv_mw_bind *);
-	int	             (*dealloc_mw)(struct ibv_mw *);
-	struct ibv_cq *  (*create_cq)(struct ibv_context *, int, struct ibv_comp_channel *, int);
-	int              (*poll_cq)(struct ibv_cq *, int, struct ibv_wc *);
-	int              (*req_notify_cq)(struct ibv_cq *, int);
-	void             (*cq_event)(struct ibv_cq *);
-	int	             (*resize_cq)(struct ibv_cq *, int);
-	int	             (*destroy_cq)(struct ibv_cq *);
-	struct ibv_srq * (*create_srq)(struct ibv_pd *, struct ibv_srq_init_attr *);
-	int              (*modify_srq)(struct ibv_srq *, struct ibv_srq_attr *, int);
-	int              (*query_srq)(struct ibv_srq *, struct ibv_srq_attr *);
-	int              (*destroy_srq)(struct ibv_srq *);
-	int              (*post_srq_recv)(struct ibv_srq *, struct ibv_recv_wr *, struct ibv_recv_wr **);
-	struct ibv_qp *  (*create_qp)(struct ibv_pd *, struct ibv_qp_init_attr *);
-	int	             (*query_qp)(struct ibv_qp *, struct ibv_qp_attr *, int, struct ibv_qp_init_attr *);
-	int	             (*modify_qp)(struct ibv_qp *, struct ibv_qp_attr *, int);
-	int	             (*destroy_qp)(struct ibv_qp *);
-	int	             (*post_send)(struct ibv_qp *, struct ibv_send_wr *, struct ibv_send_wr **);
-	int	             (*post_recv)(struct ibv_qp *, struct ibv_recv_wr *, struct ibv_recv_wr **);
-	struct ibv_ah *  (*create_ah)(struct ibv_pd *, struct ibv_ah_attr *);
-	int	             (*destroy_ah)(struct ibv_ah *);
-	int	             (*attach_mcast)(struct ibv_qp *, const union ibv_gid *, uint16_t);
-	int	             (*detach_mcast)(struct ibv_qp *, const union ibv_gid *, uint16_t);
-	void             (*async_event)(struct ibv_async_event *);
-} ibv_context_ops_virt_ptrs;
+/* static struct { */
+	/* int	             (*query_device)(struct ibv_context *, struct ibv_device_attr *); */
+	/* int              (*query_port)(struct ibv_context *, uint8_t, struct ibv_port_attr *); */
+	/* struct ibv_pd *  (*alloc_pd)(struct ibv_context *); */
+	/* int              (*dealloc_pd)(struct ibv_pd *); */
+	/* struct ibv_mr *  (*reg_mr)(struct ibv_pd *, void *, size_t, int); */
+	/* int	             (*rereg_mr)(struct ibv_mr *, int, struct ibv_pd *, void *, size_t, int); */
+	/* int	             (*dereg_mr)(struct ibv_mr *); */
+	/* struct ibv_mw *  (*alloc_mw)(struct ibv_pd *, enum ibv_mw_type); */
+	/* int	             (*bind_mw)(struct ibv_qp *, struct ibv_mw *, struct ibv_mw_bind *); */
+	/* int	             (*dealloc_mw)(struct ibv_mw *); */
+	/* struct ibv_cq *  (*create_cq)(struct ibv_context *, int, struct ibv_comp_channel *, int); */
+	/* int              (*poll_cq)(struct ibv_cq *, int, struct ibv_wc *); */
+	/* int              (*req_notify_cq)(struct ibv_cq *, int); */
+	/* void             (*cq_event)(struct ibv_cq *); */
+	/* int	             (*resize_cq)(struct ibv_cq *, int); */
+	/* int	             (*destroy_cq)(struct ibv_cq *); */
+	/* struct ibv_srq * (*create_srq)(struct ibv_pd *, struct ibv_srq_init_attr *); */
+	/* int              (*modify_srq)(struct ibv_srq *, struct ibv_srq_attr *, int); */
+	/* int              (*query_srq)(struct ibv_srq *, struct ibv_srq_attr *); */
+	/* int              (*destroy_srq)(struct ibv_srq *); */
+	/* int              (*post_srq_recv)(struct ibv_srq *, struct ibv_recv_wr *, struct ibv_recv_wr **); */
+	/* struct ibv_qp *  (*create_qp)(struct ibv_pd *, struct ibv_qp_init_attr *); */
+	/* int	             (*query_qp)(struct ibv_qp *, struct ibv_qp_attr *, int, struct ibv_qp_init_attr *); */
+	/* int	             (*modify_qp)(struct ibv_qp *, struct ibv_qp_attr *, int); */
+	/* int	             (*destroy_qp)(struct ibv_qp *); */
+	/* int	             (*post_send)(struct ibv_qp *, struct ibv_send_wr *, struct ibv_send_wr **); */
+	/* int	             (*post_recv)(struct ibv_qp *, struct ibv_recv_wr *, struct ibv_recv_wr **); */
+	/* struct ibv_ah *  (*create_ah)(struct ibv_pd *, struct ibv_ah_attr *); */
+	/* int	             (*destroy_ah)(struct ibv_ah *); */
+	/* int	             (*attach_mcast)(struct ibv_qp *, const union ibv_gid *, uint16_t); */
+	/* int	             (*detach_mcast)(struct ibv_qp *, const union ibv_gid *, uint16_t); */
+	/* void             (*async_event)(struct ibv_async_event *); */
+/* } ibv_context_ops_virt_ptrs; */
 
 struct ibv_context_ops * guest_to_host_ibv_context_ops(struct ibv_context_ops * context_ops) {
 	ibv_context_ops_virt_ptrs.query_device  = context_ops->query_device;
@@ -238,9 +238,9 @@ void host_to_guest_ibv_port_attr(struct ibv_port_attr * port_attr) {}
  * struct ibv_comp_channel 
  */
 
-static struct {
-	struct ibv_context * context;
-} ibv_comp_channel_virt_ptrs;
+/* static struct { */
+	/* struct ibv_context * context; */
+/* } ibv_comp_channel_virt_ptrs; */
 
 struct ibv_comp_channel * guest_to_host_ibv_comp_channel(struct ibv_comp_channel * channel) {
 	ibv_comp_channel_virt_ptrs.context = channel->context;
@@ -278,9 +278,9 @@ void host_to_guest_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat) {
  * pthread_mutex_t
  */
 
-static struct {
-	_pthread_descr __m_owner;
-} pthread_mutex_t_virt_ptrs;
+/* static struct { */
+	/* _pthread_descr __m_owner; */
+/* } pthread_mutex_t_virt_ptrs; */
 
 pthread_mutex_t * guest_to_host_pthread_mutex_t(pthread_mutex_t * mutex) {
 	pthread_mutex_t_virt_ptrs.__m_owner = mutex->__m_owner; // TODO: 

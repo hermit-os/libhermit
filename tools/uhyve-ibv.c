@@ -33,25 +33,26 @@
 #include <infiniband/verbs.h>		// Linux include
 
 
-// struct ibv_context * ibv_open_device(struct ibv_device * device);
-// const char* ibv_get_device_name(struct ibv_device *device);
-// int ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_port_attr * port_attr);
-// struct ibv_comp_channel * ibv_create_comp_channel(struct ibv_context * context);
-
-
 /*
- * ibv_open_device
+ * ibv_get_device_list
  */
 
-void call_ibv_open_device(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("LOG: UHYVE - call_ibv_open_device");
-	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-	uhyve_ibv_open_device_t * args = (uhyve_ibv_open_device_t *) (guest_mem + data);
+void call_ibv_get_device_list(struct kvm_run * run, uint8_t * guest_mem) {
+	printf("LOG: UHYVE - call_ibv_get_device_list\n");
+	unsigned data = *((unsigned *)((size_t)run+run->io.data_offset));
+	uhyve_ibv_get_device_list_t * args = (uhyve_ibv_get_device_list_t *) (guest_mem + data);
 
-	struct ibv_context * host_ret = ibv_open_device(args->device);
-	memcpy(args->ret, host_ret, sizeof(host_ret));
-	// TODO: Convert ptrs contained in return value.
-	free(host_ret);
+	// Call IBV function from hypervisor
+	int num_devices;
+	struct ibv_device **host_ret = ibv_get_device_list(&num_devices);
+
+	// Copy number of devices and device stucts to kernel memory
+	if (args->num_devices) {
+		memcpy(args->num_devices, &num_devices, sizeof(num_devices));
+	}
+	for (int d = 0; d < num_devices; d++) {
+		memcpy(args->ret[d], host_ret[d], sizeof(struct ibv_device));
+	}
 }
 
 
@@ -65,10 +66,30 @@ void call_ibv_get_device_name(struct kvm_run * run, uint8_t * guest_mem) {
 	uhyve_ibv_get_device_name_t * args = (uhyve_ibv_get_device_name_t *) (guest_mem + data);
 
 	// TODO: Tricky because char ptr isn't allocated in called function.
-	const char * host_ret = ibv_get_device_name(args->device);
-	memcpy(args->ret, host_ret, sizeof(host_ret));
+	args->ret = ibv_get_device_name(args->device);
+	/* memcpy(args->ret, host_ret, sizeof(host_ret)); */
 	// TODO: Convert ptrs contained in return value.
 	// TODO: How to tell if ret needs to be deleted?
+}
+
+
+/*
+ * ibv_open_device
+ */
+
+void call_ibv_open_device(struct kvm_run * run, uint8_t * guest_mem) {
+	printf("LOG: UHYVE - call_ibv_open_device\n");
+	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
+	uhyve_ibv_open_device_t * args = (uhyve_ibv_open_device_t *) (guest_mem + data);
+
+	printf("LOG: UHYVE - call_ibv_open_device\n");
+	struct ibv_context * host_ret = ibv_open_device(args->device);
+	printf("LOG: UHYVE - call_ibv_open_device\n");
+	memcpy(args->ret, host_ret, sizeof(host_ret));
+	printf("LOG: UHYVE - call_ibv_open_device\n");
+	// TODO: Convert ptrs contained in return value.
+	free(host_ret);
+	printf("LOG: UHYVE - call_ibv_open_device\n");
 }
 
 
@@ -102,26 +123,3 @@ void call_ibv_create_comp_channel(struct kvm_run * run, uint8_t * guest_mem) {
 }
 
 
-void call_ibv_get_device_list(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("LOG: UHYVE - call_ibv_get_device_list");
-	unsigned data = *((unsigned *)((size_t)run+run->io.data_offset));
-	uhyve_ibv_get_device_list_t * args = (uhyve_ibv_get_device_list_t *) (guest_mem + data);
-
-	printf("LOG: UHYVE - call_ibv_get_device_list");
-	// Call IBV function from hypervisor
-	int num_devices;
-	struct ibv_device **host_ret = ibv_get_device_list(&num_devices);
-
-	printf("LOG: UHYVE - call_ibv_get_device_list");
-	// Copy number of devices to kernel memory
-	if (args->num_devices) {
-		memcpy(args->num_devices, &num_devices, sizeof(num_devices));
-	}
-
-	printf("LOG: UHYVE - call_ibv_get_device_list");
-	for (int d = 0; d < num_devices; d++) {
-		// Copy array entry containing ibv_device struct to kernel memory
-		printf("LOG: UHYVE FOR - call_ibv_get_device_list");
-		memcpy(args->ret[d], host_ret[d], sizeof(struct ibv_device));
-	}
-}

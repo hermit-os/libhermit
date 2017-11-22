@@ -37,7 +37,11 @@ extern uint8_t * kernel_start_host;
 
 
 inline size_t guest_to_host(size_t address) {
-	return virt_to_phys(address) + (size_t) kernel_start_host;
+	return address ? virt_to_phys(address) + (size_t) kernel_start_host : address;
+}
+
+inline size_t host_to_guest(size_t address) {
+	return address ? phys_to_virt(address - (size_t) kernel_start_host) : address;
 }
 
 
