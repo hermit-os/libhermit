@@ -115,8 +115,11 @@ size_t virt_to_phys(size_t addr)
 	}
 }
 
-size_t phys_to_virt(size_t addr)
+size_t phys_to_virt(size_t phy)
 {
+	size_t pfn = phy &  PFN_MASK;
+	size_t off = phy & ~PAGE_MASK;
+
 	size_t * pml4 = self[PAGE_LEVELS-1];
 	for(size_t i=0; i<(1 << PAGE_MAP_BITS); i++) {
 		if (!(pml4[i] & PG_PRESENT)) {
@@ -137,13 +140,23 @@ size_t phys_to_virt(size_t addr)
 
 				size_t * pgt = (size_t *) (pgd[k] & PAGE_MASK);
 				for(size_t l=0; l<(1 << PAGE_MAP_BITS); l++) {
-					if (pgt[l] & PG_PRESENT) {
-						// TODO
+
+					if (pgt[l] & PG_PRESENT) { // Valid page table entry
+						if ((pgt[l] & PFN_MASK) == pfn) { // Page frame found
+							size_t vpn = ((((((i << PAGE_MAP_BITS) & j) << PAGE_MAP_BITS) & k) << PAGE_MAP_BITS) & l) << PAGE_BITS;
+							size_t sext = i & (1UL << (PAGE_MAP_BITS - 1));
+							if (sext) {
+								vpn |= ~0UL << VIRT_BITS;
+							}
+							return vpn & off;
+						}
 					}
 				}
 			}
 		}
 	}
+
+	return 0;
 }
 
 

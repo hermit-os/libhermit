@@ -34,7 +34,7 @@
 #include <hermit/verbs.h>
 
 extern uint8_t * kernel_start_host;
-
+typedef enum {GUEST, HOST} addr_type;
 
 inline size_t guest_to_host(size_t address) {
 	return address ? virt_to_phys(address) + (size_t) kernel_start_host : address;
@@ -53,11 +53,11 @@ struct ibv_comp_channel *  guest_to_host_ibv_comp_channel(struct ibv_comp_channe
 struct ibv_abi_compat_v2 * guest_to_host_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat);
 pthread_mutex_t *					 guest_to_host_pthread_mutex_t(pthread_mutex_t * mutex);
 
-void host_to_guest_ibv_device(struct ibv_device * device);
-void host_to_guest_ibv_context(struct ibv_context * context);
-void host_to_guest_ibv_context_ops(struct ibv_context_ops * context_ops);
-void host_to_guest_ibv_port_attr(struct ibv_port_attr * port_attr);
-void host_to_guest_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat);
-void host_to_guest_pthread_mutex_t(pthread_mutex_t * mutex);
+struct ibv_device *        host_to_guest_ibv_device(struct ibv_device * device, addr_type type);
+struct ibv_context *       host_to_guest_ibv_context(struct ibv_context * context, addr_type type);
+struct ibv_context_ops *   host_to_guest_ibv_context_ops(struct ibv_context_ops * context_ops, addr_type type);
+struct ibv_port_attr *     host_to_guest_ibv_port_attr(struct ibv_port_attr * port_attr, addr_type type);
+struct ibv_abi_compat_v2 * host_to_guest_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat, addr_type type);
+pthread_mutex_t *	         host_to_guest_pthread_mutex_t(pthread_mutex_t * mutex, addr_type type);
 
 #endif // __IBV_GUEST_HOST_H__

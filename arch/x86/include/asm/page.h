@@ -53,6 +53,7 @@
 #else
 #define PAGE_MASK		(((~0UL) << PAGE_BITS) & ~PG_XD)
 #define PAGE_2M_MASK		(((~0UL) << PAGE_2M_BITS) & ~PG_XD)
+#define PFN_MASK (PAGE_MASK & ~(~0UL << PHYS_BITS))
 #endif
 
 #if 0
@@ -155,6 +156,16 @@ static inline size_t sign_extend(ssize_t addr, int bits)
  * @return physical address
  */
 size_t virt_to_phys(size_t vir);
+
+/** @brief Converts a physical address to a virtual
+ *
+ * Careful: Linear runtime of O(n) (worst case) where n is the number of mapped
+ * PGT entries. Returns 0 for a physical address that is not mapped.
+ *
+ * @param phy Physical address to convert
+ * @return Virtual address
+ */
+size_t phys_to_virt(size_t phy);
 
 /** @brief Initialize paging subsystem
  *
