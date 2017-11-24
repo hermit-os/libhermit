@@ -117,38 +117,56 @@ size_t virt_to_phys(size_t addr)
 
 size_t phys_to_virt(size_t phy)
 {
+	LOG_INFO("phys_to_virt called.\n");
 	size_t pfn = phy &  PFN_MASK;
 	size_t off = phy & ~PAGE_MASK;
+	LOG_INFO("off: Hex: %zx, Dec: %zd\n", off, off);
+	LOG_INFO("pfn: Hex: %zx, Dec: %zd\n", pfn, pfn);
 
 	size_t * pml4 = self[PAGE_LEVELS-1];
 	for(size_t i=0; i<(1 << PAGE_MAP_BITS); i++) {
+		/* LOG_INFO("First for.\n"); */
 		if (!(pml4[i] & PG_PRESENT)) {
 			continue;
 		}
 
 		size_t * pdpt = (size_t *) (pml4[i] & PAGE_MASK);
 		for(size_t j=0; j<(1 << PAGE_MAP_BITS); j++) {
+			/* LOG_INFO("Second for.\n"); */
 			if (!(pdpt[j] & PG_PRESENT)) {
 				continue;
 			}
 
 			size_t * pgd = (size_t *) (pdpt[j] & PAGE_MASK);
 			for(size_t k=0; k<(1 << PAGE_MAP_BITS); k++) {
+				/* LOG_INFO("Third for.\n"); */
 				if (!(pgd[k] & PG_PRESENT)) {
 					continue;
 				}
 
 				size_t * pgt = (size_t *) (pgd[k] & PAGE_MASK);
 				for(size_t l=0; l<(1 << PAGE_MAP_BITS); l++) {
+					/* LOG_INFO("Fourth for.\n"); */
 
 					if (pgt[l] & PG_PRESENT) { // Valid page table entry
+						/* LOG_INFO("Present.\n"); */
 						if ((pgt[l] & PFN_MASK) == pfn) { // Page frame found
-							size_t vpn = ((((((i << PAGE_MAP_BITS) & j) << PAGE_MAP_BITS) & k) << PAGE_MAP_BITS) & l) << PAGE_BITS;
+							LOG_INFO("SAME PAGE.\n");
+							LOG_INFO("i: Hex: %zx, Dec: %zd\n", i, i);
+							LOG_INFO("j: Hex: %zx, Dec: %zd\n", j, j);
+							LOG_INFO("k: Hex: %zx, Dec: %zd\n", k, k);
+							LOG_INFO("l: Hex: %zx, Dec: %zd\n", l, l);
+							size_t vpn = ((((((i << PAGE_MAP_BITS) | j) << PAGE_MAP_BITS) | k) << PAGE_MAP_BITS) | l) << PAGE_BITS;
+							LOG_INFO("vpn: Hex: %zx, Dec: %zd\n", vpn, vpn);
 							size_t sext = i & (1UL << (PAGE_MAP_BITS - 1));
+							LOG_INFO("sext: Hex: %zx, Dec: %zd\n", sext, sext);
 							if (sext) {
+								LOG_INFO("sext true");
 								vpn |= ~0UL << VIRT_BITS;
+								LOG_INFO("vpn: Hex: %zx, Dec: %zd\n", vpn, vpn);
 							}
-							return vpn & off;
+							LOG_INFO("return: Hex: %zx, Dec: %zd\n", vpn | off, vpn | off);
+							return vpn | off;
 						}
 					}
 				}
@@ -156,6 +174,7 @@ size_t phys_to_virt(size_t phy)
 		}
 	}
 
+	sys_exit(-EFAULT); // TODO: remove this.
 	return 0;
 }
 

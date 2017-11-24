@@ -105,7 +105,10 @@ const char * ibv_get_device_name(struct ibv_device * device) {
 	host_to_guest_ibv_device(device, GUEST);
 	ret_guest = host_to_guest((size_t) uhyve_args.ret);
 
+	LOG_INFO("LOG TEST\n");
 	return (char *) ret_guest;
+
+	/* return device->name; // TODO: hack for testing */
 }
 
 

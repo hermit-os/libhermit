@@ -61,7 +61,7 @@ void call_ibv_get_device_list(struct kvm_run * run, uint8_t * guest_mem) {
  */
 
 void call_ibv_get_device_name(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("LOG: UHYVE - call_ibv_get_device_name");
+	printf("LOG: UHYVE - call_ibv_get_device_name\n");
 	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 	uhyve_ibv_get_device_name_t * args = (uhyve_ibv_get_device_name_t *) (guest_mem + data);
 

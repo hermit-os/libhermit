@@ -132,6 +132,8 @@ struct ibv_abi_compat_v2 *  host_to_guest_ibv_abi_compat_v2(struct ibv_abi_compa
 
 	host_to_guest_ibv_comp_channel(&abi_compat->channel, GUEST);
 	host_to_guest_pthread_mutex_t(&abi_compat->in_use, GUEST);
+
+	return vaddr;
 }
 
 
@@ -142,7 +144,7 @@ struct ibv_abi_compat_v2 *  host_to_guest_ibv_abi_compat_v2(struct ibv_abi_compa
 pthread_mutex_t * guest_to_host_pthread_mutex_t(pthread_mutex_t * mutex) {
 	/* mutex->__m_owner = guest_to_host__pthread_descr(mutex->__m_owner); */
 
-	return (struct pthread_mutex_t *) guest_to_host((size_t) mutex);
+	return (pthread_mutex_t *) guest_to_host((size_t) mutex);
 }
 
 pthread_mutex_t * host_to_guest_pthread_mutex_t(pthread_mutex_t * mutex, addr_type type) {
@@ -159,40 +161,39 @@ pthread_mutex_t * host_to_guest_pthread_mutex_t(pthread_mutex_t * mutex, addr_ty
  */
 
 struct ibv_context_ops * guest_to_host_ibv_context_ops(struct ibv_context_ops * context_ops) {
-
-	// TODO: Does this work? Fcn returns size_t. Have to convert?
-	context_ops->query_device  = guest_to_host((size_t) context_ops->query_device);
-	context_ops->query_port    = guest_to_host((size_t) context_ops->query_port);
-	context_ops->alloc_pd      = guest_to_host((size_t) context_ops->alloc_pd);
-	context_ops->dealloc_pd    = guest_to_host((size_t) context_ops->dealloc_pd);
-	context_ops->reg_mr        = guest_to_host((size_t) context_ops->reg_mr);
-	context_ops->rereg_mr      = guest_to_host((size_t) context_ops->rereg_mr);
-	context_ops->dereg_mr      = guest_to_host((size_t) context_ops->dereg_mr);
-	context_ops->alloc_mw      = guest_to_host((size_t) context_ops->alloc_mw);
-	context_ops->bind_mw       = guest_to_host((size_t) context_ops->bind_mw);
-	context_ops->dealloc_mw    = guest_to_host((size_t) context_ops->dealloc_mw);
-	context_ops->create_cq     = guest_to_host((size_t) context_ops->create_cq);
-	context_ops->poll_cq       = guest_to_host((size_t) context_ops->poll_cq);
-	context_ops->req_notify_cq = guest_to_host((size_t) context_ops->req_notify_cq);
-	context_ops->cq_event      = guest_to_host((size_t) context_ops->cq_event);
-	context_ops->resize_cq     = guest_to_host((size_t) context_ops->resize_cq);
-	context_ops->destroy_cq    = guest_to_host((size_t) context_ops->destroy_cq);
-	context_ops->create_srq    = guest_to_host((size_t) context_ops->create_srq);
-	context_ops->modify_srq    = guest_to_host((size_t) context_ops->modify_srq);
-	context_ops->query_srq     = guest_to_host((size_t) context_ops->query_srq);
-	context_ops->destroy_srq   = guest_to_host((size_t) context_ops->destroy_srq);
-	context_ops->post_srq_recv = guest_to_host((size_t) context_ops->post_srq_recv);
-	context_ops->create_qp     = guest_to_host((size_t) context_ops->create_qp);
-	context_ops->query_qp      = guest_to_host((size_t) context_ops->query_qp);
-	context_ops->modify_qp     = guest_to_host((size_t) context_ops->modify_qp);
-	context_ops->destroy_qp    = guest_to_host((size_t) context_ops->destroy_qp);
-	context_ops->post_send     = guest_to_host((size_t) context_ops->post_send);
-	context_ops->post_recv     = guest_to_host((size_t) context_ops->post_recv);
-	context_ops->create_ah     = guest_to_host((size_t) context_ops->create_ah);
-	context_ops->destroy_ah    = guest_to_host((size_t) context_ops->destroy_ah);
-	context_ops->attach_mcast  = guest_to_host((size_t) context_ops->attach_mcast);
-	context_ops->detach_mcast  = guest_to_host((size_t) context_ops->detach_mcast);
-	context_ops->async_event   = guest_to_host((size_t) context_ops->async_event);
+	// TODO: Does this work?
+	context_ops->query_device  = (int (*)(struct ibv_context *, struct ibv_device_attr *))                        guest_to_host((size_t) context_ops->query_device);
+	context_ops->query_port    = (int (*)(struct ibv_context *, uint8_t, struct ibv_port_attr *))                 guest_to_host((size_t) context_ops->query_port);
+	context_ops->alloc_pd      = (struct ibv_pd * (*)(struct ibv_context *))                                      guest_to_host((size_t) context_ops->alloc_pd);
+	context_ops->dealloc_pd    = (int (*)(struct ibv_pd *))                                                       guest_to_host((size_t) context_ops->dealloc_pd);
+	context_ops->reg_mr        = (struct ibv_mr * (*)(struct ibv_pd *, void *, size_t, int))                      guest_to_host((size_t) context_ops->reg_mr);
+	context_ops->rereg_mr      = (int (*)(struct ibv_mr *, int, struct ibv_pd *, void *, size_t, int))            guest_to_host((size_t) context_ops->rereg_mr);
+	context_ops->dereg_mr      = (int (*)(struct ibv_mr *))                                                       guest_to_host((size_t) context_ops->dereg_mr);
+	context_ops->alloc_mw      = (struct ibv_mw * (*)(struct ibv_pd *, enum ibv_mw_type))                         guest_to_host((size_t) context_ops->alloc_mw);
+	context_ops->bind_mw       = (int (*)(struct ibv_qp *, struct ibv_mw *, struct ibv_mw_bind *))                guest_to_host((size_t) context_ops->bind_mw);
+	context_ops->dealloc_mw    = (int (*)(struct ibv_mw *))                                                       guest_to_host((size_t) context_ops->dealloc_mw);
+	context_ops->create_cq     = (struct ibv_cq * (*)(struct ibv_context *, int, struct ibv_comp_channel *, int)) guest_to_host((size_t) context_ops->create_cq);
+	context_ops->poll_cq       = (int (*)(struct ibv_cq *, int, struct ibv_wc *))                                 guest_to_host((size_t) context_ops->poll_cq);
+	context_ops->req_notify_cq = (int (*)(struct ibv_cq *, int))                                                  guest_to_host((size_t) context_ops->req_notify_cq);
+	context_ops->cq_event      = (void (*)(struct ibv_cq *))                                                      guest_to_host((size_t) context_ops->cq_event);
+	context_ops->resize_cq     = (int (*)(struct ibv_cq *, int))                                                  guest_to_host((size_t) context_ops->resize_cq);
+	context_ops->destroy_cq    = (int (*)(struct ibv_cq *))                                                       guest_to_host((size_t) context_ops->destroy_cq);
+	context_ops->create_srq    = (struct ibv_srq * (*)(struct ibv_pd *, struct ibv_srq_init_attr *))              guest_to_host((size_t) context_ops->create_srq);
+	context_ops->modify_srq    = (int (*)(struct ibv_srq *, struct ibv_srq_attr *, int))                          guest_to_host((size_t) context_ops->modify_srq);
+	context_ops->query_srq     = (int (*)(struct ibv_srq *, struct ibv_srq_attr *))                               guest_to_host((size_t) context_ops->query_srq);
+	context_ops->destroy_srq   = (int (*)(struct ibv_srq *))                                                      guest_to_host((size_t) context_ops->destroy_srq);
+	context_ops->post_srq_recv = (int (*)(struct ibv_srq *, struct ibv_recv_wr *, struct ibv_recv_wr **))         guest_to_host((size_t) context_ops->post_srq_recv);
+	context_ops->create_qp     = (struct ibv_qp * (*)(struct ibv_pd *, struct ibv_qp_init_attr *))                guest_to_host((size_t) context_ops->create_qp);
+	context_ops->query_qp      = (int (*)(struct ibv_qp *, struct ibv_qp_attr *, int, struct ibv_qp_init_attr *)) guest_to_host((size_t) context_ops->query_qp);
+	context_ops->modify_qp     = (int (*)(struct ibv_qp *, struct ibv_qp_attr *, int))                            guest_to_host((size_t) context_ops->modify_qp);
+	context_ops->destroy_qp    = (int (*)(struct ibv_qp *))                                                       guest_to_host((size_t) context_ops->destroy_qp);
+	context_ops->post_send     = (int (*)(struct ibv_qp *, struct ibv_send_wr *, struct ibv_send_wr **))          guest_to_host((size_t) context_ops->post_send);
+	context_ops->post_recv     = (int (*)(struct ibv_qp *, struct ibv_recv_wr *, struct ibv_recv_wr **))          guest_to_host((size_t) context_ops->post_recv);
+	context_ops->create_ah     = (struct ibv_ah * (*)(struct ibv_pd *, struct ibv_ah_attr *))                     guest_to_host((size_t) context_ops->create_ah);
+	context_ops->destroy_ah    = (int (*)(struct ibv_ah *))                                                       guest_to_host((size_t) context_ops->destroy_ah);
+	context_ops->attach_mcast  = (int (*)(struct ibv_qp *, const union ibv_gid *, uint16_t))                      guest_to_host((size_t) context_ops->attach_mcast);
+	context_ops->detach_mcast  = (int (*)(struct ibv_qp *, const union ibv_gid *, uint16_t))                      guest_to_host((size_t) context_ops->detach_mcast);
+	context_ops->async_event   = (void (*)(struct ibv_async_event *))                                             guest_to_host((size_t) context_ops->async_event);
 
 	return (struct ibv_context_ops *) guest_to_host((size_t) context_ops);
 }
@@ -202,73 +203,38 @@ struct ibv_context_ops * host_to_guest_ibv_context_ops(
 	struct ibv_context_ops * vaddr = (type == GUEST) ? context_ops
 		: (struct ibv_context_ops *) host_to_guest((size_t) context_ops);
 
-	context_ops->query_device  = (int (*)(struct ibv_context *, struct ibv_device_attr *)) host_to_guest((size_t) vaddr->);
-	context_ops->query_port    = (int (*)(struct ibv_context *, uint8_t, struct ibv_port_attr *)) host_to_guest((size_t) vaddr->);
-	context_ops->alloc_pd      = (struct ibv_pd * (*)(struct ibv_context *)) host_to_guest((size_t) vaddr->);
-	context_ops->dealloc_pd    = (int (*)(struct ibv_pd *)) host_to_guest((size_t) vaddr->);
-	context_ops->reg_mr        = (struct ibv_mr * (*)(struct ibv_pd *, void *, size_t, int)) host_to_guest((size_t) vaddr->);
-	context_ops->rereg_mr      = (int (*)(struct ibv_mr *, int, struct ibv_pd *, void *, size_t, int)) host_to_guest((size_t) vaddr->);
-	context_ops->dereg_mr      = (int (*)(struct ibv_mr *)) host_to_guest((size_t) vaddr->);
-	context_ops->alloc_mw      = (struct ibv_mw * (*)(struct ibv_pd *, enum ibv_mw_type)) host_to_guest((size_t) vaddr->);
-	context_ops->bind_mw       = (int (*)(struct ibv_qp *, struct ibv_mw *, struct ibv_mw_bind *)) host_to_guest((size_t) vaddr->);
-	context_ops->dealloc_mw    = (int (*)(struct ibv_mw *)) host_to_guest((size_t) vaddr->);
-	context_ops->create_cq     = (struct ibv_cq * (*)(struct ibv_context *, int, struct ibv_comp_channel *, int)) host_to_guest((size_t) vaddr->);
-	context_ops->poll_cq       = (int (*)(struct ibv_cq *, int, struct ibv_wc *)) host_to_guest((size_t) vaddr->);
-	context_ops->req_notify_cq = (int (*)(struct ibv_cq *, int)) host_to_guest((size_t) vaddr->);
-	context_ops->cq_event      = (void (*)(struct ibv_cq *)) host_to_guest((size_t) vaddr->);
-	context_ops->resize_cq     = (int (*)(struct ibv_cq *, int)) host_to_guest((size_t) vaddr->);
-	context_ops->destroy_cq    = (int (*)(struct ibv_cq *)) host_to_guest((size_t) vaddr->);
-	context_ops->create_srq    = (struct ibv_srq * (*)(struct ibv_pd *, struct ibv_srq_init_attr *)) host_to_guest((size_t) vaddr->);
-	context_ops->modify_srq    = (int (*)(struct ibv_srq *, struct ibv_srq_attr *, int)) host_to_guest((size_t) vaddr->);
-	context_ops->query_srq     = (int (*)(struct ibv_srq *, struct ibv_srq_attr *)) host_to_guest((size_t) vaddr->);
-	context_ops->destroy_srq   = (int (*)(struct ibv_srq *)) host_to_guest((size_t) vaddr->);
-	context_ops->post_srq_recv = (int (*)(struct ibv_srq *, struct ibv_recv_wr *, struct ibv_recv_wr **)) host_to_guest((size_t) vaddr->);
-	context_ops->create_qp     = (struct ibv_qp * (*)(struct ibv_pd *, struct ibv_qp_init_attr *)) host_to_guest((size_t) vaddr->);
-	context_ops->query_qp      = (int (*)(struct ibv_qp *, struct ibv_qp_attr *, int, struct ibv_qp_init_attr *)) host_to_guest((size_t) vaddr->);
-	context_ops->modify_qp     = (int (*)(struct ibv_qp *, struct ibv_qp_attr *, int)) host_to_guest((size_t) vaddr->);
-	context_ops->destroy_qp    = (int (*)(struct ibv_qp *)) host_to_guest((size_t) vaddr->);
-	context_ops->post_send     = (int (*)(struct ibv_qp *, struct ibv_send_wr *, struct ibv_send_wr **)) host_to_guest((size_t) vaddr->);
-	context_ops->post_recv     = (int (*)(struct ibv_qp *, struct ibv_recv_wr *, struct ibv_recv_wr **)) host_to_guest((size_t) vaddr->);
-	context_ops->create_ah     = (struct ibv_ah * (*)(struct ibv_pd *, struct ibv_ah_attr *)) host_to_guest((size_t) vaddr->);
-	context_ops->destroy_ah    = (int (*)(struct ibv_ah *)) host_to_guest((size_t) vaddr->);
-	context_ops->attach_mcast  = (int (*)(struct ibv_qp *, const union ibv_gid *, uint16_t)) host_to_guest((size_t) vaddr->);
-	context_ops->detach_mcast  = (int (*)(struct ibv_qp *, const union ibv_gid *, uint16_t)) host_to_guest((size_t) vaddr->);
-	context_ops->async_event   = (void (*)(struct ibv_async_event *)) host_to_guest((size_t) vaddr->);
-	// todo
-
-
-	context_ops->query_device  = host_to_guest((size_t) vaddr->query_device);
-	context_ops->query_port    = host_to_guest((size_t) vaddr->query_port);
-	context_ops->alloc_pd      = host_to_guest((size_t) vaddr->alloc_pd);
-	context_ops->dealloc_pd    = host_to_guest((size_t) vaddr->dealloc_pd);
-	context_ops->reg_mr        = host_to_guest((size_t) vaddr->reg_mr);
-	context_ops->rereg_mr      = host_to_guest((size_t) vaddr->rereg_mr);
-	context_ops->dereg_mr      = host_to_guest((size_t) vaddr->dereg_mr);
-	context_ops->alloc_mw      = host_to_guest((size_t) vaddr->alloc_mw);
-	context_ops->bind_mw       = host_to_guest((size_t) vaddr->bind_mw);
-	context_ops->dealloc_mw    = host_to_guest((size_t) vaddr->dealloc_mw);
-	context_ops->create_cq     = host_to_guest((size_t) vaddr->create_cq);
-	context_ops->poll_cq       = host_to_guest((size_t) vaddr->poll_cq);
-	context_ops->req_notify_cq = host_to_guest((size_t) vaddr->req_notify_cq);
-	context_ops->cq_event      = host_to_guest((size_t) vaddr->cq_event);
-	context_ops->resize_cq     = host_to_guest((size_t) vaddr->resize_cq);
-	context_ops->destroy_cq    = host_to_guest((size_t) vaddr->destroy_cq);
-	context_ops->create_srq    = host_to_guest((size_t) vaddr->create_srq);
-	context_ops->modify_srq    = host_to_guest((size_t) vaddr->modify_srq);
-	context_ops->query_srq     = host_to_guest((size_t) vaddr->query_srq);
-	context_ops->destroy_srq   = host_to_guest((size_t) vaddr->destroy_srq);
-	context_ops->post_srq_recv = host_to_guest((size_t) vaddr->post_srq_recv);
-	context_ops->create_qp     = host_to_guest((size_t) vaddr->create_qp);
-	context_ops->query_qp      = host_to_guest((size_t) vaddr->query_qp);
-	context_ops->modify_qp     = host_to_guest((size_t) vaddr->modify_qp);
-	context_ops->destroy_qp    = host_to_guest((size_t) vaddr->destroy_qp);
-	context_ops->post_send     = host_to_guest((size_t) vaddr->post_send);
-	context_ops->post_recv     = host_to_guest((size_t) vaddr->post_recv);
-	context_ops->create_ah     = host_to_guest((size_t) vaddr->create_ah);
-	context_ops->destroy_ah    = host_to_guest((size_t) vaddr->destroy_ah);
-	context_ops->attach_mcast  = host_to_guest((size_t) vaddr->attach_mcast);
-	context_ops->detach_mcast  = host_to_guest((size_t) vaddr->detach_mcast);
-	context_ops->async_event   = host_to_guest((size_t) vaddr->async_event);
+	vaddr->query_device  = (int (*)(struct ibv_context *, struct ibv_device_attr *))                        host_to_guest((size_t) vaddr->query_device);
+	vaddr->query_port    = (int (*)(struct ibv_context *, uint8_t, struct ibv_port_attr *))                 host_to_guest((size_t) vaddr->query_port);
+	vaddr->alloc_pd      = (struct ibv_pd * (*)(struct ibv_context *))                                      host_to_guest((size_t) vaddr->alloc_pd);
+	vaddr->dealloc_pd    = (int (*)(struct ibv_pd *))                                                       host_to_guest((size_t) vaddr->dealloc_pd);
+	vaddr->reg_mr        = (struct ibv_mr * (*)(struct ibv_pd *, void *, size_t, int))                      host_to_guest((size_t) vaddr->reg_mr);
+	vaddr->rereg_mr      = (int (*)(struct ibv_mr *, int, struct ibv_pd *, void *, size_t, int))            host_to_guest((size_t) vaddr->rereg_mr);
+	vaddr->dereg_mr      = (int (*)(struct ibv_mr *))                                                       host_to_guest((size_t) vaddr->dereg_mr);
+	vaddr->alloc_mw      = (struct ibv_mw * (*)(struct ibv_pd *, enum ibv_mw_type))                         host_to_guest((size_t) vaddr->alloc_mw);
+	vaddr->bind_mw       = (int (*)(struct ibv_qp *, struct ibv_mw *, struct ibv_mw_bind *))                host_to_guest((size_t) vaddr->bind_mw);
+	vaddr->dealloc_mw    = (int (*)(struct ibv_mw *))                                                       host_to_guest((size_t) vaddr->dealloc_mw);
+	vaddr->create_cq     = (struct ibv_cq * (*)(struct ibv_context *, int, struct ibv_comp_channel *, int)) host_to_guest((size_t) vaddr->create_cq);
+	vaddr->poll_cq       = (int (*)(struct ibv_cq *, int, struct ibv_wc *))                                 host_to_guest((size_t) vaddr->poll_cq);
+	vaddr->req_notify_cq = (int (*)(struct ibv_cq *, int))                                                  host_to_guest((size_t) vaddr->req_notify_cq);
+	vaddr->cq_event      = (void (*)(struct ibv_cq *))                                                      host_to_guest((size_t) vaddr->cq_event);
+	vaddr->resize_cq     = (int (*)(struct ibv_cq *, int))                                                  host_to_guest((size_t) vaddr->resize_cq);
+	vaddr->destroy_cq    = (int (*)(struct ibv_cq *))                                                       host_to_guest((size_t) vaddr->destroy_cq);
+	vaddr->create_srq    = (struct ibv_srq * (*)(struct ibv_pd *, struct ibv_srq_init_attr *))              host_to_guest((size_t) vaddr->create_srq);
+	vaddr->modify_srq    = (int (*)(struct ibv_srq *, struct ibv_srq_attr *, int))                          host_to_guest((size_t) vaddr->modify_srq);
+	vaddr->query_srq     = (int (*)(struct ibv_srq *, struct ibv_srq_attr *))                               host_to_guest((size_t) vaddr->query_srq);
+	vaddr->destroy_srq   = (int (*)(struct ibv_srq *))                                                      host_to_guest((size_t) vaddr->destroy_srq);
+	vaddr->post_srq_recv = (int (*)(struct ibv_srq *, struct ibv_recv_wr *, struct ibv_recv_wr **))         host_to_guest((size_t) vaddr->post_srq_recv);
+	vaddr->create_qp     = (struct ibv_qp * (*)(struct ibv_pd *, struct ibv_qp_init_attr *))                host_to_guest((size_t) vaddr->create_qp);
+	vaddr->query_qp      = (int (*)(struct ibv_qp *, struct ibv_qp_attr *, int, struct ibv_qp_init_attr *)) host_to_guest((size_t) vaddr->query_qp);
+	vaddr->modify_qp     = (int (*)(struct ibv_qp *, struct ibv_qp_attr *, int))                            host_to_guest((size_t) vaddr->modify_qp);
+	vaddr->destroy_qp    = (int (*)(struct ibv_qp *))                                                       host_to_guest((size_t) vaddr->destroy_qp);
+	vaddr->post_send     = (int (*)(struct ibv_qp *, struct ibv_send_wr *, struct ibv_send_wr **))          host_to_guest((size_t) vaddr->post_send);
+	vaddr->post_recv     = (int (*)(struct ibv_qp *, struct ibv_recv_wr *, struct ibv_recv_wr **))          host_to_guest((size_t) vaddr->post_recv);
+	vaddr->create_ah     = (struct ibv_ah * (*)(struct ibv_pd *, struct ibv_ah_attr *))                     host_to_guest((size_t) vaddr->create_ah);
+	vaddr->destroy_ah    = (int (*)(struct ibv_ah *))                                                       host_to_guest((size_t) vaddr->destroy_ah);
+	vaddr->attach_mcast  = (int (*)(struct ibv_qp *, const union ibv_gid *, uint16_t))                      host_to_guest((size_t) vaddr->attach_mcast);
+	vaddr->detach_mcast  = (int (*)(struct ibv_qp *, const union ibv_gid *, uint16_t))                      host_to_guest((size_t) vaddr->detach_mcast);
+	vaddr->async_event   = (void (*)(struct ibv_async_event *))                                             host_to_guest((size_t) vaddr->async_event);
 
 	return vaddr;
 }

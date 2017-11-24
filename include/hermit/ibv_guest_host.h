@@ -57,6 +57,7 @@ struct ibv_device *        host_to_guest_ibv_device(struct ibv_device * device, 
 struct ibv_context *       host_to_guest_ibv_context(struct ibv_context * context, addr_type type);
 struct ibv_context_ops *   host_to_guest_ibv_context_ops(struct ibv_context_ops * context_ops, addr_type type);
 struct ibv_port_attr *     host_to_guest_ibv_port_attr(struct ibv_port_attr * port_attr, addr_type type);
+struct ibv_comp_channel *  host_to_guest_ibv_comp_channel(struct ibv_comp_channel * channel, addr_type type);
 struct ibv_abi_compat_v2 * host_to_guest_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat, addr_type type);
 pthread_mutex_t *	         host_to_guest_pthread_mutex_t(pthread_mutex_t * mutex, addr_type type);
 

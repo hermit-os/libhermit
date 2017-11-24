@@ -54,14 +54,18 @@ int main(int argc, char** argv)
 	printf("ib-test.c: before get dev list.\n");
 	dev_list = ibv_get_device_list(&num_devices);
 	printf("after get device list -- ib-test.c: num devices: %d\n", num_devices);
+	printf("after get device list -- ib-test.c: ptr 1: %p\n",  dev_list[0]);
+	printf("after get device list -- ib-test.c: ptr 2: %p\n",  dev_list[1]);
+	printf("after get device list -- ib-test.c: name 1: %s\n", dev_list[0]->name);
+	printf("after get device list -- ib-test.c: name 2: %s\n", dev_list[1]->name);
 
 	printf("before get device name.\n");
 	const char* dev_name = ibv_get_device_name(dev_list[0]);
-	printf("after get device name -- Device: %s", dev_name);
+	printf("after get device name -- Device: %s\n", dev_name);
 
 	printf("before open_device\n");
-	ibv_context * context = ibv_open_device(dev_list[0]);
-	printf("after open device name -- Device: %s", dev_name);
+	struct ibv_context * context = ibv_open_device(dev_list[0]);
+	printf("after open device name -- Device: %s\n", dev_name);
 
 
 
