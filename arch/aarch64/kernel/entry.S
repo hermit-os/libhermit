@@ -63,7 +63,7 @@ start64:
   msr sctlr_el1, x0
 
   /* Select sp_el0 as stack pointer */
-  msr  spsel, #0
+  //msr  spsel, #0
 
   /* Set exception table */
   ldr x0, =vector_table_el1
@@ -75,8 +75,20 @@ start64:
 
   /* Return current exception level */
   bl koutput_init
-  mrs x0, CurrentEl
-  sub x0, x0, #3
+  //mrs x0, CurrentEl
+  //sub x0, x0, #3
+  msr DAIFClr, #0b1111
+  //mrs x0, DAIF
+  //mrs x0, hcr_el2
+  bl irq_handler
+
+  /* Test floating point */
+  //fmov d0, #5.0
+  //fmov d1, #2.0
+  //fdiv d0, d0, d1
+  //fmov x0, d0
+  //mrs x0, fpcr
+  mrs x0, fpsr
   bl irq_handler
 
 //   /* Enter user space */
@@ -152,9 +164,10 @@ switch_context:
 
   ret
 
+
 .global trigger_interrupt
 trigger_interrupt:
-  brk 0
+  svc #128
   ret
 
 
@@ -171,7 +184,6 @@ asm_irq_handler:
   stp x1, x2, [sp, #-16]!
   stp x0, x1, [sp, #-16]!
 
-  //bl identify_and_clear_source
   bl irq_handler
 
   /* Restore caller-saved registers */
@@ -195,70 +207,70 @@ asm_irq_handler:
 vector_table_el1:
 /* Current exception level, sp_el0 */
 curr_el_sp0_sync:
-  bl asm_irq_handler
+  bl irq_handler //comment
 
 .balign 0x80
 curr_el_sp0_irq:
-  bl asm_irq_handler
+  bl irq_handler //comment
 
 .balign 0x80
 curr_el_sp0_fiq:
-  bl asm_irq_handler
+  bl irq_handler //comment
 
 .balign 0x80
 curr_el_sp0_serror:
-  bl asm_irq_handler
+  bl irq_handler //comment
 
 /* Current exception level, sp_elx */
 .balign 0x80
 curr_el_spx_sync:
-  bl asm_irq_handler
+  bl irq_handler //comment
 
 .balign 0x80
 curr_el_spx_irq:
-  bl asm_irq_handler
+  bl irq_handler //comment
 
 .balign 0x80
 curr_el_spx_fiq:
-  bl asm_irq_handler
+  bl irq_handler //comment
 
 .balign 0x80
 curr_el_spx_serror:
-  bl asm_irq_handler
+  bl irq_handler //comment
 
 /* Lower exception level, coming from AArch64 */
 .balign 0x80
 lower_el_aarch64_sync:
-  bl asm_irq_handler
+  bl irq_handler //comment
 
 .balign 0x80
 lower_el_aarch64_irq:
-  bl asm_irq_handler
+  bl irq_handler //comment
 
 .balign 0x80
 lower_el_aarch64_fiq:
-  bl asm_irq_handler
+  bl irq_handler //comment
 
 .balign 0x80
 lower_el_aarch64_serror:
-  bl asm_irq_handler
+  bl irq_handler //comment
 
 /* Lower exception level, coming from AArch32 */
 .balign 0x80
 lower_el_aarch32_sync:
-  bl asm_irq_handler
+  bl irq_handler //comment
 
 .balign 0x80
 lower_el_aarch32_irq:
-  bl asm_irq_handler
+  bl irq_handler //comment
 
 .balign 0x80
 lower_el_aarch32_fiq:
-  bl asm_irq_handler
+  bl irq_handler //comment
 
 .balign 0x80
 lower_el_aarch32_serror:
-  bl asm_irq_handler
+  bl irq_handler //comment
 
 
 .section .data

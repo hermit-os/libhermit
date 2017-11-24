@@ -289,12 +289,44 @@ char* itoa(int i, char b[]);
 static int initd(void* arg)
 {
 #if 0
+	kputs("\tHello from initd! Argument ");
+	kputs((char*) arg);
+	kputs("\n");
+	return 0;
+
+#endif
+
+/* Floating point testing */
+#if 0
 	kputs("Hello from initd!\nArgument: ");
 	kputs((char*) arg);
 	kputs("\n");
 
-	int v, x = 5;
-	x = x / 0;
+	float volatile a = 5.0;
+	float volatile b = 2.0;
+	float volatile c;
+
+ 	c = a / b;
+	c = c * 2.0;
+	char str_c[50];
+	itoa(c, str_c);
+	kputs(str_c);
+
+
+	kputs("XXXXX Hello from after float operations XXXXX\n");
+	reschedule();
+	return 0;
+#endif
+
+/* Interrupt testing */
+#if 0
+	kputs("Hello from initd!\nArgument: ");
+	kputs((char*) arg);
+	kputs("\n");
+
+	//int v, x = 5;
+	//x = x / 0;
+	int x = 0;
 	/*asm volatile(
 		"mov x0, #0\n\t"
 		"udiv %0, %0, x0\n\t"
@@ -302,10 +334,18 @@ static int initd(void* arg)
 		: "+r"(v)
 		:
 		: "memory", "x0", "x1");*/
+	/*asm volatile(
+		"brk 0"
+		:
+		:
+		: "memory");*/
 	trigger_interrupt();
+	kputs("XXXXX Hello from after trigger_interrupt XXXXX\n");
 	reschedule();
 	return x;
 #endif
+
+/* Sheduling testing */
 #if 1
 	int i = 0;
 	char str_i[100];
@@ -321,6 +361,7 @@ static int initd(void* arg)
 	}
 #endif
 
+/* Original initd */
 #if 0
 	int s = -1, c = -1;
 	int i, j, flag;
@@ -541,6 +582,12 @@ char* itoa(int i, char b[]){
     return b;
 }
 
+int foo() {
+	kputs("Hello from foo\n");
+	LOG_INFO("Don't go over this.\n");
+	return 0;
+}
+
 int hermit_main(void)
 {
 	hermit_init();
@@ -583,6 +630,7 @@ int hermit_main(void)
 	kputs("Hello from before create_kernel_task_on_core\n");
 	create_kernel_task_on_core(NULL, initd, "test0", NORMAL_PRIO, CORE_ID);
 	create_kernel_task_on_core(NULL, initd, "test1", NORMAL_PRIO, CORE_ID);
+	create_kernel_task_on_core(NULL, foo, NULL, NORMAL_PRIO, CORE_ID);
 	kputs("Hello from after create_kernel_task_on_core\n\n");
 	while(1) {
 		reschedule();

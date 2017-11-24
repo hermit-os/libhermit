@@ -26,6 +26,8 @@
  */
 
 #include <hermit/stdlib.h>
+#include <asm/processor.h>
+#include <asm/page.h>
 
 int irq_init(void)
 {
@@ -39,6 +41,22 @@ int enable_dynticks(void)
 
 int irq_handler(int int_nr)
 {
+    uint32_t esr = read_esr_el1();
+    uint32_t ec = esr >> 24;
+    uint32_t iss = esr & 0xFFFFFF;
+
+	/* data abort from lower or current level */
+    if (ec == 0b100100 || ec == 0b100101) {
+		/* check if value in far_el1 is valid */
+		if (!(iss & (1 << 10))) {
+			/* read far_el1 register, which holds the faulting virtual address */
+            uint64_t far = read_far_el1();
+			//page_fault_handler(far);
+		} else {
+			kputs("Could not handle data abort: address in far_el1 invalid\n");
+		}
+    }
+
 	kputs("\nWe made it to the irq_handler!\n");
 	char str[100];
 	itoa(int_nr, str);

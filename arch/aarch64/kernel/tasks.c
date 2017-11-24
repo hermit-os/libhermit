@@ -85,11 +85,13 @@ static int thread_entry(void* arg, size_t ep)
 	if (init_tls())
 		return -ENOMEM;
 
-
 	//vma_dump();
 
 	entry_point_t call_ep = (entry_point_t) ep;
 	call_ep(arg);
+	/* After finishing the task, we will return here and call the
+	   cleanup function, which calls the scheduler */
+	leave_kernel_task();
 
 	return 0;
 }
@@ -135,10 +137,6 @@ int create_default_frame(task_t* task, entry_point_t ep, void* arg, uint32_t cor
 
 	/* Only marker for debugging purposes, ... */
 	*stack-- = 0xDEADBEEF;
-
-	/* and the "caller" we shall return to.
-	 * This procedure cleans the task after exit. */
-	*stack = (size_t) leave_kernel_task;
 
 	/* Next bunch on the stack is the initial register state.
 	 * The stack must look like the stack of a task which was

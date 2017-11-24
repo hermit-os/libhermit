@@ -170,6 +170,15 @@ static inline size_t read_far_el1(void) {
         return val;
 }
 
+/** @brief Read esr_el1 register
+ * @return esr_el1's (Exception Syndrome Register) value
+ */
+static inline size_t read_esr_el1(void) {
+        size_t val;
+        asm volatile("mrs %0, esr_el1" : "=r"(val) :: "memory");
+        return val;
+}
+
 /** @brief Read out time stamp counter
  *
  * The rdtsc instruction puts a 64 bit time stamp value
@@ -237,6 +246,13 @@ static inline void rmb(void) { asm volatile ("dmb ld" : : : "memory"); }
 /// Force strict CPU ordering, serializes store operations.
 static inline void wmb(void) { asm volatile ("dmb st" : : : "memory"); }
 
+/** @brief search the first most significant bit
+ *
+ * @param i source operand
+ * @return
+ * - first bit, which is set in the source operand
+ * - invalid value, if not bit ist set
+ */
 static inline size_t msb(size_t i) {
 	size_t ret, tmp = 63;
 

@@ -374,7 +374,7 @@ void NORETURN do_exit(int arg)
 	void* tls_addr = NULL;
 	const uint32_t core_id = CORE_ID;
 
-	LOG_INFO("Terminate task: %u, return value %d\n", curr_task->id, arg);
+	//LOG_INFO("Terminate task: %u, return value %d\n", curr_task->id, arg);
 
 	uint8_t flags = irq_nested_disable();
 
@@ -386,11 +386,13 @@ void NORETURN do_exit(int arg)
 	// do we need to release the TLS?
 	tls_addr = (void*)get_tls();
 	if (tls_addr) {
-		LOG_INFO("Release TLS at %p\n", (char*)tls_addr - curr_task->tls_size);
+		//LOG_INFO("Release TLS at %p\n", (char*)tls_addr - curr_task->tls_size);
 		kfree((char*)tls_addr - curr_task->tls_size - TLS_OFFSET);
 	}
 
 	curr_task->status = TASK_FINISHED;
+	kputs("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY\n");
+	//LOG_INFO("Don't go over this.\n");
 	reschedule();
 
 	irq_nested_enable(flags);

@@ -60,16 +60,16 @@ inline static uint8_t is_irq_enabled(void)
  *
  * This inline function just clears out the interrupt bit
  */
-inline static void irq_disable(void) {
-	//asm volatile("cli" ::: "memory");
-}
+ static inline void irq_disable(void) {
+         asm volatile("msr daifset, 0b1111" ::: "memory");
+ }
 
 /** @brief Enable IRQs
  *
  * This inline function just sets the interrupt bit
  */
-inline static void irq_enable(void) {
-	//asm volatile("sti" ::: "memory");
+static inline void irq_enable(void) {
+        asm volatile("msr daifclr, 0b1111" ::: "memory");
 }
 
 /** @brief Disable IRQs (nested)
