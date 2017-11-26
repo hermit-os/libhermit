@@ -145,7 +145,7 @@ void configure_gdt_entry(gdt_entry_t *dest_entry, unsigned long base, unsigned l
 
 /** @brief Initialize the task state segments
  */
-void tss_init(void);
+void tss_init(tid_t id);
 
 #ifdef __cplusplus
 }

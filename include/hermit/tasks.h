@@ -280,6 +280,10 @@ static inline void check_workqueues(void)
  */
 int is_proxy(void);
 
+/** @brief initialized the stacks of the idle tasks
+ */
+int set_boot_stack(tid_t id, size_t stack, size_t ist_addr);
+
 #ifdef __cplusplus
 }
 #endif
