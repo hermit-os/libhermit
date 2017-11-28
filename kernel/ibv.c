@@ -55,7 +55,8 @@ typedef struct {
 	// Parameters:
 	int * num_devices;
 	// Return value:
-	struct ibv_device * ret[MAX_NUM_OF_IBV_DEVICES];
+	/* struct ibv_device * ret[MAX_NUM_OF_IBV_DEVICES]; */
+	struct ibv_device ** ret;
 } __attribute__((packed)) uhyve_ibv_get_device_list_t;
 
 struct ibv_device ** ibv_get_device_list(int * num_devices) {
@@ -64,22 +65,22 @@ struct ibv_device ** ibv_get_device_list(int * num_devices) {
 	uhyve_args.num_devices = (int *) guest_to_host((size_t) num_devices);
 
 	// Allocate memory for return value.
-	struct ibv_device * devs = kmalloc(MAX_NUM_OF_IBV_DEVICES * sizeof(struct ibv_device));
-	struct ibv_device ** ret_guest = kmalloc(MAX_NUM_OF_IBV_DEVICES * sizeof(struct ibv_device *));
+	/* struct ibv_device * devs = kmalloc(MAX_NUM_OF_IBV_DEVICES * sizeof(struct ibv_device)); */
+	/* struct ibv_device ** ret_guest = kmalloc(MAX_NUM_OF_IBV_DEVICES * sizeof(struct ibv_device *)); */
 
 	// We keep a list of the virtual addresses, so we can return it later, and map
 	// to physical addresses for the args struct passed to uhyve.
-	for (int i = 0; i < MAX_NUM_OF_IBV_DEVICES; i++) {
-		struct ibv_device * device_address = devs + i;
-		ret_guest[i] = device_address;
-		uhyve_args.ret[i] = (struct ibv_device *) guest_to_host((size_t) device_address);
-	}
+	/* for (int i = 0; i < MAX_NUM_OF_IBV_DEVICES; i++) { */
+		/* struct ibv_device * device_address = devs + i; */
+		/* ret_guest[i] = device_address; */
+		/* uhyve_args.ret[i] = (struct ibv_device *) guest_to_host((size_t) device_address); */
+	/* } */
 
 	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_LIST, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
-	for (int i = 0; i < MAX_NUM_OF_IBV_DEVICES; i++) {
-		host_to_guest_ibv_device(ret_guest[i], GUEST);
-	}
+	/* for (int i = 0; i < MAX_NUM_OF_IBV_DEVICES; i++) { */
+		/* host_to_guest_ibv_device(ret_guest[i], GUEST); */
+	/* } */
 
 	return ret_guest;
 }
@@ -105,10 +106,7 @@ const char * ibv_get_device_name(struct ibv_device * device) {
 	host_to_guest_ibv_device(device, GUEST);
 	ret_guest = host_to_guest((size_t) uhyve_args.ret);
 
-	LOG_INFO("LOG TEST\n");
 	return (char *) ret_guest;
-
-	/* return device->name; // TODO: hack for testing */
 }
 
 

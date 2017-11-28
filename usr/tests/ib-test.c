@@ -59,13 +59,15 @@ int main(int argc, char** argv)
 	printf("after get device list -- ib-test.c: name 1: %s\n", dev_list[0]->name);
 	printf("after get device list -- ib-test.c: name 2: %s\n", dev_list[1]->name);
 
-	printf("before get device name.\n");
-	const char* dev_name = ibv_get_device_name(dev_list[0]);
-	printf("after get device name -- Device: %s\n", dev_name);
+	printf("before get device name loop.\n");
+	for (int i=0; i < num_devices; i++) {
+		const char* dev_name = ibv_get_device_name(dev_list[i]);
+		printf("after get device name -- Device name %d: %s\n", i, dev_name);
+	}
 
 	printf("before open_device\n");
 	struct ibv_context * context = ibv_open_device(dev_list[0]);
-	printf("after open device name -- Device: %s\n", dev_name);
+	printf("after open device\n");
 
 
 

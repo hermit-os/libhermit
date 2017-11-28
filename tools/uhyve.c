@@ -62,6 +62,7 @@
 #include <linux/kvm.h>
 #include <asm/msr-index.h>
 #include <asm/mman.h>
+#include <malloc.h>
 
 #include <infiniband/verbs.h>		// Linux include
 
@@ -192,6 +193,66 @@ static pthread_barrier_t barrier;
 static __thread struct kvm_run *run = NULL;
 static __thread int vcpufd = -1;
 static __thread uint32_t cpuid = 0;
+
+static bool ib_malloc = false;
+static uint8_t * ib_mem = NULL;
+
+// Definition of malloc hooks for IBV library
+static void   ib_init_hook(void);
+static void * ib_malloc_hook(size_t, const void *);
+static void   ib_free_hook(void *, const void *);
+
+static void * (* default_malloc_hook)(size_t, const void *);
+static void   (* default_free_hook)(void *, const void *);
+
+/* void (* __malloc_initialize_hook) (void) = ib_init_hook; */
+/* __malloc_initialize_hook = ib_init_hook; */
+
+static void ib_init_hook(void) {
+	default_malloc_hook = __malloc_hook;
+	default_free_hook   = __free_hook;
+
+	__malloc_hook = ib_malloc_hook;
+	__free_hook   = ib_free_hook;
+}
+
+static void * ib_malloc_hook(size_t size, const void * caller) {
+	void * result;
+
+	__malloc_hook = default_malloc_hook;
+	__free_hook   = default_free_hook;
+
+	if (ib_malloc) {
+		ib_mem -= size;
+		result = ib_mem;
+	} else {
+		result = malloc(size);
+	}
+
+	default_malloc_hook = __malloc_hook;
+	default_free_hook   = __free_hook;
+
+	__malloc_hook = ib_malloc_hook;
+	__free_hook   = ib_free_hook;
+
+	return result;
+}
+
+static void ib_free_hook(void * ptr, const void * caller) {
+	__malloc_hook = default_malloc_hook;
+	__free_hook   = default_free_hook;
+
+	if (!ib_malloc) {
+		free(ptr);
+	}
+
+	default_malloc_hook = __malloc_hook;
+	default_free_hook   = __free_hook;
+
+	__malloc_hook = ib_malloc_hook;
+	__free_hook   = ib_free_hook;
+}
+
 
 static uint64_t memparse(const char *ptr)
 {
@@ -1430,6 +1491,9 @@ int uhyve_init(char *path)
 		if (netfd < 0)
 			err(1, "unable to initialized network");
 	}
+
+	ib_mem = guest_mem + guest_size;
+	ib_init_hook();
 
 	return ret;
 }

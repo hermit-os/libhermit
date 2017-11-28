@@ -39,6 +39,9 @@
 
 #define GAP_BELOW	0x100000ULL
 
+#define IB_MEMORY_SIZE (1UL << 20)
+#define IB_MEMORY_NPAGES (IB_MEMORY_SIZE / PAGE_SIZE)
+
 extern uint64_t base;
 extern uint64_t limit;
 
@@ -368,4 +371,15 @@ int memory_init(void)
 oom:
 	LOG_ERROR("BUG: Failed to init mm!\n");
 	while(1) {HALT; }
+}
+
+int ib_memory_init(void)
+{
+	size_t phyaddr, viraddr, bits;
+
+	/* phyaddr =  */
+	viraddr = vma_alloc(IB_MEMORY_NPAGES * PAGE_SIZE, VMA_READ|VMA_WRITE|VMA_CACHEABLE);
+
+	
+
 }

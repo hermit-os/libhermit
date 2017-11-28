@@ -43,7 +43,7 @@ struct ibv_device * guest_to_host_ibv_device(struct ibv_device * device) {
 	return (struct ibv_device *) guest_to_host((size_t) device);
 }
 
-struct ibv_device * host_to_guest_ibv_device(struct ibv_device * device, addr_type type) { 
+struct ibv_device * host_to_guest_ibv_device(struct ibv_device * device, addr_type type) {
 	struct ibv_device * vaddr = (type == GUEST) ? device
 		: (struct ibv_device *) host_to_guest((size_t) device);
 
@@ -66,7 +66,7 @@ struct ibv_context * guest_to_host_ibv_context(struct ibv_context * context) {
 }
 
 struct ibv_context * host_to_guest_ibv_context(struct ibv_context * context, addr_type type) {
-	struct ibv_context * vaddr = (type == GUEST) ? context 
+	struct ibv_context * vaddr = (type == GUEST) ? context
 		: (struct ibv_context *) host_to_guest((size_t) context);
 
 	vaddr->device     = host_to_guest_ibv_device(vaddr->device, HOST);
@@ -96,7 +96,7 @@ struct ibv_port_attr * host_to_guest_ibv_port_attr(struct ibv_port_attr * port_a
 
 
 /*
- * struct ibv_comp_channel 
+ * struct ibv_comp_channel
  */
 
 struct ibv_comp_channel * guest_to_host_ibv_comp_channel(struct ibv_comp_channel * channel) {
@@ -127,7 +127,7 @@ struct ibv_abi_compat_v2 * guest_to_host_ibv_abi_compat_v2(struct ibv_abi_compat
 }
 
 struct ibv_abi_compat_v2 *  host_to_guest_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat, addr_type type) {
-	struct ibv_abi_compat_v2 * vaddr = (type == GUEST) ? abi_compat 
+	struct ibv_abi_compat_v2 * vaddr = (type == GUEST) ? abi_compat
 		: (struct ibv_abi_compat_v2 *) host_to_guest((size_t) abi_compat);
 
 	host_to_guest_ibv_comp_channel(&abi_compat->channel, GUEST);
