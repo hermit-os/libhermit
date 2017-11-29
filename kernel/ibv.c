@@ -60,7 +60,7 @@ typedef struct {
 } __attribute__((packed)) uhyve_ibv_get_device_list_t;
 
 struct ibv_device ** ibv_get_device_list(int * num_devices) {
-	// num_devices can be mapped to physical memory right away.
+	struct ibv_device ** ret_guest;
 	uhyve_ibv_get_device_list_t uhyve_args;
 	uhyve_args.num_devices = (int *) guest_to_host((size_t) num_devices);
 
@@ -78,9 +78,10 @@ struct ibv_device ** ibv_get_device_list(int * num_devices) {
 
 	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_LIST, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
-	/* for (int i = 0; i < MAX_NUM_OF_IBV_DEVICES; i++) { */
-		/* host_to_guest_ibv_device(ret_guest[i], GUEST); */
-	/* } */
+	ret_guest = (struct ibv_device **) host_to_guest((size_t) uhyve_args.ret);
+	for (int i = 0; i < *num_devices; i++) {
+		ret_guest[i] = host_to_guest_ibv_device(ret_guest[i], HOST); // TODO: Make this a host_to_guest fcn for lists of ptrs
+	}
 
 	return ret_guest;
 }
@@ -98,15 +99,16 @@ typedef struct {
 } __attribute__((packed)) uhyve_ibv_get_device_name_t;
 
 const char * ibv_get_device_name(struct ibv_device * device) {
+	char * ret_guest;
 	uhyve_ibv_get_device_name_t uhyve_args;
 	uhyve_args.device = guest_to_host_ibv_device(device);
 
 	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_NAME, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	host_to_guest_ibv_device(device, GUEST);
-	ret_guest = host_to_guest((size_t) uhyve_args.ret);
+	ret_guest = (char *) host_to_guest((size_t) uhyve_args.ret);
 
-	return (char *) ret_guest;
+	return ret_guest;
 }
 
 
@@ -122,18 +124,19 @@ typedef struct {
 } __attribute__((packed)) uhyve_ibv_open_device_t;
 
 struct ibv_context * ibv_open_device(struct ibv_device * device) {
+	struct ibv_context * ret_guest;
 	uhyve_ibv_open_device_t uhyve_args;
 	uhyve_args.device = guest_to_host_ibv_device(device);
 
-	ret_guest = kmalloc(sizeof(struct ibv_context));
-	uhyve_args.ret = (struct ibv_context *) guest_to_host((size_t) ret_guest);
+	/* ret_guest = kmalloc(sizeof(struct ibv_context)); */
+	/* uhyve_args.ret = (struct ibv_context *) guest_to_host((size_t) ret_guest); */
 
 	uhyve_send(UHYVE_PORT_IBV_OPEN_DEVICE, (unsigned) virt_to_phys((size_t)&uhyve_args));
 
 	host_to_guest_ibv_device(device, GUEST);
-	host_to_guest_ibv_context((struct ibv_context * ) ret_guest, GUEST);
- 
-	return (struct ibv_context *) ret_guest;
+	ret_guest = host_to_guest_ibv_context(uhyve_args.ret, HOST);
+
+	return ret_guest;
 }
 
 
@@ -177,16 +180,17 @@ typedef struct {
 } __attribute__((packed)) uhyve_ibv_create_comp_channel_t;
 
 struct ibv_comp_channel * ibv_create_comp_channel(struct ibv_context * context) {
+	struct ibv_comp_channel * ret_guest;
 	uhyve_ibv_create_comp_channel_t uhyve_args;
 	uhyve_args.context = guest_to_host_ibv_context(context);
 
-	ret_guest = kmalloc(sizeof(struct ibv_comp_channel));
-	uhyve_args.ret = (struct ibv_comp_channel *) guest_to_host((size_t) ret_guest);
+	/* ret_guest = kmalloc(sizeof(struct ibv_comp_channel)); */
+	/* uhyve_args.ret = (struct ibv_comp_channel *) guest_to_host((size_t) ret_guest); */
 
 	uhyve_send(UHYVE_PORT_IBV_CREATE_COMP_CHANNEL, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	host_to_guest_ibv_context(context, GUEST);
-	host_to_guest_ibv_comp_channel((struct ibv_comp_channel *) ret_guest, GUEST);
+	ret_guest = host_to_guest_ibv_comp_channel(uhyve_args.ret, HOST);
 
 	return ret_guest;
 }

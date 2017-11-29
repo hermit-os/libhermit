@@ -78,3 +78,5 @@ struct ibv_comp_channel * ibv_create_comp_channel(struct ibv_context * context) 
 	// TODO: Fix pointers in returned data structures.
 	return uhyve_args.ret;
 }
+
+

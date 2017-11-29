@@ -1,4 +1,3 @@
-
 void call_ibv_open_device(struct kvm_run * run, uint8_t * guest_mem) {
 	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 	uhyve_ibv_open_device_t * args = (uhyve_ibv_open_device_t *) (guest_mem + data);

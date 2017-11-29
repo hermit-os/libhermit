@@ -21,8 +21,11 @@
 
 #include <infiniband/verbs.h>		// Linux include
 #include <linux/kvm.h>
+#include <stdbool.h>
 
 #define MAX_NUM_OF_IBV_DEVICES 16
+
+extern bool ib_malloc;
 
 typedef enum {
 	UHYVE_PORT_IBV_OPEN_DEVICE = 0x510,
@@ -38,7 +41,8 @@ typedef struct {
 	// Parameters:
 	int * num_devices;
 	// Return value:
-	struct ibv_device * ret[MAX_NUM_OF_IBV_DEVICES];
+	// struct ibv_device * ret[MAX_NUM_OF_IBV_DEVICES];
+	struct ibv_device ** ret;
 } __attribute__((packed)) uhyve_ibv_get_device_list_t;
 
 typedef struct {

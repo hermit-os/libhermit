@@ -1,4 +1,3 @@
-
 			case UHYVE_PORT_IBV_OPEN_DEVICE:
 				call_ibv_open_device(run, guest_mem);
 				break;

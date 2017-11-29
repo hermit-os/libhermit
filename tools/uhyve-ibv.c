@@ -38,21 +38,26 @@
  */
 
 void call_ibv_get_device_list(struct kvm_run * run, uint8_t * guest_mem) {
+	ib_malloc = true;
 	printf("LOG: UHYVE - call_ibv_get_device_list\n");
 	unsigned data = *((unsigned *)((size_t)run+run->io.data_offset));
 	uhyve_ibv_get_device_list_t * args = (uhyve_ibv_get_device_list_t *) (guest_mem + data);
 
 	// Call IBV function from hypervisor
-	int num_devices;
-	struct ibv_device **host_ret = ibv_get_device_list(&num_devices);
+	/* int num_devices; */
+	/* struct ibv_device **host_ret = ibv_get_device_list(&num_devices); */
+	printf("LOG: UHYVE - call_ibv_get_device_list -- before ibv call\n");
+	args->ret = ibv_get_device_list(args->num_devices);
+	printf("LOG: UHYVE - call_ibv_get_device_list -- after ibv call\n");
 
-	// Copy number of devices and device stucts to kernel memory
-	if (args->num_devices) {
-		memcpy(args->num_devices, &num_devices, sizeof(num_devices));
-	}
-	for (int d = 0; d < num_devices; d++) {
-		memcpy(args->ret[d], host_ret[d], sizeof(struct ibv_device));
-	}
+	// Copy number of devices and device structs to kernel memory
+	/* if (args->num_devices) { */
+		/* memcpy(args->num_devices, &num_devices, sizeof(num_devices)); */
+	/* } */
+	/* for (int d = 0; d < num_devices; d++) { */
+		/* memcpy(args->ret[d], host_ret[d], sizeof(struct ibv_device)); */
+	/* } */
+	ib_malloc = false;
 }
 
 

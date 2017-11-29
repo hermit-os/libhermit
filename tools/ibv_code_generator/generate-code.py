@@ -88,7 +88,7 @@ Required in: ./tool/uhyve-ibv.h
 """
 
 from __future__ import print_function
-import pyparsing as pp
+from parser import generate_struct_conversions
 
 
 # Path of the input file containing function prototypes.
@@ -101,7 +101,7 @@ UHYVE_IBV_HEADER_GEN_PATH = "GEN-tools-uhyve-ibv-ports.h"
 INCLUDE_STDDEF_GEN_PATH = "GEN-include-hermit-stddef.h"
 UHYVE_IBV_HEADER_STRUCTS_GEN_PATH = "GEN-tools-uhyve-ibv-structs.h"
 UHYVE_HOST_FCNS_GEN_PATH = "GEN-tools-uhyve-ibv.c"
-VERBS_HEADER_PATH = "verbs-0.h"
+#  VERBS_HEADER_PATH = "verbs-0.h"
 
 # Starting number of the sequence used for IBV ports.
 PORT_NUMBER_START = 0x510
@@ -109,64 +109,166 @@ PORT_NUMBER_START = 0x510
 TABS = ["", "\t", "\t\t", "\t\t\t", "\t\t\t\t"]
 NEWLINES = ["", "\n", "\n\n"]
 
+class Type:
+  def __init__(self, string):
+    ts = string
+    if (string[-1] is "*") and (string[-2] is not " "):
+        ts = string[:-1] + " *"
 
-def get_struct_name(function_name):
-  """Returns the matching struct name for a given function name.
-  """
-  return "uhyve_{0}_t".format(function_name)
+    self.type_string     = ts
+    self.type_components = ts.split(" ")
 
+  def get_struct_name(self):
+    name = ""
+    if is_struct():
+      name = self.type_components[1]
+    return name
 
-def parse_line(line):
-  """Parses a line containing a function prototype.
+  def is_struct(self):
+    return self.type_components[0] == "struct"
 
-  Args:
-    line: Line of the following format: 
-          <return_type> <function_name>(<param_type> <param_name>, [...])
+  def is_pointer(self):
+    return self.type_components[-1] == "*"
 
-  Returns:
-    Return type, function name, parameters as Tuple[string, string, list[string]]
-  """
-  parens_split = line.split("(")
-
-  ret_and_name = parens_split[0].split(" ")
-  all_params = parens_split[-1][:-1]
-
-  ret = " ".join(ret_and_name[:-1])
-  function_name = ret_and_name[-1]
-
-  params = all_params.split(",")
-  params[-1] = params[-1][:-1]
-
-  return ret, function_name, params
+  def is_void(self):
+    return self.type_string == "void"
 
 
-def generate_struct(ret, function_name, params):
-  """Generates the struct to hold a function's parameters and return value.
+class FunctionParameter:
+  def __init__(self, string):
+    components = string.split(" ")
+    type_string = " ".join(components[:-1])
 
-  Args:
+    self.type = Type(type_string)
+    self.name = components[-1]
+
+  def get_full_expression:
+    return self.type.type_string + " " + self.name
+
+  def get_struct_name(self):
+    return self.type.get_struct_name()
+
+  def is_struct(self):
+    return self.type.is_struct()
+
+  def is_pointer(self):
+    return self.type.is_pointer()
+
+
+class FunctionPrototype:
+  def __init__(self, string):
+    parens_split = string.split("(")
+    ret_and_name = parens_split[0].split(" ")
+    all_params = parens_split[-1].split(")")[0]
+    param_strings = all_params.split(",")
+
+    self.parameters    = [FunctionParameter(p) for p in param_strings]
+    self.ret           = Type(" ".join(ret_and_name[:-1]))
+    self.function_name = ret_and_name[-1]
+
+  def generate_args_struct(ret, function_name, params):
+    """Generates the struct to hold a function's parameters and return value.
+
+    Args:
     ret: Return type as string.
     function_name: Function name as string.
     params: Parameters as list of strings.
 
-  Returns:
+    Returns:
     Generated struct as string.
-  """
-  struct = "typedef struct {\n"
-  if params:
-    struct += "\t// Parameters:\n"
-    for param in params:
-      struct += "\t{0};\n".format(param)
+    """
+    code = ""
+    code = "typedef struct {\n"
 
-  if ret is not "void":
-    struct += "\t// Return value:\n"
-    struct += "\t{0} ret;\n".format(ret)
+    if self.get_num_parameters() > 0:
+      code += "\t// Parameters:\n"
+      for param in self.parameters:
+        code += "\t{0};\n".format(param.get_full_expression())
 
-  struct_name = get_struct_name(function_name)
-  struct += "}} __attribute__((packed)) {0};\n\n".format(struct_name)
+    if not self.ret.is_void():
+      code += "\t// Return value:\n"
+      code += "\t{0} ret;\n".format(self.ret.type_string)
 
-  return struct
+    code += "}} __attribute__((packed)) {0};\n\n".format( self.get_args_struct_name())
+
+    return code
+
+  def get_num_parameters(self):
+    return len(self.parameters)
+
+  def get_parameter_types(self):
+    return [param.type.type_string for param in self.parameters]
+
+  def get_port_name(self):
+    return "UHYVE_PORT_" + self.function_name.upper()
+
+  def get_args_struct_name(self):
+    return "uhyve_{0}_t".format(self.function_name)
 
 
+
+# -----------------------------------------------------------------------------
+
+
+
+
+#  def get_struct_name(function_name):
+  #  """Returns the matching struct name for a given function name.
+  #  """
+  #  return "uhyve_{0}_t".format(function_name)
+
+
+#  def parse_line(line):
+  #  """Parses a line containing a function prototype.
+
+  #  Args:
+    #  line: Line of the following format:
+          #  <return_type> <function_name>(<param_type> <param_name>, [...])
+
+  #  Returns:
+    #  [Return type, function name, parameters] as Tuple[string, string, list[string]]
+  #  """
+  #  parens_split = line.split("(")
+
+  #  ret_and_name = parens_split[0].split(" ")
+  #  all_params = parens_split[-1][:-1]
+
+  #  ret = " ".join(ret_and_name[:-1])
+  #  function_name = ret_and_name[-1]
+
+  #  params = all_params.split(",")
+  #  params[-1] = params[-1][:-1]
+
+  #  return ret, function_name, params
+
+
+#  def generate_struct(ret, function_name, params):
+  #  """Generates the struct to hold a function's parameters and return value.
+
+  #  Args:
+    #  ret: Return type as string.
+    #  function_name: Function name as string.
+    #  params: Parameters as list of strings.
+
+  #  Returns:
+    #  Generated struct as string.
+  #  """
+  #  struct = "typedef struct {\n"
+  #  if params:
+    #  struct += "\t// Parameters:\n"
+    #  for param in params:
+      #  struct += "\t{0};\n".format(param)
+
+  #  if ret is not "void":
+    #  struct += "\t// Return value:\n"
+    #  struct += "\t{0} ret;\n".format(ret)
+
+  #  struct_name = get_struct_name(function_name)
+  #  struct += "}} __attribute__((packed)) {0};\n\n".format(struct_name)
+
+  #  return struct
+
+# TODO: hier gehts weiter
 def generate_kernel_function(ret, function_name, params):
   """Generates the kernel function that sends the KVM exit IO to uhyve.
 
@@ -178,11 +280,16 @@ def generate_kernel_function(ret, function_name, params):
   Returns:
     Generated function as string.
   """
-  function = "{0} {1}({2}) {{\n".format(ret, function_name, ", ".join(params))
+  code = ""
+
+  code = "{0} {1}({2}) {{\n".format(ret, function_name, ", ".join(params))
 
   # Create uhyve_args and define parameters
   struct_name = get_struct_name(function_name)
-  function += "\t{0} uhyve_args;\n".format(struct_name)
+  code += "\t{0} ret_guest;\n".format(ret)
+  code += "\t{0} uhyve_args;\n".format(struct_name)
+
+  # TODO: Make a class for function prototypes
   for param in params:
     param_split = param.split(" ")
     param_type = " ".join(param_split[:-1])
@@ -190,54 +297,64 @@ def generate_kernel_function(ret, function_name, params):
 
     # Define struct members according to their type.
     if "**" in param_type:
-      function += "\t// TODO: Take care of ** parameter.\n"
+      code += "\t// TODO: Take care of ** parameter.\n"
     elif "*" in param_type:
-      function += "\tuhyve_args->{0} = " "({1}) virt_to_phys((size_t) {2});\n".format(
-        param_name, param_type, param_name)
+      # TODO: char ptrs
+      code += "\tuhyve_args.{0} = guest_to_host_{1}({2});\n".format(param_name, 
+                                                                    param_split[1])
     else:
-      function += "\tuhyve_args->{0} = {0};\n".format(param_name)
-
-  # Allocate memory for return value if it is a pointer.
-  if "**" in ret:
-    function += "\n\t// TODO: Take care of return value.\n"
-  elif "*" in ret:
-    function += "\n\tuhyve_args->ret = kmalloc(sizeof({0}));\n".format(ret[:-2])
+      code += "\tuhyve_args,{0} = {0};\n".format(param_name)
 
   # call uhyve_send() using the respective port ID.
   port_name = "UHYVE_PORT_" + function_name.upper()
-  function += "\n\tuhyve_send({0}, (unsigned) virt_to_phys((size_t) " \
+  code += "\n\tuhyve_send({0}, (unsigned) virt_to_phys((size_t) " \
     "&uhyve_args));\n\n".format(port_name)
 
-  function += "\t// TODO: Fix pointers in returned data structures.\n"
+  for param in params:
+    param_split = param.split(" ")
+    param_type = " ".join(param_split[:-1])
+    param_name = param_split[-1]
 
-  function += "\treturn uhyve_args.ret;\n"
-  function += "}\n\n\n"
+    # Define struct members according to their type.
+    if "**" in param_type:
+      code += "\t// TODO: Take care of ** parameter.\n"
+    elif "*" in param_type:
+      code += "\thost_to_guest_{0}({1}, GUEST);".format(param_split[1], param_name)
 
-  return function
+  if "**" in ret:
+    code += "\t// TODO: Take care of ** parameter.\n"
+  elif "*" in ret:
+    code += "\tret_guest = host_to_guest_{0}(uhyve_args.ret, HOST)\n".format(ret[1])
+  else:
+    code += "\tret_guest = uhyve_args.ret;\n"
+  
+  code += "\n\treturn ret_guest;\n"
+  code += "}\n\n\n"
+
+  return code
 
 
-def generate_uhyve_cases(function_names):
+# TODO: done
+def generate_uhyve_cases(function_prototypes):
   """ Generates all switch-cases for uhyve's KVM exit IO.
 
-  Args:
-    function_names: All function names as a list of strings.
-
   Returns:
-    Generated switch-cases as one single string.
+    Generated switch-cases [string]
   """
-  cases = ""
+  code = ""
 
-  for function_name in function_names:
-    port_name = "UHYVE_PORT_" + function_name.upper()
-    struct_name = get_struct_name(function_name)
+  for pt in function_prototypes:
+    name = pt.function_name
+    port_name = pt.get_port_name()
 
-    cases += "{0}{1}case {2}:".format(NEWLINES[1], TABS[3], port_name)
-    cases += "{0}{1}call_{2}(run, guest_mem);".format(NEWLINES[1], TABS[4], function_name)
-    cases += "{0}{1}break;".format(NEWLINES[1], TABS[4])
+    code += "{0}{1}case {2}:".format(NEWLINES[1], TABS[3], port_name)
+    code += "{0}{1}call_{2}(run, guest_mem);".format(NEWLINES[1], TABS[4], name)
+    code += "{0}{1}break;".format(NEWLINES[1], TABS[4])
 
-  return cases
+  return code
 
 
+# TODO: hier gehts weiter
 def generate_uhyve_host_function(ret, function_name, params):
   """Generates a switch-case that catches a KVM exit IO for the given function in uhyve.
 
@@ -273,7 +390,7 @@ def generate_uhyve_host_function(ret, function_name, params):
       host_param = "{0}".format(param_name)
 
     return host_param
-    
+
   struct_name = get_struct_name(function_name)
 
   fcn = "{0}void call_{1}(struct kvm_run * run, uint8_t * guest_mem) {{".format(NEWLINES[1], function_name)
@@ -285,7 +402,7 @@ def generate_uhyve_host_function(ret, function_name, params):
     fcn += generate_host_call_parameter(param) + ", "
   else:
     fcn += generate_host_call_parameter(params[-1]) + ");"
-  
+
   if "**" in ret:
     fcn += "{0}{1}// TODO: Take care of {2} return value.".format(NEWLINES[1], TABS[1], ret)
   elif "*" in ret:
@@ -333,35 +450,6 @@ def generate_port_macros(function_names):
                                                        format(num, "X"))
   return macros
 
-def generate_struct_conversions():
-  
-  word = pp.Word(pp.alphas+"_", bodyChars=pp.alphanums+"_")
-
-  struct_header = (pp.Literal("struct").suppress() + word +
-                   pp.Literal("{").suppress())
-  struct_footer = pp.Literal("};").suppress()
-
-  member_var = word + pp.Literal(";").suppress()
-  member_type = (pp.Combine(pp.OneOrMore(word + ~pp.FollowedBy(pp.Literal(";"))),
-                            joinString=" ", adjacent=False) 
-                 + pp.ZeroOrMore("*") + pp.FollowedBy(member_var))
-  
-  member = pp.Group(member_type + member_var)
-  body = pp.OneOrMore(member)
-
-  struct = struct_header + body + struct_footer
-
-  # TODO: Not bullet proof yet.
-  comment = pp.Or([pp.Literal("/*") + pp.SkipTo(pp.Literal("*/")),
-                   pp.Literal("//") + pp.SkipTo(pp.LineEnd())])
-  struct.ignore(comment)
-  
-  with open(VERBS_HEADER_PATH, "r") as f_verbs:
-    code = f_verbs.read()
-
-  # for result, _, _ in struct.scanString(code):
-    # print("{0}".format(result))
-
 
 if __name__ == "__main__":
   """TODO: Doc
@@ -399,7 +487,4 @@ if __name__ == "__main__":
     f_stddef.write(port_macros)
 
   generate_struct_conversions()
-
-  
-
 

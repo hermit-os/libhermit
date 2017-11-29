@@ -194,8 +194,8 @@ static __thread struct kvm_run *run = NULL;
 static __thread int vcpufd = -1;
 static __thread uint32_t cpuid = 0;
 
-static bool ib_malloc = false;
 static uint8_t * ib_mem = NULL;
+bool ib_malloc = false;
 
 // Definition of malloc hooks for IBV library
 static void   ib_init_hook(void);
@@ -209,6 +209,7 @@ static void   (* default_free_hook)(void *, const void *);
 /* __malloc_initialize_hook = ib_init_hook; */
 
 static void ib_init_hook(void) {
+	printf("ib_init_hook\n");
 	default_malloc_hook = __malloc_hook;
 	default_free_hook   = __free_hook;
 
@@ -217,15 +218,18 @@ static void ib_init_hook(void) {
 }
 
 static void * ib_malloc_hook(size_t size, const void * caller) {
+	printf("ib_malloc_hook");
 	void * result;
 
 	__malloc_hook = default_malloc_hook;
 	__free_hook   = default_free_hook;
 
 	if (ib_malloc) {
+		printf(" - ib_malloc true -- ib_mem: %p\n", ib_mem);
 		ib_mem -= size;
-		result = ib_mem;
+		result = (size == 0) ? NULL : ib_mem;
 	} else {
+		printf(" - ib_malloc false\n");
 		result = malloc(size);
 	}
 
@@ -1039,7 +1043,7 @@ static int vcpu_loop(void)
 				}
 
 			// InfiniBand
-			case UHYVE_PORT_IBV_GET_DEVICE_LIST: {
+			case UHYVE_PORT_IBV_GET_DEVICE_LIST:
 				printf("LOG: UHYVE CASE\n");
 				call_ibv_get_device_list(run, guest_mem);
 				break;
@@ -1059,8 +1063,6 @@ static int vcpu_loop(void)
 				printf("LOG: UHYVE CASE UHYVE_PORT_IBV_CREATE_COMP_CHANNEL\n");
 				call_ibv_create_comp_channel(run, guest_mem);
 				break;
-
-																					 }
 
 			default:
 				err(1, "KVM: unhandled KVM_EXIT_IO at port 0x%x, direction %d\n", run->io.port, run->io.direction);
@@ -1492,7 +1494,10 @@ int uhyve_init(char *path)
 			err(1, "unable to initialized network");
 	}
 
+	printf("ib_mem initialization\n");
 	ib_mem = guest_mem + guest_size;
+	printf("guest_mem: %p, guest_size: %p\n", guest_mem, guest_size);
+	printf("ib_mem = guest_mem + guest_size: %p\n", ib_mem);
 	ib_init_hook();
 
 	return ret;

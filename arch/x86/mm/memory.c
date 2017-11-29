@@ -56,6 +56,7 @@ typedef struct free_list {
  * maintaining a value, rather their address is their value.
  */
 extern const void kernel_start;
+extern const void kernel_end;
 
 uint8_t * host_kernel_start = NULL;
 
@@ -373,13 +374,28 @@ oom:
 	while(1) {HALT; }
 }
 
-int ib_memory_init(void)
+void * ib_memory_init(void)
 {
+	LOG_INFO("ib_memory_init\n");
+
 	size_t phyaddr, viraddr, bits;
+	int err;
 
-	/* phyaddr =  */
+	phyaddr = (size_t) &kernel_end - IB_MEMORY_SIZE;
+	bits = PG_RW|PG_GLOBAL|PG_NX;
 	viraddr = vma_alloc(IB_MEMORY_NPAGES * PAGE_SIZE, VMA_READ|VMA_WRITE|VMA_CACHEABLE);
+	if (BUILTIN_EXPECT(!viraddr, 0)) {
+		LOG_INFO("BUILTIN_EXPECT failed: ib_memory_init 1\n");
+		return NULL;
+	}
 
-	
+	err = page_map(viraddr, phyaddr, IB_MEMORY_NPAGES, bits);
+	if (BUILTIN_EXPECT(err, 0)) {
+		LOG_INFO("BUILTIN_EXPECT failed: ib_memory_init 2\n");
+		vma_free(viraddr, viraddr + IB_MEMORY_NPAGES*PAGE_SIZE);
+		return NULL;
+	}
 
+	LOG_INFO("ib_memory_init\n");
+	return (void *) viraddr;
 }
