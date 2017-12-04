@@ -196,65 +196,184 @@ static __thread uint32_t cpuid = 0;
 
 static uint8_t * ib_mem = NULL;
 bool ib_malloc = false;
+static const size_t std_alignment = 16; // TODO: Use sizeof(maxint_t) (?) or similar
 
 // Definition of malloc hooks for IBV library
 static void   ib_init_hook(void);
+
 static void * ib_malloc_hook(size_t, const void *);
+static void * ib_realloc_hook(void *, size_t, const void *);
+static void * ib_memalign_hook(size_t, size_t, const void *);
 static void   ib_free_hook(void *, const void *);
 
-static void * (* default_malloc_hook)(size_t, const void *);
-static void   (* default_free_hook)(void *, const void *);
+static void * (* default_malloc_hook)  (size_t, const void *);
+static void * (* default_realloc_hook) (void *, size_t, const void *);
+static void * (* default_memalign_hook)(size_t, size_t, const void *);
+static void   (* default_free_hook)    (void *, const void *);
 
 /* void (* __malloc_initialize_hook) (void) = ib_init_hook; */
 /* __malloc_initialize_hook = ib_init_hook; */
 
-static void ib_init_hook(void) {
-	printf("ib_init_hook\n");
-	default_malloc_hook = __malloc_hook;
-	default_free_hook   = __free_hook;
+void * new_ib_malloc_region(size_t size) {
+	void * result = NULL;
 
-	__malloc_hook = ib_malloc_hook;
-	__free_hook   = ib_free_hook;
+	if (size > 0) {
+		ib_mem -= size;
+		ib_mem -= (size_t) ((uintptr_t) ib_mem % std_alignment);
+		printf("ib_mem aligned: %p\n", ib_mem);
+		result = ib_mem;
+
+		ib_mem -= std_alignment;
+		size_t * block_size = (size_t *) ib_mem;
+		*block_size = size;
+	}
+
+	if ((uint8_t *) result < guest_mem + guest_size - (size_t) (1UL << 20)) { // TODO: remove this
+		printf("WARNING, IB MEM OUT OF BOUNDS\n\n");
+	}
+
+	return result;
+}
+
+static void ib_init_hook(void) {
+	/* printf("ib_init_hook\n"); */
+	default_malloc_hook   = __malloc_hook;
+	default_realloc_hook  = __realloc_hook;
+	default_memalign_hook = __memalign_hook;
+	default_free_hook     = __free_hook;
+
+	__malloc_hook   = ib_malloc_hook;
+	__realloc_hook  = ib_realloc_hook;
+	__memalign_hook = ib_memalign_hook;
+	__free_hook     = ib_free_hook;
 }
 
 static void * ib_malloc_hook(size_t size, const void * caller) {
-	printf("ib_malloc_hook");
+	__malloc_hook   = default_malloc_hook;
+	__realloc_hook  = default_realloc_hook;
+	__memalign_hook = default_memalign_hook;
+  __free_hook     = default_free_hook;
+
+	printf(" ib_malloc_hook\tib_malloc %s\t Args:\tsize = %lu\t", ib_malloc ? "true " : "false", size);
+
 	void * result;
-
-	__malloc_hook = default_malloc_hook;
-	__free_hook   = default_free_hook;
-
 	if (ib_malloc) {
-		printf(" - ib_malloc true -- ib_mem: %p\n", ib_mem);
-		ib_mem -= size;
-		result = (size == 0) ? NULL : ib_mem;
-	} else {
-		printf(" - ib_malloc false\n");
+		result = new_ib_malloc_region(size);
+	} else { // !ib_malloc
+		printf("\n");
 		result = malloc(size);
 	}
 
-	default_malloc_hook = __malloc_hook;
-	default_free_hook   = __free_hook;
+	default_malloc_hook   = __malloc_hook;
+	default_realloc_hook  = __realloc_hook;
+	default_memalign_hook = __memalign_hook;
+	default_free_hook     = __free_hook;
 
-	__malloc_hook = ib_malloc_hook;
-	__free_hook   = ib_free_hook;
+	__malloc_hook   = ib_malloc_hook;
+	__realloc_hook  = ib_realloc_hook;
+	__memalign_hook = ib_memalign_hook;
+	__free_hook     = ib_free_hook;
+
+	return result;
+}
+
+static void * ib_realloc_hook(void * ptr, size_t new_size, const void * caller) {
+	__malloc_hook   = default_malloc_hook;
+	__realloc_hook  = default_realloc_hook;
+	__memalign_hook = default_memalign_hook;
+  __free_hook     = default_free_hook;
+
+	printf("ib_realloc_hook\tib_malloc %s\t Args:\tptr = %p, size = %lu\t", ib_malloc ? "true " : "false", ptr, new_size);
+	void * result;
+
+	if (ib_malloc) {
+		size_t * mem_block_size_ptr = (size_t *) (ptr - std_alignment);
+		size_t orig_size = *mem_block_size_ptr;
+
+		if (new_size <= 0 || ptr == NULL) {
+			printf("new_size <= 0 || ptr == NULL\n");
+			result = NULL;
+		} else if (new_size <= orig_size) {
+			printf("new_size <= orig_size = %lu\n", orig_size);
+			*mem_block_size_ptr = new_size;
+			result = ptr;
+		} else { // new_size > orig_size
+			result = new_ib_malloc_region(new_size);
+			memcpy(result, ptr, orig_size);
+		}
+
+	} else { // !ib_malloc
+		printf("\n");
+		result = realloc(ptr, new_size);
+	}
+
+	default_malloc_hook   = __malloc_hook;
+	default_realloc_hook  = __realloc_hook;
+	default_memalign_hook = __memalign_hook;
+	default_free_hook     = __free_hook;
+
+	__malloc_hook   = ib_malloc_hook;
+	__realloc_hook  = ib_realloc_hook;
+	__memalign_hook = ib_memalign_hook;
+	__free_hook     = ib_free_hook;
+
+	return result;
+}
+
+static void * ib_memalign_hook(size_t alignment, size_t size, const void * caller) {
+	__malloc_hook   = default_malloc_hook;
+	__realloc_hook  = default_realloc_hook;
+	__memalign_hook = default_memalign_hook;
+  __free_hook     = default_free_hook;
+
+	printf("\tCALLED! ib_memalign_hook\tib_malloc %s\t Args:\talignment = %lu\tsize = %lu\t",
+			ib_malloc ? "true " : "false", alignment, size);
+
+	void * result;
+	if (ib_malloc) {
+		/* result = new_ib_malloc_region(size); */
+	} else { // !ib_malloc
+		printf("\n");
+		result = memalign(alignment, size);
+	}
+
+	default_malloc_hook   = __malloc_hook;
+	default_realloc_hook  = __realloc_hook;
+	default_memalign_hook = __memalign_hook;
+	default_free_hook     = __free_hook;
+
+	__malloc_hook   = ib_malloc_hook;
+	__realloc_hook  = ib_realloc_hook;
+	__memalign_hook = ib_memalign_hook;
+	__free_hook     = ib_free_hook;
 
 	return result;
 }
 
 static void ib_free_hook(void * ptr, const void * caller) {
-	__malloc_hook = default_malloc_hook;
-	__free_hook   = default_free_hook;
+	__malloc_hook   = default_malloc_hook;
+	__realloc_hook  = default_realloc_hook;
+	__memalign_hook = default_memalign_hook;
+  __free_hook     = default_free_hook;
+
+	printf("   ib_free_hook\tib_malloc %s\t Args:\tptr = %p", ib_malloc ? "true " : "false", ptr);
 
 	if (!ib_malloc) {
 		free(ptr);
+	} else if (ptr != NULL && (ptr <= ib_mem || ptr > guest_mem + guest_size)) {
+		printf("\t!!! ptr out of ib bounds !!!");
 	}
+	printf("\n");
 
-	default_malloc_hook = __malloc_hook;
-	default_free_hook   = __free_hook;
+	default_malloc_hook   = __malloc_hook;
+	default_realloc_hook  = __realloc_hook;
+	default_memalign_hook = __memalign_hook;
+	default_free_hook     = __free_hook;
 
-	__malloc_hook = ib_malloc_hook;
-	__free_hook   = ib_free_hook;
+	__malloc_hook   = ib_malloc_hook;
+	__realloc_hook  = ib_realloc_hook;
+	__memalign_hook = ib_memalign_hook;
+	__free_hook     = ib_free_hook;
 }
 
 
@@ -1494,7 +1613,7 @@ int uhyve_init(char *path)
 			err(1, "unable to initialized network");
 	}
 
-	printf("ib_mem initialization\n");
+	printf("UHYVE: Initialize malloc hooks (ib_init_hook())\n");
 	ib_mem = guest_mem + guest_size;
 	printf("guest_mem: %p, guest_size: %p\n", guest_mem, guest_size);
 	printf("ib_mem = guest_mem + guest_size: %p\n", ib_mem);

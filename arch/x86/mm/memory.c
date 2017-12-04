@@ -376,8 +376,6 @@ oom:
 
 void * ib_memory_init(void)
 {
-	LOG_INFO("ib_memory_init\n");
-
 	size_t phyaddr, viraddr, bits;
 	int err;
 
@@ -389,6 +387,11 @@ void * ib_memory_init(void)
 		return NULL;
 	}
 
+	LOG_INFO("ib_memory_init, size: %lu\n", IB_MEMORY_SIZE);
+	LOG_INFO("\tGuest Phys Start: %p\tEnd: %p\n", (uint8_t *) phyaddr, (uint8_t *) &kernel_end);
+	/* LOG_INFO("\tHost  Virt Start: %p\tEnd: %p\n", */
+			/* phyaddr + host_kernel_start, (size_t) &kernel_end + host_kernel_start); */
+
 	err = page_map(viraddr, phyaddr, IB_MEMORY_NPAGES, bits);
 	if (BUILTIN_EXPECT(err, 0)) {
 		LOG_INFO("BUILTIN_EXPECT failed: ib_memory_init 2\n");
@@ -396,6 +399,6 @@ void * ib_memory_init(void)
 		return NULL;
 	}
 
-	LOG_INFO("ib_memory_init\n");
+	LOG_INFO("ib_memory_init finished\n");
 	return (void *) viraddr;
 }

@@ -43,8 +43,9 @@
 
 int main(int argc, char** argv)
 {
+	/* printf("checking kernel outputs.\n"); */
+
 	int i, random;
-	FILE* file;
 
 	// ---------------------------------------------------------------------------
 
@@ -68,8 +69,6 @@ int main(int argc, char** argv)
 	printf("before open_device\n");
 	struct ibv_context * context = ibv_open_device(dev_list[0]);
 	printf("after open device\n");
-
-
 
 	return 0;
 }
