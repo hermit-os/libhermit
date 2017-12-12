@@ -1113,6 +1113,12 @@ static int vcpu_loop(void)
 			case UHYVE_PORT_IBV_IS_QPT_SUPPORTED:
 				call_ibv_is_qpt_supported(run, guest_mem);
 				break;
+			case UHYVE_PORT_IBV_GET_MR_LKEY:
+				call_ibv_get_mr_lkey(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_GET_QP_NUM:
+				call_ibv_get_qp_num(run, guest_mem);
+				break;
 
 			default:
 				err(1, "KVM: unhandled KVM_EXIT_IO at port 0x%x, direction %d\n", run->io.port, run->io.direction);

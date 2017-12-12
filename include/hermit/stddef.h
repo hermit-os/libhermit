@@ -135,6 +135,8 @@ extern const size_t image_size;
 #define UHYVE_PORT_IBV_PORT_STATE_STR           0x56B
 #define UHYVE_PORT_IBV_EVENT_TYPE_STR           0x56C
 #define UHYVE_PORT_IBV_IS_QPT_SUPPORTED         0x56E
+#define UHYVE_PORT_IBV_GET_MR_LKEY              0x56F // !
+#define UHYVE_PORT_IBV_GET_QP_NUM               0x570 // !
 
 // #define UHYVE_PORT_KERNEL_IBV_LOG               0x56F
 

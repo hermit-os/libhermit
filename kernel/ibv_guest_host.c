@@ -32,6 +32,7 @@
 #include <asm/page.h>
 
 #include <hermit/ibv_guest_host.h>
+#include <hermit/stdio.h>
 #include <hermit/logging.h>
 
 

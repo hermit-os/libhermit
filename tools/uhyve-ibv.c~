@@ -251,37 +251,45 @@ void call_ibv_reg_mr(struct kvm_run * run, uint8_t * guest_mem) {
 	args->ret = ibv_reg_mr(args->pd, args->addr, args->length, args->access);
 }
 
-void call_ibv_rereg_mr(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("UHYVE call: call_ibv_rereg_mr\n");
+void call_ibv_get_mr_lkey(struct kvm_run * run, uint8_t * guest_mem) {
+	printf("UHYVE call: call_ibv_get_mr_lkey\n");
 	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
-	uhyve_ibv_rereg_mr_t * args = (uhyve_ibv_rereg_mr_t *) (guest_mem + data);
-
-	args->ret = ibv_rereg_mr(args->mr, args->flags, args->pd, args->addr, args->length, args->access);
-}
-
-void call_ibv_dereg_mr(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("UHYVE call: call_ibv_dereg_mr\n");
+	(struct ibv_qp_att	 *) guest_to_host((size_t) uhyve_ibv_reg_mr_t )* args = (uhyve_ibv_reg_mr_t *) (guest_mem + data);
+(struct ibv_qp_att	 *) guest_to_host((size_t) 
+	args)->ret = ibv_reg_mr(args->pd, args->addr, args->length, args->access);
+(struct ibv_qp_att	 *) guest_to_host((size_t) }
+		(struct ibv_qp_att	 *) guest_to_host((size_t) )
+		)void call_ibv_rereg_mr(struct kvm_run * run, uint8_t * guest_mem) {
+	printf("(struct ibv_qp_att	 *) guest_to_host((size_t) UHYVE )call: call_ibv_rereg_mr\n");
 	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
-	uhyve_ibv_dereg_mr_t * args = (uhyve_ibv_dereg_mr_t *) (guest_mem + data);
-
-	args->ret = ibv_dereg_mr(args->mr);
-}
-
-void call_ibv_alloc_mw(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("UHYVE call: call_ibv_alloc_mw\n");
+	uhyve_ibv_rereg_mr_t * args = (struct ibv_qp_att	 *) guest_to_host((size_t) ()uhyve_ibv_rereg_mr_t *) (guest_mem + data);
+(struct ibv_qp_att	 *) guest_to_host((size_t) 
+	args)->ret = ibv_rereg_mr(args->mr, args->flags, args->pd, args->addr, args->length, args->access);
+(struct ibv_qp_att	 *) guest_to_host((size_t) }
+		(struct ibv_qp_att	 *) guest_to_host((size_t) )
+		)void call_ibv_dereg_mr(struct kvm_run * run, uint8_t * guest_mem) {
+	printf("(struct ibv_qp_att	 *) guest_to_host((size_t) UHYVE )call: call_ibv_dereg_mr\n");
 	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
-	uhyve_ibv_alloc_mw_t * args = (uhyve_ibv_alloc_mw_t *) (guest_mem + data);
-
-	args->ret = ibv_alloc_mw(args->pd, args->type);
-}
-
-void call_ibv_dealloc_mw(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("UHYVE call: call_ibv_dealloc_mw\n");
+	uhyve_ibv_dereg_mr_t * args = (struct ibv_qp_att	 *) guest_to_host((size_t) ()uhyve_ibv_dereg_mr_t *) (guest_mem + data);
+(struct ibv_qp_att	 *) guest_to_host((size_t) 
+	args)->ret = ibv_dereg_mr(args->mr);
+(struct ibv_qp_att	 *) guest_to_host((size_t) }
+		(struct ibv_qp_att	 *) guest_to_host((size_t) )
+		)void call_ibv_alloc_mw(struct kvm_run * run, uint8_t * guest_mem) {
+	printf("(struct ibv_qp_att	 *) guest_to_host((size_t) UHYVE )call: call_ibv_alloc_mw\n");
 	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
-	uhyve_ibv_dealloc_mw_t * args = (uhyve_ibv_dealloc_mw_t *) (guest_mem + data);
-
-	args->ret = ibv_dealloc_mw(args->mw);
-}
+	uhyve_ibv_alloc_mw_t * args = (struct ibv_qp_att	 *) guest_to_host((size_t) ()uhyve_ibv_alloc_mw_t *) (guest_mem + data);
+(struct ibv_qp_att	 *) guest_to_host((size_t) 
+	args)->ret = ibv_alloc_mw(args->pd, args->type);
+(struct ibv_qp_att	 *) guest_to_host((size_t) }
+		(struct ibv_qp_att	 *) guest_to_host((size_t) )
+		)void call_ibv_dealloc_mw(struct kvm_run * run, uint8_t * guest_mem) {
+	printf("(struct ibv_qp_att	 *) guest_to_host((size_t) UHYVE )call: call_ibv_dealloc_mw\n");
+	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
+	uhyve_ibv_dealloc_mw_t * args (struct ibv_qp_att	 *) guest_to_host((size_t) = )(uhyve_ibv_dealloc_mw_t *) (guest_mem + data);
+(struct ibv_qp_att	 *) guest_to_host((size_t) 
+	args)->ret = ibv_dealloc_mw(args->mw);
+guest_to_host((size_t) }
 
 void call_ibv_inc_rkey(struct kvm_run * run, uint8_t * guest_mem) {
 	printf("UHYVE call: call_ibv_inc_rkey\n");
@@ -587,21 +595,5 @@ void call_ibv_is_qpt_supported(struct kvm_run * run, uint8_t * guest_mem) {
 	uhyve_ibv_is_qpt_supported_t * args = (uhyve_ibv_is_qpt_supported_t *) (guest_mem + data);
 
 	args->ret = ibv_is_qpt_supported(args->caps, args->qpt);
-}
-
-void call_ibv_get_mr_lkey(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("UHYVE call: call_ibv_get_mr_lkey\n");
-	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
-	uhyve_ibv_get_mr_lkey_t * args = (uhyve_ibv_get_mr_lkey_t *) (guest_mem + data);
-
-	args->ret = args->mr->lkey;
-}
-
-void call_ibv_get_qp_num(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("UHYVE call: call_ibv_get_qp_num\n");
-	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
-	uhyve_ibv_get_qp_num_t * args = (uhyve_ibv_get_qp_num_t *) (guest_mem + data);
-
-	args->ret = args->qp->qp_num;
 }
 

@@ -107,11 +107,11 @@ int ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_po
 	uhyve_ibv_query_port_t uhyve_args;
 	uhyve_args.context   = context;
 	uhyve_args.port_num  = port_num;
-	uhyve_args.port_attr = guest_to_host_ibv_port_attr(port_attr); // !
+	uhyve_args.port_attr = (struct ibv_port_attr *) guest_to_host((size_t) port_attr); // own fnc?
 
 	uhyve_send(UHYVE_PORT_IBV_QUERY_PORT, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
-	/* host_to_guest_ibv_port_attr(port_attr, GUEST); // ! */
+	/* host_to_guest_ibv_port_attr(port_attr, GUEST); // ! not necessary atm */
 
 	return uhyve_args.ret;
 }
@@ -1336,19 +1336,18 @@ typedef struct {
 } __attribute__((packed)) uhyve_ibv_post_recv_t;
 
 int ibv_post_recv(struct ibv_qp * qp, struct ibv_recv_wr * wr, struct ibv_recv_wr ** bad_wr) {
-	LOG_INFO("KERNEL: ibv_post_recv()\n");
+	/* LOG_INFO("KERNEL: ibv_post_recv()\n"); */
 
 	uhyve_ibv_post_recv_t uhyve_args;
-	LOG_INFO("KERNEL: ibv_post_recv()\n");
 	uhyve_args.qp     = qp;
-	LOG_INFO("KERNEL: ibv_post_recv()\n");
+	/* LOG_INFO("KERNEL: ibv_post_recv() - guest_to_host_ibv_recv_wr\n"); */
 	uhyve_args.wr     = guest_to_host_ibv_recv_wr(wr);
-	LOG_INFO("KERNEL: ibv_post_recv()\n");
+	/* LOG_INFO("KERNEL: ibv_post_recv() - \n"); */
 	uhyve_args.bad_wr = (struct ibv_recv_wr **) guest_to_host((size_t) bad_wr);
 
-	LOG_INFO("KERNEL: ibv_post_recv()\n");
+	/* LOG_INFO("KERNEL: ibv_post_recv()\n"); */
 	uhyve_send(UHYVE_PORT_IBV_POST_RECV, (unsigned) virt_to_phys((size_t) &uhyve_args));
-	LOG_INFO("KERNEL: ibv_post_recv()\n");
+	/* LOG_INFO("KERNEL: ibv_post_recv()\n"); */
 
 	/* host_to_guest_ibv_recv_wr(wr, GUEST); */ // TODO: add this back in
 	/* LOG_INFO("KERNEL: ibv_post_recv()\n"); */
@@ -1616,3 +1615,43 @@ int ibv_is_qpt_supported(uint32_t caps, enum ibv_qp_type qpt) {
 }
 
 
+/*
+ * ibv_get_mr_lkey
+ */
+
+typedef struct {
+	// Parameters:
+	struct ibv_mr * mr;
+	// Return value:
+	uint32_t ret;
+} __attribute__((packed)) uhyve_ibv_get_mr_lkey_t;
+
+uint32_t ibv_get_mr_lkey(struct ibv_mr * mr) {
+	uhyve_ibv_get_mr_lkey_t uhyve_args;
+	uhyve_args.mr = mr;
+
+	uhyve_send(UHYVE_PORT_IBV_GET_MR_LKEY, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	return uhyve_args.ret;
+}
+
+
+/*
+ * ibv_get_qp_num
+ */
+
+typedef struct {
+	// Parameters:
+	struct ibv_qp * qp;
+	// Return value:
+	uint32_t ret;
+} __attribute__((packed)) uhyve_ibv_get_qp_num_t;
+
+uint32_t ibv_get_qp_num(struct ibv_qp * qp) {
+	uhyve_ibv_get_qp_num_t uhyve_args;
+	uhyve_args.qp = qp;
+
+	uhyve_send(UHYVE_PORT_IBV_GET_QP_NUM, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	return uhyve_args.ret;
+}

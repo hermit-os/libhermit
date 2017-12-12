@@ -95,6 +95,7 @@ struct pingpong_dest {
 static int pp_connect_ctx(struct pingpong_context *ctx, int port, int my_psn,
 				int sl, struct pingpong_dest *dest, int sgid_idx)
 {
+	printf("Entered pp_connect_ctx().\n");
 	struct ibv_ah_attr ah_attr = {
 		.is_global     = 0,
 		.dlid          = dest->lid,
@@ -140,6 +141,7 @@ static int pp_connect_ctx(struct pingpong_context *ctx, int port, int my_psn,
 static struct pingpong_dest *pp_client_exch_dest(const char *servername, int port,
 						 const struct pingpong_dest *my_dest)
 {
+	printf("Entered pp_client_exch_dest().\n");
 	struct addrinfo *res, *t;
 	struct addrinfo hints = {
 		.ai_family   = AF_UNSPEC,
@@ -214,6 +216,7 @@ static struct pingpong_dest *pp_server_exch_dest(struct pingpong_context *ctx,
 						 const struct pingpong_dest *my_dest,
 						 int sgid_idx)
 {
+	printf("Entered pp_server_exch_dest().\n");
 	struct addrinfo *res, *t;
 	struct addrinfo hints = {
 		.ai_flags    = AI_PASSIVE,
@@ -245,8 +248,9 @@ static struct pingpong_dest *pp_server_exch_dest(struct pingpong_context *ctx,
 
 			setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &n, sizeof n);
 
-			if (!bind(sockfd, t->ai_addr, t->ai_addrlen))
+			if (!bind(sockfd, t->ai_addr, t->ai_addrlen)) {
 				break;
+			}
 			close(sockfd);
 			sockfd = -1;
 		}
@@ -261,7 +265,9 @@ static struct pingpong_dest *pp_server_exch_dest(struct pingpong_context *ctx,
 	}
 
 	listen(sockfd, 1);
+	printf("\tAfter listen.\n");
 	connfd = accept(sockfd, NULL, NULL);
+	printf("\tBefore close.\n");
 	close(sockfd);
 	if (connfd < 0) {
 		fprintf(stderr, "accept() failed\n");
@@ -275,6 +281,7 @@ static struct pingpong_dest *pp_server_exch_dest(struct pingpong_context *ctx,
 		goto out;
 	}
 
+	printf("\tBefore malloc.\n");
 	rem_dest = malloc(sizeof *rem_dest);
 	if (!rem_dest)
 		goto out;
@@ -283,6 +290,7 @@ static struct pingpong_dest *pp_server_exch_dest(struct pingpong_context *ctx,
 							&rem_dest->psn, gid);
 	wire_gid_to_gid(gid, &rem_dest->gid);
 
+	printf("\tBefore pp_connect_ctx().\n");
 	if (pp_connect_ctx(ctx, ib_port, my_dest->psn, sl, rem_dest,
 								sgid_idx)) {
 		fprintf(stderr, "Couldn't connect to remote QP\n");
@@ -310,6 +318,7 @@ static struct pingpong_context *pp_init_ctx(struct ibv_device *ib_dev, int size,
 					    int rx_depth, int port,
 					    int use_event)
 {
+	printf("Entered pp_init_ctx().\n");
 	struct pingpong_context *ctx;
 
 	ctx = malloc(sizeof *ctx);
@@ -454,6 +463,7 @@ clean_ctx:
 
 static int pp_close_ctx(struct pingpong_context *ctx)
 {
+	printf("Entered pp_close_ctx().\n");
 	if (ibv_destroy_qp(ctx->qp)) {
 		fprintf(stderr, "Couldn't destroy QP\n");
 		return 1;
@@ -497,25 +507,14 @@ static int pp_close_ctx(struct pingpong_context *ctx)
 	return 0;
 }
 
-// struct ibv_recv_wr {
-// 	uint64_t		wr_id;
-// 	struct ibv_recv_wr     *next;
-// 	struct ibv_sge	       *sg_list;
-// 	int			num_sge;
-// };
-
-// struct ibv_sge { // scatter/gather element
-// 	uint64_t		addr;  // might have to be converted
-// 	uint32_t		length;
-// 	uint32_t		lkey;
-// };
-
 static int pp_post_recv(struct pingpong_context *ctx, int n)
 {
+	printf("Entered pp_post_recv().\n");
 	struct ibv_sge list = {
 		.addr	= (uintptr_t) ctx->buf,
 		.length = ctx->size + 40,
-		.lkey	= ctx->mr->lkey
+		/* .lkey	= ctx->mr->lkey */
+		.lkey	= ibv_get_mr_lkey(ctx->mr)
 	};
 	struct ibv_recv_wr wr = {
 		.wr_id	    = PINGPONG_RECV_WRID,
@@ -525,7 +524,6 @@ static int pp_post_recv(struct pingpong_context *ctx, int n)
 	struct ibv_recv_wr *bad_wr;
 	int i;
 
-	printf("before for loop calling ibv_post_recv().\n");
 	for (i = 0; i < n; ++i) {
 		printf("loop.\n");
 		if (ibv_post_recv(ctx->qp, &wr, &bad_wr))
@@ -533,10 +531,12 @@ static int pp_post_recv(struct pingpong_context *ctx, int n)
 	}
 
 	return i;
+	printf("Finished pp_post_recv().\n");
 }
 
 static int pp_post_send(struct pingpong_context *ctx, uint32_t qpn)
 {
+	printf("Entered pp_post_send().\n");
 	struct ibv_sge list = {
 		.addr	= (uintptr_t) ctx->buf + 40,
 		.length = ctx->size,
@@ -559,6 +559,7 @@ static int pp_post_send(struct pingpong_context *ctx, uint32_t qpn)
 	struct ibv_send_wr *bad_wr;
 
 	return ibv_post_send(ctx->qp, &wr, &bad_wr);
+	printf("Finished pp_post_send().\n");
 }
 
 static void usage(const char *argv0)
@@ -676,8 +677,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (optind == argc - 1)
+	if (optind == argc - 1) {
 		servername = strdupa(argv[optind]);
+		printf("Servername set.\n");
+	}
 	else if (optind < argc) {
 		usage(argv[0]);
 		return 1;
@@ -713,28 +716,27 @@ int main(int argc, char *argv[])
 	if (!ctx)
 		return 1;
 
-	/* printf("before pp_post_recv.\n"); */
 	routs = pp_post_recv(ctx, ctx->rx_depth);
-	/* printf("after pp_post_recv.\n"); */
 	if (routs < ctx->rx_depth) {
 		fprintf(stderr, "Couldn't post receive (%d)\n", routs);
 		return 1;
 	}
 
+	/* printf("Before if(use_event).\n"); */
 	if (use_event)
 		if (ibv_req_notify_cq(ctx->cq, 0)) {
 			fprintf(stderr, "Couldn't request CQ notification\n");
 			return 1;
 		}
 
-	if (pp_get_port_info(ctx->context, ib_port, &ctx->portinfo)) {
+	if (pp_get_port_info(ctx->context, ib_port, &ctx->portinfo)) { // ibv_query_port
 		fprintf(stderr, "Couldn't get port info\n");
 		return 1;
 	}
-	printf("After pp_get_port_info()\n");
+	/* printf("After pp_get_port_info(), containing ibv_query_port()\n"); */
 	my_dest.lid = ctx->portinfo.lid;
 
-	my_dest.qpn = ctx->qp->qp_num;
+	my_dest.qpn = ibv_get_qp_num(ctx->qp);
 	my_dest.psn = lrand48() & 0xffffff;
 
 	if (gidx >= 0) {
@@ -746,16 +748,15 @@ int main(int argc, char *argv[])
 	} else
 		memset(&my_dest.gid, 0, sizeof my_dest.gid);
 
+	// TODO: fix me
 	/* inet_ntop(AF_INET6, &my_dest.gid, gid, sizeof gid); */
 	/* printf("  local address:  LID 0x%04x, QPN 0x%06x, PSN 0x%06x: GID %s\n", */
 				 /* my_dest.lid, my_dest.qpn, my_dest.psn, gid); */
 
-	printf("if servername()\n");
 	if (servername)
-		rem_dest = pp_client_exch_dest(servername, port, &my_dest); // no ibv calls
+		rem_dest = pp_client_exch_dest(servername, port, &my_dest);
 	else
-		rem_dest = pp_server_exch_dest(ctx, ib_port, port, sl, // no ibv calls
-							&my_dest, gidx);
+		rem_dest = pp_server_exch_dest(ctx, ib_port, port, sl, &my_dest, gidx);
 
 	if (!rem_dest)
 		return 1;
@@ -766,8 +767,7 @@ int main(int argc, char *argv[])
 
 	printf("if servername() 2\n");
 	if (servername)
-		if (pp_connect_ctx(ctx, ib_port, my_dest.psn, sl, rem_dest,
-									gidx))
+		if (pp_connect_ctx(ctx, ib_port, my_dest.psn, sl, rem_dest, gidx))
 			return 1;
 
 	ctx->pending = PINGPONG_RECV_WRID;
