@@ -122,7 +122,6 @@ static int hermit_init(void)
 	timer_init();
 	multitasking_init();
 	memory_init();
-	ib_memory_init();
 	signal_init();
 
 	return 0;

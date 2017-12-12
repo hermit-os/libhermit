@@ -168,8 +168,6 @@
 #define IOAPIC_DEFAULT_BASE	0xfec00000
 #define APIC_DEFAULT_BASE	0xfee00000
 
-#define IB_MEM_DEBUG 1
-
 static bool restart = false;
 static bool cap_tsc_deadline = false;
 static bool cap_irqchip = false;
@@ -194,199 +192,6 @@ static pthread_barrier_t barrier;
 static __thread struct kvm_run *run = NULL;
 static __thread int vcpufd = -1;
 static __thread uint32_t cpuid = 0;
-
-
-
-
-
-static uint8_t * ib_mem = NULL;
-bool ib_malloc = false;
-static const size_t std_alignment = 16; // TODO: Use sizeof(maxint_t) (?) or similar
-static pthread_mutex_t ib_hooks_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-// Definition of malloc hooks for IBV library
-static void   init_ib_hooks(void);
-
-static void * ib_malloc_hook(size_t, const void *);
-static void * ib_realloc_hook(void *, size_t, const void *);
-static void * ib_memalign_hook(size_t, size_t, const void *);
-static void   ib_free_hook(void *, const void *);
-
-static void * (* default_malloc_hook)  (size_t, const void *);
-static void * (* default_realloc_hook) (void *, size_t, const void *);
-static void * (* default_memalign_hook)(size_t, size_t, const void *);
-static void   (* default_free_hook)    (void *, const void *);
-
-/* void (* __malloc_initialize_hook) (void) = init_ib_hooks; */
-/* __malloc_initialize_hook = init_ib_hooks; */
-
-static void init_ib_hooks(void) {
-	default_malloc_hook   = __malloc_hook;
-	default_realloc_hook  = __realloc_hook;
-	default_memalign_hook = __memalign_hook;
-	default_free_hook     = __free_hook;
-
-	__malloc_hook   = ib_malloc_hook;
-	__realloc_hook  = ib_realloc_hook;
-	__memalign_hook = ib_memalign_hook;
-	__free_hook     = ib_free_hook;
-}
-
-void init_default_hooks() {
-	__malloc_hook   = default_malloc_hook;
-	__realloc_hook  = default_realloc_hook;
-	__memalign_hook = default_memalign_hook;
-	__free_hook     = default_free_hook;
-}
-
-void * new_ib_malloc_region(size_t size) {
-	void * result = NULL;
-
-	if (size > 0) {
-		ib_mem -= size;
-		ib_mem -= (size_t) ((uintptr_t) ib_mem % std_alignment);
-#ifdef IB_MEM_DEBUG
-		printf("ib_mem aligned: %p\n", ib_mem);
-#endif
-		result = ib_mem;
-
-		ib_mem -= std_alignment;
-		size_t * block_size = (size_t *) ib_mem;
-		*block_size = size;
-	}
-
-	if ((uint8_t *) result < guest_mem + guest_size - (size_t) (1UL << 20)) { // TODO: remove this
-#ifdef IB_MEM_DEBUG
-		printf("WARNING, IB MEM OUT OF BOUNDS\n\n");
-#endif
-	}
-
-	return result;
-}
-
-// Malloc Hook
-static void * ib_malloc_hook(size_t size, const void * caller) {
-#ifdef IB_MEM_DEBUG
-	/* printf("Before Mutex Lock."); */
-#endif
-	pthread_mutex_lock(&ib_hooks_mutex);
-	init_default_hooks();
-
-#ifdef IB_MEM_DEBUG
-	printf(" ib_malloc_hook\tib_malloc %s\t Args:\tsize = %lu\t", ib_malloc ? "true " : "false", size);
-#endif
-
-	void * result;
-	if (ib_malloc) {
-		result = new_ib_malloc_region(size);
-	} else { // !ib_malloc
-#ifdef IB_MEM_DEBUG
-		printf("\n");
-#endif
-		result = malloc(size);
-	}
-
-	init_ib_hooks();
-	pthread_mutex_unlock(&ib_hooks_mutex);
-	return result;
-}
-
-// Realloc Hook
-static void * ib_realloc_hook(void * ptr, size_t new_size, const void * caller) {
-	pthread_mutex_lock(&ib_hooks_mutex);
-	init_default_hooks();
-
-#ifdef IB_MEM_DEBUG
-	printf("ib_realloc_hook\tib_malloc %s\t Args:\tptr = %p, size = %lu\t", ib_malloc ? "true " : "false", ptr, new_size);
-#endif
-	void * result;
-
-	if (ib_malloc) {
-		size_t * mem_block_size_ptr = (size_t *) (ptr - std_alignment);
-		size_t orig_size = *mem_block_size_ptr;
-
-		if (new_size <= 0 || ptr == NULL) {
-#ifdef IB_MEM_DEBUG
-			printf("new_size <= 0 || ptr == NULL\n");
-#endif
-			result = NULL;
-		} else if (new_size <= orig_size) {
-#ifdef IB_MEM_DEBUG
-			printf("new_size <= orig_size = %lu\n", orig_size);
-#endif
-			*mem_block_size_ptr = new_size;
-			result = ptr;
-		} else { // new_size > orig_size
-			result = new_ib_malloc_region(new_size);
-			memcpy(result, ptr, orig_size);
-		}
-
-	} else { // !ib_malloc
-#ifdef IB_MEM_DEBUG
-		printf("\n");
-#endif
-		result = realloc(ptr, new_size);
-	}
-
-	init_ib_hooks();
-	pthread_mutex_unlock(&ib_hooks_mutex);
-	return result;
-}
-
-// Memalign Hook - just a dummy for now
-static void * ib_memalign_hook(size_t alignment, size_t size, const void * caller) {
-	pthread_mutex_lock(&ib_hooks_mutex);
-	init_default_hooks();
-
-#ifdef IB_MEM_DEBUG
-	printf("\tCALLED! ib_memalign_hook\tib_malloc %s\t Args:\talignment = %lu\tsize = %lu\t",
-			ib_malloc ? "true " : "false", alignment, size);
-#endif
-
-	void * result;
-	if (ib_malloc) {
-		/* result = new_ib_malloc_region(size); */
-	} else { // !ib_malloc
-#ifdef IB_MEM_DEBUG
-		printf("\n");
-#endif
-		result = memalign(alignment, size);
-	}
-
-	init_ib_hooks();
-	pthread_mutex_unlock(&ib_hooks_mutex);
-	return result;
-}
-
-// Free Hook
-static void ib_free_hook(void * ptr, const void * caller) {
-	pthread_mutex_lock(&ib_hooks_mutex);
-	init_default_hooks();
-
-#ifdef IB_MEM_DEBUG
-	printf("   ib_free_hook\tib_malloc %s\t Args:\tptr = %p", ib_malloc ? "true " : "false", ptr);
-#endif
-
-	if (!ib_malloc) {
-		free(ptr);
-	} else if (ptr != NULL && (ptr <= ib_mem || ptr > guest_mem + guest_size)) {
-#ifdef IB_MEM_DEBUG
-		printf("\t!!! ptr out of ib bounds !!!");
-#endif
-	}
-#ifdef IB_MEM_DEBUG
-	printf("\n");
-#endif
-
-	init_ib_hooks();
-	pthread_mutex_unlock(&ib_hooks_mutex);
-}
-
-
-
-
-
-
 
 static uint64_t memparse(const char *ptr)
 {
@@ -1165,33 +970,217 @@ static int vcpu_loop(void)
 					break;
 				}
 
-			case UHYVE_PORT_KERNEL_IBV_LOG: {
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-					char* str = (char*) (guest_mem + data);
-					printf("KERNEL IBV LOG: %s\n", str);
-					break;
-				}
+			/* case UHYVE_PORT_KERNEL_IBV_LOG: { */
+					/* unsigned data = *((unsigned*)((size_t)run+run->io.data_offset)); */
+					/* char* str = (char*) (guest_mem + data); */
+					/* printf("KERNEL IBV LOG: %s\n", str); */
+					/* break; */
+				/* } */
 
 			// InfiniBand
+			case UHYVE_PORT_IBV_WC_STATUS_STR:
+				call_ibv_wc_status_str(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_RATE_TO_MULT:
+				call_ibv_rate_to_mult(run, guest_mem);
+				break;
+			case UHYVE_PORT_MULT_TO_IBV_RATE:
+				call_mult_to_ibv_rate(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_RATE_TO_MBPS:
+				call_ibv_rate_to_mbps(run, guest_mem);
+				break;
+			case UHYVE_PORT_MBPS_TO_IBV_RATE:
+				call_mbps_to_ibv_rate(run, guest_mem);
+				break;
+			case UHYVE_PORT_VERBS_GET_CTX:
+				call_verbs_get_ctx(run, guest_mem);
+				break;
 			case UHYVE_PORT_IBV_GET_DEVICE_LIST:
-				printf("LOG: UHYVE CASE\n");
 				call_ibv_get_device_list(run, guest_mem);
 				break;
+			case UHYVE_PORT_IBV_FREE_DEVICE_LIST:
+				call_ibv_free_device_list(run, guest_mem);
+				break;
 			case UHYVE_PORT_IBV_GET_DEVICE_NAME:
-				printf("LOG: UHYVE CASE UHYVE_PORT_IBV_GET_DEVICE_NAME\n");
 				call_ibv_get_device_name(run, guest_mem);
 				break;
+			case UHYVE_PORT_IBV_GET_DEVICE_GUID:
+				call_ibv_get_device_guid(run, guest_mem);
+				break;
 			case UHYVE_PORT_IBV_OPEN_DEVICE:
-				printf("LOG: UHYVE CASE UHYVE_PORT_IBV_OPEN_DEVICE\n");
 				call_ibv_open_device(run, guest_mem);
 				break;
+			case UHYVE_PORT_IBV_CLOSE_DEVICE:
+				call_ibv_close_device(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_GET_ASYNC_EVENT:
+				call_ibv_get_async_event(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_ACK_ASYNC_EVENT:
+				call_ibv_ack_async_event(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_QUERY_DEVICE:
+				call_ibv_query_device(run, guest_mem);
+				break;
 			case UHYVE_PORT_IBV_QUERY_PORT:
-				printf("LOG: UHYVE CASE UHYVE_PORT_IBV_QUERY_PORT\n");
 				call_ibv_query_port(run, guest_mem);
 				break;
+			case UHYVE_PORT____IBV_QUERY_PORT:
+				call____ibv_query_port(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_QUERY_GID:
+				call_ibv_query_gid(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_QUERY_PKEY:
+				call_ibv_query_pkey(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_ALLOC_PD:
+				call_ibv_alloc_pd(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_DEALLOC_PD:
+				call_ibv_dealloc_pd(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_CREATE_FLOW:
+				call_ibv_create_flow(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_DESTROY_FLOW:
+				call_ibv_destroy_flow(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_OPEN_XRCD:
+				call_ibv_open_xrcd(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_CLOSE_XRCD:
+				call_ibv_close_xrcd(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_REG_MR:
+				call_ibv_reg_mr(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_REREG_MR:
+				call_ibv_rereg_mr(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_DEREG_MR:
+				call_ibv_dereg_mr(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_ALLOC_MW:
+				call_ibv_alloc_mw(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_DEALLOC_MW:
+				call_ibv_dealloc_mw(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_INC_RKEY:
+				call_ibv_inc_rkey(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_BIND_MW:
+				call_ibv_bind_mw(run, guest_mem);
+				break;
 			case UHYVE_PORT_IBV_CREATE_COMP_CHANNEL:
-				printf("LOG: UHYVE CASE UHYVE_PORT_IBV_CREATE_COMP_CHANNEL\n");
 				call_ibv_create_comp_channel(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_DESTROY_COMP_CHANNEL:
+				call_ibv_destroy_comp_channel(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_CREATE_CQ:
+				call_ibv_create_cq(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_RESIZE_CQ:
+				call_ibv_resize_cq(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_DESTROY_CQ:
+				call_ibv_destroy_cq(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_GET_CQ_EVENT:
+				call_ibv_get_cq_event(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_ACK_CQ_EVENTS:
+				call_ibv_ack_cq_events(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_POLL_CQ:
+				call_ibv_poll_cq(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_REQ_NOTIFY_CQ:
+				call_ibv_req_notify_cq(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_CREATE_SRQ:
+				call_ibv_create_srq(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_CREATE_SRQ_EX:
+				call_ibv_create_srq_ex(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_MODIFY_SRQ:
+				call_ibv_modify_srq(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_QUERY_SRQ:
+				call_ibv_query_srq(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_GET_SRQ_NUM:
+				call_ibv_get_srq_num(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_DESTROY_SRQ:
+				call_ibv_destroy_srq(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_POST_SRQ_RECV:
+				call_ibv_post_srq_recv(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_CREATE_QP:
+				call_ibv_create_qp(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_CREATE_QP_EX:
+				call_ibv_create_qp_ex(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_QUERY_DEVICE_EX:
+				call_ibv_query_device_ex(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_OPEN_QP:
+				call_ibv_open_qp(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_MODIFY_QP:
+				call_ibv_modify_qp(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_QUERY_QP:
+				call_ibv_query_qp(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_DESTROY_QP:
+				call_ibv_destroy_qp(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_POST_SEND:
+				call_ibv_post_send(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_POST_RECV:
+				call_ibv_post_recv(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_CREATE_AH:
+				call_ibv_create_ah(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_INIT_AH_FROM_WC:
+				call_ibv_init_ah_from_wc(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_CREATE_AH_FROM_WC:
+				call_ibv_create_ah_from_wc(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_DESTROY_AH:
+				call_ibv_destroy_ah(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_ATTACH_MCAST:
+				call_ibv_attach_mcast(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_DETACH_MCAST:
+				call_ibv_detach_mcast(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_FORK_INIT:
+				call_ibv_fork_init(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_NODE_TYPE_STR:
+				call_ibv_node_type_str(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_PORT_STATE_STR:
+				call_ibv_port_state_str(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_EVENT_TYPE_STR:
+				call_ibv_event_type_str(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_IS_QPT_SUPPORTED:
+				call_ibv_is_qpt_supported(run, guest_mem);
 				break;
 
 			default:
@@ -1623,12 +1612,6 @@ int uhyve_init(char *path)
 		if (netfd < 0)
 			err(1, "unable to initialized network");
 	}
-
-	printf("UHYVE: Initialize malloc hooks (init_ib_hooks())\n");
-	ib_mem = guest_mem + guest_size;
-	printf("guest_mem: %p, guest_size: %p\n", guest_mem, guest_size);
-	printf("ib_mem = guest_mem + guest_size: %p\n", ib_mem);
-	init_ib_hooks();
 
 	return ret;
 }
