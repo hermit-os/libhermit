@@ -367,6 +367,9 @@ int memory_init(void)
 		}
 	}
 
+	// Ok, we are now able to use our memory management => update tss
+	tss_init();
+
 	return ret;
 
 oom:
