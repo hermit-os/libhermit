@@ -150,8 +150,9 @@ const char * ibv_wc_status_str(enum ibv_wc_status status) {
 	uhyve_ibv_wc_status_str_t uhyve_args;
 	uhyve_args.status = status;
 
-	uhyve_args.ret = kmalloc(MAX_CHAR_ARR_LENGTH); // !
+	static const char ret[MAX_CHAR_ARR_LENGTH];
 	uhyve_send(UHYVE_PORT_IBV_WC_STATUS_STR, (unsigned) virt_to_phys((size_t) &uhyve_args));
+	// memcpy here TODO
 
 	return uhyve_args.ret;
 }
@@ -936,7 +937,7 @@ int ibv_poll_cq(struct ibv_cq * cq, int num_entries, struct ibv_wc * wc) {
 	uhyve_ibv_poll_cq_t uhyve_args;
 	uhyve_args.cq = cq;
 	uhyve_args.num_entries = num_entries;
-	uhyve_args.wc = wc;
+	uhyve_args.wc = (struct ibv_wc *) guest_to_host((size_t) wc); // !
 
 	uhyve_send(UHYVE_PORT_IBV_POLL_CQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1313,10 +1314,12 @@ typedef struct {
 int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_wr ** bad_wr) {
 	uhyve_ibv_post_send_t uhyve_args;
 	uhyve_args.qp = qp;
-	uhyve_args.wr = wr;
-	// TODO: Take care of ** parameter.
+	uhyve_args.wr = guest_to_host_ibv_send_wr(wr); // !
+	uhyve_args.bad_wr = (struct ibv_send_wr **) guest_to_host((size_t) bad_wr); // will be written to
 
 	uhyve_send(UHYVE_PORT_IBV_POST_SEND, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	// TODO: Do we want to convert bad_wr's content back to guest memory?
 
 	return uhyve_args.ret;
 }
@@ -1340,14 +1343,10 @@ int ibv_post_recv(struct ibv_qp * qp, struct ibv_recv_wr * wr, struct ibv_recv_w
 
 	uhyve_ibv_post_recv_t uhyve_args;
 	uhyve_args.qp     = qp;
-	/* LOG_INFO("KERNEL: ibv_post_recv() - guest_to_host_ibv_recv_wr\n"); */
 	uhyve_args.wr     = guest_to_host_ibv_recv_wr(wr);
-	/* LOG_INFO("KERNEL: ibv_post_recv() - \n"); */
-	uhyve_args.bad_wr = (struct ibv_recv_wr **) guest_to_host((size_t) bad_wr);
+	uhyve_args.bad_wr = (struct ibv_recv_wr **) guest_to_host((size_t) bad_wr); // will be written to
 
-	/* LOG_INFO("KERNEL: ibv_post_recv()\n"); */
 	uhyve_send(UHYVE_PORT_IBV_POST_RECV, (unsigned) virt_to_phys((size_t) &uhyve_args));
-	/* LOG_INFO("KERNEL: ibv_post_recv()\n"); */
 
 	/* host_to_guest_ibv_recv_wr(wr, GUEST); */ // TODO: add this back in
 	/* LOG_INFO("KERNEL: ibv_post_recv()\n"); */
@@ -1372,8 +1371,8 @@ typedef struct {
 
 struct ibv_ah * ibv_create_ah(struct ibv_pd * pd, struct ibv_ah_attr * attr) {
 	uhyve_ibv_create_ah_t uhyve_args;
-	uhyve_args.pd = pd;
-	uhyve_args.attr = attr;
+	uhyve_args.pd   = pd;
+	uhyve_args.attr = (struct ibv_ah_attr *) guest_to_host((size_t) attr); // !
 
 	uhyve_send(UHYVE_PORT_IBV_CREATE_AH, (unsigned) virt_to_phys((size_t) &uhyve_args));
 

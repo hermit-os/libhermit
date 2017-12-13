@@ -185,7 +185,7 @@ static struct pingpong_dest *pp_client_exch_dest(const char *servername, int por
 
 	gid_to_wire_gid(&my_dest->gid, gid);
 	sprintf(msg, "%04x:%06x:%06x:%s", my_dest->lid, my_dest->qpn,
-							my_dest->psn, gid);
+			my_dest->psn, gid);
 	if (write(sockfd, msg, sizeof msg) != sizeof msg) {
 		fprintf(stderr, "Couldn't send local address\n");
 		goto out;
@@ -291,8 +291,7 @@ static struct pingpong_dest *pp_server_exch_dest(struct pingpong_context *ctx,
 	wire_gid_to_gid(gid, &rem_dest->gid);
 
 	printf("\tBefore pp_connect_ctx().\n");
-	if (pp_connect_ctx(ctx, ib_port, my_dest->psn, sl, rem_dest,
-								sgid_idx)) {
+	if (pp_connect_ctx(ctx, ib_port, my_dest->psn, sl, rem_dest, sgid_idx)) {
 		fprintf(stderr, "Couldn't connect to remote QP\n");
 		free(rem_dest);
 		rem_dest = NULL;
@@ -540,7 +539,7 @@ static int pp_post_send(struct pingpong_context *ctx, uint32_t qpn)
 	struct ibv_sge list = {
 		.addr	= (uintptr_t) ctx->buf + 40,
 		.length = ctx->size,
-		.lkey	= ctx->mr->lkey
+		.lkey	= ibv_get_mr_lkey(ctx->mr)
 	};
 	struct ibv_send_wr wr = {
 		.wr_id	    = PINGPONG_SEND_WRID,
@@ -603,6 +602,8 @@ int main(int argc, char *argv[])
 	int			 gidx = -1;
 	char			 gid[33];
 
+	printf("optint: %d / argc: %d\n", optind, argc);
+
 	srand48(getpid() * time(NULL));
 
 	while (1) {
@@ -621,8 +622,7 @@ int main(int argc, char *argv[])
 			{}
 		};
 
-		c = getopt_long(argc, argv, "p:d:i:s:r:n:l:eg:",
-							long_options, NULL);
+		c = getopt_long(argc, argv, "p:d:i:s:r:n:l:eg:", long_options, NULL);
 		if (c == -1)
 			break;
 
@@ -676,6 +676,9 @@ int main(int argc, char *argv[])
 			return 1;
 		}
 	}
+
+	/* servername = "137.226.133.156"; // ! */
+	/* printf("Servername manually set.\n"); */
 
 	if (optind == argc - 1) {
 		servername = strdupa(argv[optind]);
@@ -753,6 +756,7 @@ int main(int argc, char *argv[])
 	/* printf("  local address:  LID 0x%04x, QPN 0x%06x, PSN 0x%06x: GID %s\n", */
 				 /* my_dest.lid, my_dest.qpn, my_dest.psn, gid); */
 
+	printf("if servername() 1\n");
 	if (servername)
 		rem_dest = pp_client_exch_dest(servername, port, &my_dest);
 	else
@@ -761,6 +765,7 @@ int main(int argc, char *argv[])
 	if (!rem_dest)
 		return 1;
 
+	// TODO: fix me
 	/* inet_ntop(AF_INET6, &rem_dest->gid, gid, sizeof gid); */
 	/* printf("  remote address: LID 0x%04x, QPN 0x%06x, PSN 0x%06x, GID %s\n", */
 				 /* rem_dest->lid, rem_dest->qpn, rem_dest->psn, gid); */
@@ -825,7 +830,7 @@ int main(int argc, char *argv[])
 			for (i = 0; i < ne; ++i) {
 				if (wc[i].status != IBV_WC_SUCCESS) {
 					fprintf(stderr, "Failed status %s (%d) for wr_id %d\n",
-						ibv_wc_status_str(wc[i].status),
+						ibv_wc_status_str(wc[i].status), // todo here
 						wc[i].status, (int) wc[i].wr_id);
 					return 1;
 				}
