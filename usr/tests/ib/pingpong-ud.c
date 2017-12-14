@@ -158,30 +158,41 @@ static struct pingpong_dest *pp_client_exch_dest(const char *servername, int por
 		return NULL;
 
 	n = getaddrinfo(servername, service, &hints, &res);
+	printf("	after getaddrinfo().\n");
+	printf("	.res->ai_addr->sa_data (the address): %s\n", res->ai_addr->sa_data);
 
 	if (n < 0) {
 		fprintf(stderr, "error for %s:%d\n", servername, port);
 		free(service);
 		return NULL;
 	}
+	printf("	after if(n < 0) {.\n");
 
 	for (t = res; t; t = t->ai_next) {
+		printf("	\twithin for loop.\n");
 		sockfd = socket(t->ai_family, t->ai_socktype, t->ai_protocol);
 		if (sockfd >= 0) {
+			printf("	\t\tsockfd >= 0.\n");
 			if (!connect(sockfd, t->ai_addr, t->ai_addrlen))
+				printf("	\t\t!connect.\n");
 				break;
+			printf("	\t\tbefore close.\n");
 			close(sockfd);
+			printf("	\t\tafter close.\n");
 			sockfd = -1;
 		}
 	}
+	printf("	after for loop.\n");
 
 	freeaddrinfo(res);
 	free(service);
+	printf("	after free(service).\n");
 
 	if (sockfd < 0) {
 		fprintf(stderr, "Couldn't connect to %s:%d\n", servername, port);
 		return NULL;
 	}
+	printf("	after if (sockfd < 0).\n");
 
 	gid_to_wire_gid(&my_dest->gid, gid);
 	sprintf(msg, "%04x:%06x:%06x:%s", my_dest->lid, my_dest->qpn,
@@ -677,8 +688,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	/* servername = "137.226.133.156"; // ! */
-	/* printf("Servername manually set.\n"); */
+	servername = "10.0.5.3"; // !
+	printf("Servername manually set.\n");
 
 	if (optind == argc - 1) {
 		servername = strdupa(argv[optind]);

@@ -151,10 +151,11 @@ const char * ibv_wc_status_str(enum ibv_wc_status status) {
 	uhyve_args.status = status;
 
 	static const char ret[MAX_CHAR_ARR_LENGTH];
-	uhyve_send(UHYVE_PORT_IBV_WC_STATUS_STR, (unsigned) virt_to_phys((size_t) &uhyve_args));
-	// memcpy here TODO
+	uhyve_args.ret = ret;
 
-	return uhyve_args.ret;
+	uhyve_send(UHYVE_PORT_IBV_WC_STATUS_STR, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	return ret;
 }
 
 

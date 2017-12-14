@@ -50,6 +50,7 @@ struct ibv_context *       guest_to_host_ibv_context(struct ibv_context * contex
 struct ibv_context_ops *   guest_to_host_ibv_context_ops(struct ibv_context_ops * context_ops);
 struct ibv_port_attr *     guest_to_host_ibv_port_attr(struct ibv_port_attr * port_attr);
 struct ibv_recv_wr *       guest_to_host_ibv_recv_wr(struct ibv_recv_wr * wr);
+struct ibv_send_wr *       guest_to_host_ibv_send_wr(struct ibv_send_wr * wr);
 struct ibv_sge *           guest_to_host_ibv_sge(struct ibv_sge * sg);
 struct ibv_abi_compat_v2 * guest_to_host_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat);
 pthread_mutex_t *					 guest_to_host_pthread_mutex_t(pthread_mutex_t * mutex);
@@ -60,6 +61,7 @@ struct ibv_context_ops *   host_to_guest_ibv_context_ops(struct ibv_context_ops 
 struct ibv_port_attr *     host_to_guest_ibv_port_attr(struct ibv_port_attr * port_attr, addr_type type);
 struct ibv_comp_channel *  host_to_guest_ibv_comp_channel(struct ibv_comp_channel * channel, addr_type type);
 struct ibv_recv_wr *       host_to_guest_ibv_recv_wr(struct ibv_recv_wr * wr, addr_type type);
+struct ibv_send_wr *       host_to_guest_ibv_send_wr(struct ibv_send_wr * wr, addr_type type);
 struct ibv_sge *           host_to_guest_ibv_sge(struct ibv_sge * sg, addr_type type);
 struct ibv_abi_compat_v2 * host_to_guest_ibv_abi_compat_v2(struct ibv_abi_compat_v2 * abi_compat, addr_type type);
 pthread_mutex_t *	         host_to_guest_pthread_mutex_t(pthread_mutex_t * mutex, addr_type type);
