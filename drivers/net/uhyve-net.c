@@ -251,7 +251,7 @@ err_t uhyve_netif_init (struct netif* netif)
 
 	memset(uhyve_netif, 0x00, sizeof(uhyve_netif_t));
 
-	uhyve_netif->rx_buf = page_alloc(RX_BUF_LEN + 16 /* header size */, VMA_READ|VMA_WRITE);
+	uhyve_netif->rx_buf = page_alloc(RX_BUF_LEN + 16 /* header size */, VMA_READ|VMA_WRITE|VMA_CACHEABLE);
 	if (!(uhyve_netif->rx_buf)) {
 		LOG_ERROR("uhyve_netif_init: out of memory\n");
 		kfree(uhyve_netif);
@@ -259,7 +259,7 @@ err_t uhyve_netif_init (struct netif* netif)
 	}
 	memset(uhyve_netif->rx_buf, 0x00, RX_BUF_LEN + 16);
 
-	uhyve_netif->tx_buf[0] = page_alloc(TX_BUF_NUM * TX_BUF_LEN, VMA_READ|VMA_WRITE);
+	uhyve_netif->tx_buf[0] = page_alloc(TX_BUF_NUM * TX_BUF_LEN, VMA_READ|VMA_WRITE|VMA_CACHEABLE);
 	if (!(uhyve_netif->tx_buf[0])) {
 		LOG_ERROR("uhyve_netif_init: out of memory\n");
 		page_free(uhyve_netif->rx_buf, RX_BUF_LEN + 16);
