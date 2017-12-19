@@ -29,6 +29,7 @@
  */
 
 
+
 #include <asm/page.h>
 
 #include <hermit/ibv_guest_host.h>
@@ -102,16 +103,16 @@ struct ibv_port_attr * host_to_guest_ibv_port_attr(struct ibv_port_attr * port_a
  */
 
 struct ibv_sge * guest_to_host_ibv_sge(struct ibv_sge * sg) {
-	LOG_INFO("Entered guest_to_host_ibv_recv_wr()\n");
-	LOG_INFO("\tsg->addr before conversion: %lu\n", sg->addr);
+	/* LOG_INFO("Entered guest_to_host_ibv_recv_wr()\n"); */
+	/* LOG_INFO("\tsg->addr before conversion: %lu\n", sg->addr); */
 	sg->addr = (uint64_t) guest_to_host((size_t) sg->addr);
-	LOG_INFO("\tsg->addr after conversion: %lu\n", sg->addr);
+	/* LOG_INFO("\tsg->addr after conversion: %lu\n", sg->addr); */
 
 	return (struct ibv_sge *) guest_to_host((size_t) sg);
 }
 
 struct ibv_sge * host_to_guest_ibv_sge(struct ibv_sge * sg, addr_type type) {
-	LOG_INFO("Entered host_to_guest_ibv_recv_wr()\n");
+	/* LOG_INFO("Entered host_to_guest_ibv_recv_wr()\n"); */
 	struct ibv_sge * vaddr = (type == GUEST) ? sg
 		: (struct ibv_sge *) host_to_guest((size_t) sg);
 
@@ -119,7 +120,6 @@ struct ibv_sge * host_to_guest_ibv_sge(struct ibv_sge * sg, addr_type type) {
 
 	return vaddr;
 }
-
 
 // struct ibv_recv_wr {
 // 	uint64_t		wr_id;
@@ -134,30 +134,41 @@ struct ibv_sge * host_to_guest_ibv_sge(struct ibv_sge * sg, addr_type type) {
 // 	uint32_t		lkey;
 // };
 
+
 /*
  * struct ibv_recv_wr
  */
 
 struct ibv_recv_wr * guest_to_host_ibv_recv_wr(struct ibv_recv_wr * wr) {
-	LOG_INFO("Entered guest_to_host_ibv_recv_wr()\n");
+	/* LOG_INFO("Entered guest_to_host_ibv_recv_wr()\n"); */
 	if (wr->next) {
-		LOG_INFO("\twr->next is not NULL\n");
-		wr->next    = guest_to_host_ibv_recv_wr(wr->next); // linked list
+		/* LOG_INFO("\twr->next is not NULL\n"); */
+		wr->next = guest_to_host_ibv_recv_wr(wr->next); // linked list
 	}
-	wr->sg_list = guest_to_host_ibv_sge(wr->sg_list);
+
+	for (int i = 0; i < wr->num_sge; i++) {
+		guest_to_host_ibv_sge(wr->sg_list + i);
+	}
+	wr->sg_list = (struct ibv_sge *) guest_to_host((size_t) wr->sg_list);
 
 	return (struct ibv_recv_wr *) guest_to_host((size_t) wr);
 }
 
 struct ibv_recv_wr * host_to_guest_ibv_recv_wr(struct ibv_recv_wr * wr, addr_type type) {
-	LOG_INFO("Entered host_to_guest_ibv_recv_wr()\n");
+	/* LOG_INFO("Entered host_to_guest_ibv_recv_wr()\n"); */
 	struct ibv_recv_wr * vaddr = (type == GUEST) ? wr
 		: (struct ibv_recv_wr *) host_to_guest((size_t) wr);
 
-	if (wr->next) {
-		LOG_INFO("\twr->next is not NULL\n");
+	if (vaddr->next) {
+		/* LOG_INFO("\twr->next is not NULL\n"); */
 		vaddr->next = host_to_guest_ibv_recv_wr(vaddr->next, HOST); // linked list
 	}
+
+	vaddr->sg_list = (struct ibv_sge *) host_to_guest((size_t) vaddr->sg_list);
+	for (int i = 0; i < vaddr->num_sge; i++) {
+		host_to_guest_ibv_sge(vaddr->sg_list + i, GUEST);
+	}
+
 	// TODO: make this work with an actual list > 1 element.
 	vaddr->sg_list = host_to_guest_ibv_sge(vaddr->sg_list, HOST);
 
@@ -165,31 +176,39 @@ struct ibv_recv_wr * host_to_guest_ibv_recv_wr(struct ibv_recv_wr * wr, addr_typ
 }
 
 
+/*
+ * struct ibv_send_wr
+ */
+
 struct ibv_send_wr * guest_to_host_ibv_send_wr(struct ibv_send_wr * wr) {
-	LOG_INFO("Entered guest_to_host_ibv_send_wr()\n");
+	/* LOG_INFO("Entered guest_to_host_ibv_send_wr()\n"); */
 	if (wr->next) {
-		LOG_INFO("\twr->next is not NULL\n");
+		/* LOG_INFO("\twr->next is not NULL\n"); */
 		wr->next = guest_to_host_ibv_send_wr(wr->next); // linked list
 	}
-	// TODO: make this work with an actual list > 1 element. (recv_wr as well)
-	/* for (int i = 0; i < wr->num_sge; i++) { */
-		/* todo */
-	/* } */
-	wr->sg_list = guest_to_host_ibv_sge(wr->sg_list);
+
+	for (int i = 0; i < wr->num_sge; i++) {
+		guest_to_host_ibv_sge(wr->sg_list + i);
+	}
+	wr->sg_list = (struct ibv_sge *) guest_to_host((size_t) wr->sg_list);
 
 	return (struct ibv_send_wr *) guest_to_host((size_t) wr);
 }
 
 struct ibv_send_wr * host_to_guest_ibv_send_wr(struct ibv_send_wr * wr, addr_type type) {
-	LOG_INFO("Entered host_to_guest_ibv_send_wr()\n");
+	/* LOG_INFO("Entered host_to_guest_ibv_send_wr()\n"); */
 	struct ibv_send_wr * vaddr = (type == GUEST) ? wr
 		: (struct ibv_send_wr *) host_to_guest((size_t) wr);
 
 	if (wr->next) {
-		LOG_INFO("\twr->next is not NULL\n");
+		/* LOG_INFO("\twr->next is not NULL\n"); */
 		vaddr->next = host_to_guest_ibv_send_wr(vaddr->next, HOST); // linked list
 	}
-	vaddr->sg_list = host_to_guest_ibv_sge(vaddr->sg_list, HOST);
+
+	vaddr->sg_list = (struct ibv_sge *) host_to_guest((size_t) vaddr->sg_list);
+	for (int i = 0; i < vaddr->num_sge; i++) {
+		host_to_guest_ibv_sge(vaddr->sg_list + i, GUEST);
+	}
 
 	return vaddr;
 }

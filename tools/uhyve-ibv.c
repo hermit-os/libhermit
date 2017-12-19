@@ -354,7 +354,7 @@ void call_ibv_ack_cq_events(struct kvm_run * run, uint8_t * guest_mem) {
 }
 
 void call_ibv_poll_cq(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("UHYVE call: call_ibv_poll_cq\n");
+	/* printf("UHYVE call: call_ibv_poll_cq\n"); */
 	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
 	uhyve_ibv_poll_cq_t * args = (uhyve_ibv_poll_cq_t *) (guest_mem + data);
 
@@ -482,7 +482,7 @@ void call_ibv_destroy_qp(struct kvm_run * run, uint8_t * guest_mem) {
 }
 
 void call_ibv_post_send(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("UHYVE call: call_ibv_post_send\n");
+	/* printf("UHYVE call: call_ibv_post_send\n"); */
 	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
 	uhyve_ibv_post_send_t * args = (uhyve_ibv_post_send_t *) (guest_mem + data);
 
@@ -490,7 +490,7 @@ void call_ibv_post_send(struct kvm_run * run, uint8_t * guest_mem) {
 }
 
 void call_ibv_post_recv(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("UHYVE call: call_ibv_post_recv\n");
+	/* printf("UHYVE call: call_ibv_post_recv\n"); */
 	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
 	uhyve_ibv_post_recv_t * args = (uhyve_ibv_post_recv_t *) (guest_mem + data);
 
@@ -590,7 +590,7 @@ void call_ibv_is_qpt_supported(struct kvm_run * run, uint8_t * guest_mem) {
 }
 
 void call_ibv_get_mr_lkey(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("UHYVE call: call_ibv_get_mr_lkey\n");
+	/* printf("UHYVE call: call_ibv_get_mr_lkey\n"); */
 	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
 	uhyve_ibv_get_mr_lkey_t * args = (uhyve_ibv_get_mr_lkey_t *) (guest_mem + data);
 

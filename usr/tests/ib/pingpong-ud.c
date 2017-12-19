@@ -158,41 +158,30 @@ static struct pingpong_dest *pp_client_exch_dest(const char *servername, int por
 		return NULL;
 
 	n = getaddrinfo(servername, service, &hints, &res);
-	printf("	after getaddrinfo().\n");
-	printf("	.res->ai_addr->sa_data (the address): %s\n", res->ai_addr->sa_data);
 
 	if (n < 0) {
 		fprintf(stderr, "error for %s:%d\n", servername, port);
 		free(service);
 		return NULL;
 	}
-	printf("	after if(n < 0) {.\n");
 
 	for (t = res; t; t = t->ai_next) {
-		printf("	\twithin for loop.\n");
 		sockfd = socket(t->ai_family, t->ai_socktype, t->ai_protocol);
 		if (sockfd >= 0) {
-			printf("	\t\tsockfd >= 0.\n");
 			if (!connect(sockfd, t->ai_addr, t->ai_addrlen))
-				printf("	\t\t!connect.\n");
 				break;
-			printf("	\t\tbefore close.\n");
 			close(sockfd);
-			printf("	\t\tafter close.\n");
 			sockfd = -1;
 		}
 	}
-	printf("	after for loop.\n");
 
 	freeaddrinfo(res);
 	free(service);
-	printf("	after free(service).\n");
 
 	if (sockfd < 0) {
 		fprintf(stderr, "Couldn't connect to %s:%d\n", servername, port);
 		return NULL;
 	}
-	printf("	after if (sockfd < 0).\n");
 
 	gid_to_wire_gid(&my_dest->gid, gid);
 	sprintf(msg, "%04x:%06x:%06x:%s", my_dest->lid, my_dest->qpn,
@@ -276,9 +265,9 @@ static struct pingpong_dest *pp_server_exch_dest(struct pingpong_context *ctx,
 	}
 
 	listen(sockfd, 1);
-	printf("\tAfter listen.\n");
+	printf("\tServer listening.\n");
 	connfd = accept(sockfd, NULL, NULL);
-	printf("\tBefore close.\n");
+	printf("\tAccepted connection.\n");
 	close(sockfd);
 	if (connfd < 0) {
 		fprintf(stderr, "accept() failed\n");
@@ -292,7 +281,6 @@ static struct pingpong_dest *pp_server_exch_dest(struct pingpong_context *ctx,
 		goto out;
 	}
 
-	printf("\tBefore malloc.\n");
 	rem_dest = malloc(sizeof *rem_dest);
 	if (!rem_dest)
 		goto out;
@@ -301,7 +289,6 @@ static struct pingpong_dest *pp_server_exch_dest(struct pingpong_context *ctx,
 							&rem_dest->psn, gid);
 	wire_gid_to_gid(gid, &rem_dest->gid);
 
-	printf("\tBefore pp_connect_ctx().\n");
 	if (pp_connect_ctx(ctx, ib_port, my_dest->psn, sl, rem_dest, sgid_idx)) {
 		fprintf(stderr, "Couldn't connect to remote QP\n");
 		free(rem_dest);
@@ -519,7 +506,7 @@ static int pp_close_ctx(struct pingpong_context *ctx)
 
 static int pp_post_recv(struct pingpong_context *ctx, int n)
 {
-	printf("Entered pp_post_recv().\n");
+	/* printf("Entered pp_post_recv().\n"); */
 	struct ibv_sge list = {
 		.addr	= (uintptr_t) ctx->buf,
 		.length = ctx->size + 40,
@@ -535,18 +522,16 @@ static int pp_post_recv(struct pingpong_context *ctx, int n)
 	int i;
 
 	for (i = 0; i < n; ++i) {
-		printf("loop.\n");
 		if (ibv_post_recv(ctx->qp, &wr, &bad_wr))
 			break;
 	}
 
 	return i;
-	printf("Finished pp_post_recv().\n");
 }
 
 static int pp_post_send(struct pingpong_context *ctx, uint32_t qpn)
 {
-	printf("Entered pp_post_send().\n");
+	/* printf("Entered pp_post_send().\n"); */
 	struct ibv_sge list = {
 		.addr	= (uintptr_t) ctx->buf + 40,
 		.length = ctx->size,
@@ -569,7 +554,6 @@ static int pp_post_send(struct pingpong_context *ctx, uint32_t qpn)
 	struct ibv_send_wr *bad_wr;
 
 	return ibv_post_send(ctx->qp, &wr, &bad_wr);
-	printf("Finished pp_post_send().\n");
 }
 
 static void usage(const char *argv0)
@@ -603,7 +587,7 @@ int main(int argc, char *argv[])
 	unsigned int             port = 18515;
 	int                      ib_port = 1;
 	unsigned int             size = 2048;
-	unsigned int             rx_depth = 1; // TODO: set back to 500
+	unsigned int             rx_depth = 500;
 	unsigned int             iters = 1000;
 	int                      use_event = 0;
 	int                      routs;
@@ -612,8 +596,6 @@ int main(int argc, char *argv[])
 	int                      sl = 0;
 	int			 gidx = -1;
 	char			 gid[33];
-
-	printf("optint: %d / argc: %d\n", optind, argc);
 
 	srand48(getpid() * time(NULL));
 
@@ -747,27 +729,25 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Couldn't get port info\n");
 		return 1;
 	}
-	/* printf("After pp_get_port_info(), containing ibv_query_port()\n"); */
 	my_dest.lid = ctx->portinfo.lid;
 
 	my_dest.qpn = ibv_get_qp_num(ctx->qp);
-	my_dest.psn = lrand48() & 0xffffff;
+	my_dest.psn = lrand48() & 0xffffff; // packet sequence number
 
 	if (gidx >= 0) {
 		if (ibv_query_gid(ctx->context, ib_port, gidx, &my_dest.gid)) {
-			fprintf(stderr, "Could not get local gid for gid index "
-								"%d\n", gidx);
+			fprintf(stderr, "Could not get local gid for gid index %d\n", gidx);
 			return 1;
 		}
-	} else
+	} else {
 		memset(&my_dest.gid, 0, sizeof my_dest.gid);
+	}
 
 	// TODO: fix me
 	/* inet_ntop(AF_INET6, &my_dest.gid, gid, sizeof gid); */
 	/* printf("  local address:  LID 0x%04x, QPN 0x%06x, PSN 0x%06x: GID %s\n", */
 				 /* my_dest.lid, my_dest.qpn, my_dest.psn, gid); */
 
-	printf("if servername() 1\n");
 	if (servername)
 		rem_dest = pp_client_exch_dest(servername, port, &my_dest);
 	else
@@ -781,14 +761,12 @@ int main(int argc, char *argv[])
 	/* printf("  remote address: LID 0x%04x, QPN 0x%06x, PSN 0x%06x, GID %s\n", */
 				 /* rem_dest->lid, rem_dest->qpn, rem_dest->psn, gid); */
 
-	printf("if servername() 2\n");
 	if (servername)
 		if (pp_connect_ctx(ctx, ib_port, my_dest.psn, sl, rem_dest, gidx))
 			return 1;
 
 	ctx->pending = PINGPONG_RECV_WRID;
 
-	printf("if servername() 3\n");
 	if (servername) {
 		if (pp_post_send(ctx, rem_dest->qpn)) {
 			fprintf(stderr, "Couldn't post send\n");
@@ -802,6 +780,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	printf("Entering while loop of post_send & post_recv.\n");
 	rcnt = scnt = 0;
 	while (rcnt < iters || scnt < iters) {
 		if (use_event) {
@@ -815,7 +794,7 @@ int main(int argc, char *argv[])
 
 			++num_cq_events;
 
-			if (ev_cq != ctx->cq) {
+			if (ev_cq != ctx->cq) { // both host space pointers
 				fprintf(stderr, "CQ event for unknown CQ %p\n", ev_cq);
 				return 1;
 			}
@@ -827,11 +806,12 @@ int main(int argc, char *argv[])
 		}
 
 		{
-			struct ibv_wc wc[2];
+			int num_wc = 2;
+			struct ibv_wc wc[num_wc];
 			int ne, i;
 
 			do {
-				ne = ibv_poll_cq(ctx->cq, 2, wc);
+				ne = ibv_poll_cq(ctx->cq, num_wc, wc);
 				if (ne < 0) {
 					fprintf(stderr, "poll CQ failed %d\n", ne);
 					return 1;
