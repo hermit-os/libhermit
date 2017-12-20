@@ -11,7 +11,8 @@ add_executable(pi pi.go)
 
 add_executable(ib-test ib-test.c)
 #add_executable(ib-pingpong ib/pingpong.c ib/pingpong.h ib/pingpong-ud.c)
-add_executable(ib-pingpong ib/pingpong.c ib/pingpong-ud.c)
+add_executable(ib-pingpong-ud ib/pingpong.c ib/pingpong-ud.c)
+add_executable(ib-pingpong-rc ib/pingpong.c ib/pingpong-rc.c)
 #target_link_libraries(ib-test ibverbs)
 
 add_executable(test-malloc test-malloc.c)

@@ -153,23 +153,23 @@ size_t phys_to_virt(size_t phy)
 					/* LOG_INFO("Fourth for.\n"); */
 
 					if (pgt[l] & PG_PRESENT) { // Valid page table entry
-						/* LOG_INFO("p"); */
+						/* LOG_INFO("\tp\n"); */
 						if ((pgt[l] & PFN_MASK) == pfn) { // Page frame found
-							LOG_INFO("SAME PAGE.\n");
+							LOG_INFO("\tSAME PAGE.\n");
 							/* LOG_INFO("i: Hex: %zx, Dec: %zd\n", i, i); */
 							/* LOG_INFO("j: Hex: %zx, Dec: %zd\n", j, j); */
 							/* LOG_INFO("k: Hex: %zx, Dec: %zd\n", k, k); */
 							/* LOG_INFO("l: Hex: %zx, Dec: %zd\n", l, l); */
 							size_t vpn = ((((((i << PAGE_MAP_BITS) | j) << PAGE_MAP_BITS) | k) << PAGE_MAP_BITS) | l) << PAGE_BITS;
-							/* LOG_INFO("vpn: Hex: %zx, Dec: %zd\n", vpn, vpn); */
+							LOG_INFO("\tvpn: Hex: %zx, Dec: %zd\n", vpn, vpn);
 							size_t sext = i & (1UL << (PAGE_MAP_BITS - 1));
-							/* LOG_INFO("sext: Hex: %zx, Dec: %zd\n", sext, sext); */
+							LOG_INFO("\tsext: Hex: %zx, Dec: %zd\n", sext, sext);
 							if (sext) {
-								/* LOG_INFO("sext true"); */
+								LOG_INFO("\tsext true");
 								vpn |= ~0UL << VIRT_BITS;
-								/* LOG_INFO("vpn: Hex: %zx, Dec: %zd\n", vpn, vpn); */
+								LOG_INFO("\tvpn: Hex: %zx, Dec: %zd\n", vpn, vpn);
 							}
-							/* LOG_INFO("return: Hex: %zx, Dec: %zd\n", vpn | off, vpn | off); */
+							LOG_INFO("\treturn: Hex: %zx, Dec: %zd\n", vpn | off, vpn | off);
 							return vpn | off;
 						}
 					}

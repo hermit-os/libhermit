@@ -1244,6 +1244,7 @@ typedef struct {
 
 int ibv_modify_qp(struct ibv_qp * qp, struct ibv_qp_attr * attr, int attr_mask) {
 	uhyve_ibv_modify_qp_t uhyve_args;
+
 	uhyve_args.qp        = qp;
 	uhyve_args.attr      = (struct ibv_qp_attr *) guest_to_host((size_t) attr); // !
 	uhyve_args.attr_mask = attr_mask;
@@ -1344,7 +1345,7 @@ typedef struct {
 } __attribute__((packed)) uhyve_ibv_post_recv_t;
 
 int ibv_post_recv(struct ibv_qp * qp, struct ibv_recv_wr * wr, struct ibv_recv_wr ** bad_wr) {
-	/* LOG_INFO("KERNEL: ibv_post_recv()\n"); */
+	LOG_INFO("KERNEL: ibv_post_recv()\n");
 	uhyve_ibv_post_recv_t uhyve_args;
 
 	uhyve_args.qp     = qp;
@@ -1353,8 +1354,8 @@ int ibv_post_recv(struct ibv_qp * qp, struct ibv_recv_wr * wr, struct ibv_recv_w
 
 	uhyve_send(UHYVE_PORT_IBV_POST_RECV, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
-	/* host_to_guest_ibv_recv_wr(wr, GUEST); */ // TODO: add this back in
-	/* LOG_INFO("KERNEL: ibv_post_recv()\n"); */
+	/* LOG_INFO("KERNEL: Before host_to_guest_ibv_recv_wr(wr, GUEST);\n"); */
+	/* host_to_guest_ibv_recv_wr(wr, GUEST); // TODO: add this back in */
 
 	// TODO: Do we want to convert bad_wr's content back to guest memory?
 
