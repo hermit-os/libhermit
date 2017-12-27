@@ -35,11 +35,11 @@
  */
 
 
-/* 
- * HermitCore's printf implementation is based on a implementation which was 
- * published at http://www.pagetable.com/?p=298. 
+/*
+ * HermitCore's printf implementation is based on a implementation which was
+ * published at http://www.pagetable.com/?p=298.
  * The authors built a full-featured standalone version of printf().  The
- * base code has been taken from FreeBSD (sys/kern/subr_prf.c) and is 
+ * base code has been taken from FreeBSD (sys/kern/subr_prf.c) and is
  * consequently BSD-licensed. Unnecessary functions have been removed and
  * all typedefs required have been added.
  */
@@ -486,7 +486,7 @@ int kprintf(const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	ret = kvprintf(fmt, 
+	ret = kvprintf(fmt,
 		       _putchar,	/* output function */
 		       NULL,	 	/* additional argument for the output function */
 		       10, ap);

@@ -131,145 +131,33 @@ void buddy_dump(void)
 	LOG_INFO("free buddies: %lu bytes\n", free);
 }
 
-void* palloc(size_t sz, uint32_t flags)
-{
-	size_t phyaddr, viraddr, bits;
-	uint32_t npages = PAGE_CEIL(sz) >> PAGE_BITS;
-	int err;
-
-	LOG_DEBUG("palloc(%zd) (%u pages)\n", sz, npages);
-
-	// get free virtual address space
-	viraddr = vma_alloc(PAGE_CEIL(sz), flags);
-	if (BUILTIN_EXPECT(!viraddr, 0))
-		return NULL;
-
-	// get continous physical pages
-	phyaddr = get_pages(npages);
-	if (BUILTIN_EXPECT(!phyaddr, 0)) {
-		vma_free(viraddr, viraddr+npages*PAGE_SIZE);
-		return NULL;
-	}
-
-	//TODO: interpretation of from (vma) flags is missing
-	bits = PG_RW|PG_GLOBAL|PG_NX;
-
-	// map physical pages to VMA
-	err = page_map(viraddr, phyaddr, npages, bits);
-	if (BUILTIN_EXPECT(err, 0)) {
-		vma_free(viraddr, viraddr+npages*PAGE_SIZE);
-		put_pages(phyaddr, npages);
-		return NULL;
-	}
-
-	return (void*) viraddr;
-}
-
-static char stack[16][DEFAULT_STACK_SIZE] __attribute__ ((aligned (16)));
-static int id = 0;
-
 void* create_stack(size_t sz)
 {
-	id++;
-	return (void*) stack[id];
-	#if 0
-	size_t phyaddr, viraddr, bits;
-	uint32_t npages = PAGE_CEIL(sz) >> PAGE_BITS;
-	int err;
-
-	LOG_DEBUG("create_stack(0x%zx) (%u pages)\n", DEFAULT_STACK_SIZE, npages);
+	LOG_DEBUG("create_stack(0x%zx)\n", sz);
+	kputs("create_stack(");
+	print_hex(sz);
+	kputs(")\n");
 
 	if (BUILTIN_EXPECT(!sz, 0))
 		return NULL;
 
-	// get free virtual address space
-	viraddr = vma_alloc((npages+2)*PAGE_SIZE, VMA_READ|VMA_WRITE|VMA_CACHEABLE);
-	if (BUILTIN_EXPECT(!viraddr, 0))
-		return NULL;
-
-	// get continous physical pages
-	phyaddr = get_pages(npages);
-	if (BUILTIN_EXPECT(!phyaddr, 0)) {
-		vma_free(viraddr, viraddr+(npages+2)*PAGE_SIZE);
-		return NULL;
-	}
-
-	bits = PG_RW|PG_GLOBAL|PG_NX;
-
-	// map physical pages to VMA
-	err = page_map(viraddr+PAGE_SIZE, phyaddr, npages, bits);
-	if (BUILTIN_EXPECT(err, 0)) {
-		vma_free(viraddr, viraddr+(npages+2)*PAGE_SIZE);
-		put_pages(phyaddr, npages);
-		return NULL;
-	}
-
-	return (void*) (viraddr+PAGE_SIZE);
-	#endif
+	return (void*) kmalloc(sz);
 }
 
 int destroy_stack(void* viraddr, size_t sz)
 {
-	size_t phyaddr;
-	uint32_t npages = PAGE_CEIL(sz) >> PAGE_BITS;
-
-	LOG_DEBUG("destroy_stack(0x%zx) (size 0x%zx)\n", viraddr, DEFAULT_STACK_SIZE);
+	LOG_DEBUG("destroy_stack(0x%zx) (size 0x%zx)\n", viraddr, sz);
+	kputs("destroy_stack(");
+	print_hex(viraddr);
+	kputs(") (size ");
+	print_hex(sz);
+	kputs(")\n");
 
 	if (BUILTIN_EXPECT(!viraddr, 0))
 		return -EINVAL;
 	if (BUILTIN_EXPECT(!sz, 0))
 		return -EINVAL;
 
-	phyaddr = virt_to_phys((size_t)viraddr);
-	if (BUILTIN_EXPECT(!phyaddr, 0))
-		return -ENOMEM;
-
-	// unmap and destroy stack
-	vma_free((size_t)viraddr-PAGE_SIZE, (size_t)viraddr+(npages+1)*PAGE_SIZE);
-	page_unmap((size_t)viraddr, npages);
-	put_pages(phyaddr, npages);
-
+	kfree(viraddr);
 	return 0;
-}
-
-void* kmalloc(size_t sz)
-{
-	if (BUILTIN_EXPECT(!sz, 0))
-		return NULL;
-
-	// add space for the prefix
-	sz += sizeof(buddy_t);
-
-	int exp = buddy_exp(sz);
-	if (BUILTIN_EXPECT(!exp, 0))
-		return NULL;
-
-	buddy_t* buddy = buddy_get(exp);
-	if (BUILTIN_EXPECT(!buddy, 0))
-		return NULL;
-
-	// setup buddy prefix
-	buddy->prefix.magic = BUDDY_MAGIC;
-	buddy->prefix.exponent = exp;
-
-	LOG_DEBUG("kmalloc(%zd) = %p\n", sz, buddy+1);
-
-	// pointer arithmetic: we hide the prefix
-	return buddy+1;
-}
-
-void kfree(void *addr)
-{
-	if (BUILTIN_EXPECT(!addr, 0))
-		return;
-
-	LOG_DEBUG("kfree(%p)\n", addr);
-
-	buddy_t* buddy = (buddy_t*) addr - 1; // get prefix
-
-	// check magic
-	if (BUILTIN_EXPECT(buddy->prefix.magic != BUDDY_MAGIC, 0))
-		return;
-
-	buddy_put(buddy);
 }

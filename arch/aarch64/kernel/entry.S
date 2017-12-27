@@ -75,12 +75,12 @@ start64:
 
   /* Return current exception level */
   bl koutput_init
-  //mrs x0, CurrentEl
-  //sub x0, x0, #3
-  msr DAIFClr, #0b1111
+  mrs x0, CurrentEl
+  sub x0, x0, #3
+  //msr DAIFClr, #0b1111
   //mrs x0, DAIF
   //mrs x0, hcr_el2
-  bl irq_handler
+  bl print_hex_return;
 
   /* Test floating point */
   //fmov d0, #5.0
@@ -88,8 +88,12 @@ start64:
   //fdiv d0, d0, d1
   //fmov x0, d0
   //mrs x0, fpcr
-  mrs x0, fpsr
-  bl irq_handler
+  //mrs x0, fpsr
+  //bl print_hex_return
+
+  /* Test core ID */
+  mrs x0, mpidr_el1
+  bl print_hex_return
 
 //   /* Enter user space */
 //   ldr x0, =el0_return
@@ -207,70 +211,70 @@ asm_irq_handler:
 vector_table_el1:
 /* Current exception level, sp_el0 */
 curr_el_sp0_sync:
-  bl irq_handler //comment
+  bl irq_handler
 
 .balign 0x80
 curr_el_sp0_irq:
-  bl irq_handler //comment
+  bl irq_handler
 
 .balign 0x80
 curr_el_sp0_fiq:
-  bl irq_handler //comment
+  bl irq_handler
 
 .balign 0x80
 curr_el_sp0_serror:
-  bl irq_handler //comment
+  bl irq_handler
 
 /* Current exception level, sp_elx */
 .balign 0x80
 curr_el_spx_sync:
-  bl irq_handler //comment
+  bl irq_handler
 
 .balign 0x80
 curr_el_spx_irq:
-  bl irq_handler //comment
+  bl irq_handler
 
 .balign 0x80
 curr_el_spx_fiq:
-  bl irq_handler //comment
+  bl irq_handler
 
 .balign 0x80
 curr_el_spx_serror:
-  bl irq_handler //comment
+  bl irq_handler
 
 /* Lower exception level, coming from AArch64 */
 .balign 0x80
 lower_el_aarch64_sync:
-  bl irq_handler //comment
+  bl irq_handler
 
 .balign 0x80
 lower_el_aarch64_irq:
-  bl irq_handler //comment
+  bl irq_handler
 
 .balign 0x80
 lower_el_aarch64_fiq:
-  bl irq_handler //comment
+  bl irq_handler
 
 .balign 0x80
 lower_el_aarch64_serror:
-  bl irq_handler //comment
+  bl irq_handler
 
 /* Lower exception level, coming from AArch32 */
 .balign 0x80
 lower_el_aarch32_sync:
-  bl irq_handler //comment
+  bl irq_handler
 
 .balign 0x80
 lower_el_aarch32_irq:
-  bl irq_handler //comment
+  bl irq_handler
 
 .balign 0x80
 lower_el_aarch32_fiq:
-  bl irq_handler //comment
+  bl irq_handler
 
 .balign 0x80
 lower_el_aarch32_serror:
-  bl irq_handler //comment
+  bl irq_handler
 
 
 .section .data
@@ -278,3 +282,5 @@ lower_el_aarch32_serror:
 boot_stack: .skip (MAX_CORES*KERNEL_STACK_SIZE)
 .global boot_ist
 boot_ist: .skip KERNEL_STACK_SIZE
+.global msg
+msg: .ascii "\n"

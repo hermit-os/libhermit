@@ -112,7 +112,7 @@ static int hermit_init(void)
 	//irq_init();
 	//timer_init();
 	multitasking_init();
-	//memory_init();
+	memory_init();
 	//signal_init();
 
 	return 0;
@@ -283,7 +283,7 @@ int smp_main(void)
 
 int libc_start(int argc, char** argv, char** env);
 
-char* itoa(int i, char b[]);
+char* itoa(uint64_t input, char* str);
 
 // init task => creates all other tasks and initializes the LwIP
 static int initd(void* arg)
@@ -293,7 +293,6 @@ static int initd(void* arg)
 	kputs((char*) arg);
 	kputs("\n");
 	return 0;
-
 #endif
 
 /* Floating point testing */
@@ -346,7 +345,7 @@ static int initd(void* arg)
 #endif
 
 /* Sheduling testing */
-#if 1
+#if 0
 	int i = 0;
 	char str_i[100];
 
@@ -359,6 +358,67 @@ static int initd(void* arg)
 		kputs("\n");
 		reschedule();
 	}
+	LOG_INFO("Reached end of initd()\n");
+#endif
+
+/* kmalloc() and kfree() testing */
+#if 1
+	uint64_t* a = (uint64_t*) kmalloc(sizeof(uint64_t));
+	uint64_t* b = (uint64_t*) kmalloc(sizeof(uint64_t));
+	uint32_t* c = (uint32_t*) kmalloc(sizeof(uint32_t));
+
+	print_hex(a);
+	kputs(" This is the address of integer a\n");
+
+	*a = 1;
+	*b = 2;
+	*c = 0;
+	*c = *a + *b;
+
+	kputs("int a: ");
+	print_int(*a);
+	kputs("\n");
+	kputs("int b: ");
+	print_int(*b);
+	kputs("\n");
+	kputs("int c: ");
+	print_int(*c);
+	kputs("\n");
+
+	kfree(b);
+	//kfree(c);
+
+	uint64_t* d = (uint64_t*) kmalloc(sizeof(uint64_t));
+	*d = 9;
+
+	kputs("int a: ");
+	print_int(*a);
+	kputs("\n");
+	kputs("int b: ");
+	print_int(*b);
+	kputs("\n");
+	kputs("int c: ");
+	print_int(*c);
+	kputs("\n");
+	//print_int(*d);
+	//kputs("\n");
+
+	kputs("Test string: ");
+	int i = 30;
+	char* str = (char*) kmalloc(i+1);
+	for (int n = 0; n < i; n++)
+		str[n] = lwip_rand() % 26 + 'a';
+	str[i] = '\0';
+	kputs(str);
+	kputs("\n");
+
+	print_free_list();
+
+	kfree(a);
+	kfree(c);
+	kfree(d);
+	kfree(str);
+
 #endif
 
 /* Original initd */
@@ -562,29 +622,85 @@ out:
 	return 0;
 }
 
-char* itoa(int i, char b[]){
-    char const digit[] = "0123456789";
-    char* p = b;
-    if(i<0){
-        *p++ = '-';
-        i *= -1;
-    }
-    int shifter = i;
-    do{ //Move to where representation ends
-        ++p;
-        shifter = shifter/10;
-    }while(shifter);
-    *p = '\0';
-    do{ //Move back, inserting digits as u go
-        *--p = digit[i%10];
-        i = i/10;
-    }while(i);
-    return b;
+char* itoa(uint64_t input, char* str) {
+	char* p = str;
+	uint64_t tmp = input;
+
+	if (input == 0) {
+		str[0] = '0';
+		str[1] = '\0';
+		return str;
+	}
+
+	if (input < 0) {
+		*p++ = '-';
+		input *= -1;
+	}
+
+	while (tmp) {
+		p++;
+		tmp /= 10;
+	}
+	*p = '\0';
+	while (input) {
+		*--p = '0' + input % 10;
+		input /= 10;
+	}
+
+	return str;
+}
+
+void print_int(int input) {
+	char* str[50];
+
+	itoa(input, str);
+	kputs(str);
+}
+
+void print_binary(uint64_t input) {
+	char* bit = 0;
+
+	for (int i = 0; i < 64; i++) {
+		bit = (input << i) >> 63;
+		if (bit == 1)
+			kputs("1");
+		else
+			kputs("0");
+	}
+}
+
+void print_hex(uint64_t input) {
+	uint64_t bits = 0;
+	int i = 0;
+	char tmp[2] = "0";
+
+	while(!bits && i < 16) {
+		bits = (input << i * 4) >> 60;
+		i++;
+	}
+	i--;
+
+	kputs("0x");
+	while (i < 16) {
+		bits = (input << i * 4) >> 60;
+		if (bits > 9)
+			tmp[0] = 'A' + bits - 10;
+		else
+			tmp[0] = '0' + bits;
+		kputs(tmp);
+		i++;
+	}
+}
+
+void print_hex_return(uint64_t input) {
+	print_hex(input);
+	kputs("\n");
 }
 
 int foo() {
 	kputs("Hello from foo\n");
-	LOG_INFO("Don't go over this.\n");
+	LOG_INFO("We can't go over any LOG_INFO.\n");
+	kputs("We went over the LOG_INFO() in foo\n");
 	return 0;
 }
 
@@ -632,6 +748,24 @@ int hermit_main(void)
 	create_kernel_task_on_core(NULL, initd, "test1", NORMAL_PRIO, CORE_ID);
 	create_kernel_task_on_core(NULL, foo, NULL, NORMAL_PRIO, CORE_ID);
 	kputs("Hello from after create_kernel_task_on_core\n\n");
+
+
+	/* just to see some addresses */
+	extern const void kernel_start;
+	extern const void kernel_end;
+
+	kputs("Just some addresses:\n");
+	print_hex(&kernel_start);
+	kputs("\n");
+
+	print_hex(&kernel_end);
+	kputs("\n");
+
+	int random_adr = 7;
+	print_hex(&random_adr);
+	kputs("\n\n");
+	/* end address area */
+
 	while(1) {
 		reschedule();
 	#if 0

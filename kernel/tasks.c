@@ -391,8 +391,7 @@ void NORETURN do_exit(int arg)
 	}
 
 	curr_task->status = TASK_FINISHED;
-	kputs("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY\n");
-	//LOG_INFO("Don't go over this.\n");
+	kputs("--------------- Task finished ---------------\n");
 	reschedule();
 
 	irq_nested_enable(flags);
@@ -590,17 +589,13 @@ int create_task(tid_t* id, entry_point_t ep, void* arg, uint8_t prio, uint32_t c
 		return -ENOMEM;
 	}
 
-#if 0
-	kputs("Hello from before kmalloc\n");
 	counter = kmalloc(sizeof(atomic_int64_t));
-	kputs("Hello from after kmalloc\n");
 	if (BUILTIN_EXPECT(!counter, 0)) {
 		destroy_stack(stack, KERNEL_STACK_SIZE);
 		destroy_stack(stack, DEFAULT_STACK_SIZE);
 		return -ENOMEM;
 	}
 	atomic_int64_set((atomic_int64_t*) counter, 0);
-#endif
 
 	spinlock_irqsave_lock(&table_lock);
 
@@ -658,7 +653,7 @@ out:
 	if (ret) {
 		destroy_stack(stack, DEFAULT_STACK_SIZE);
 		destroy_stack(ist, KERNEL_STACK_SIZE);
-		//kfree(counter);
+		kfree(counter);
 	}
 
 	return ret;

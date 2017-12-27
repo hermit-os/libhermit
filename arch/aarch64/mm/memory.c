@@ -40,11 +40,23 @@
 extern uint64_t base;
 extern uint64_t limit;
 
-typedef struct free_list {
+/*typedef struct free_list {
 	size_t start, end;
 	struct free_list* next;
 	struct free_list* prev;
+} free_list_t;*/
+
+typedef struct free_list {
+	size_t type;
+	size_t size;
+	//size_t start, end;
+	struct free_list* next;
+	struct free_list* prev;
 } free_list_t;
+
+#define BLOCK_FREE			0x00DE1E7E
+#define BLOCK_ALLOCATED		0xA110CA7E
+#define BLOCK_HEADER_SIZE	sizeof(free_list_t)
 
 /*
  * Note that linker symbols are not variables, they have no memory allocated for
@@ -56,7 +68,8 @@ extern const void kernel_end;
 static spinlock_t list_lock = SPINLOCK_INIT;
 
 static free_list_t init_list = {0, 0, NULL, NULL};
-static free_list_t* free_start = &init_list;
+static free_list_t* free_start = (free_list_t*) &kernel_end;
+
 
 atomic_int64_t total_pages = ATOMIC_INIT(0);
 atomic_int64_t total_allocated_pages = ATOMIC_INIT(0);
@@ -64,6 +77,7 @@ atomic_int64_t total_available_pages = ATOMIC_INIT(0);
 
 size_t get_pages(size_t npages)
 {
+	#if 0
 	size_t i, ret = 0;
 	free_list_t* curr = free_start;
 
@@ -104,12 +118,15 @@ out:
 	}
 
 	return ret;
+	#endif
+	return 0;
 }
 
 DEFINE_PER_CORE(size_t, ztmp_addr, 0);
 
 size_t get_zeroed_page(void)
 {
+	#if 0
 	size_t phyaddr = get_page();
 	size_t viraddr;
 	uint8_t flags;
@@ -138,11 +155,14 @@ novaddr:
 	irq_nested_enable(flags);
 
 	return phyaddr;
+	#endif
+	return  0;
 }
 
 /* TODO: reunion of elements is still missing */
 int put_pages(size_t phyaddr, size_t npages)
 {
+	#if 0
 	free_list_t* curr = free_start;
 
 	if (BUILTIN_EXPECT(!phyaddr, 0))
@@ -187,10 +207,13 @@ out_err:
 	spinlock_unlock(&list_lock);
 
 	return -ENOMEM;
+	#endif
+	return 0;
 }
 
 void* page_alloc(size_t sz, uint32_t flags)
 {
+	#if 0
 	size_t viraddr = 0;
 	size_t phyaddr;
 	uint32_t npages = PAGE_FLOOR(sz) >> PAGE_BITS;
@@ -226,10 +249,12 @@ void* page_alloc(size_t sz, uint32_t flags)
 
 oom:
 	return (void*) viraddr;
+	#endif
 }
 
 void page_free(void* viraddr, size_t sz)
 {
+	#if 0
 	size_t phyaddr;
 
 	if (BUILTIN_EXPECT(!viraddr || !sz, 0))
@@ -241,6 +266,7 @@ void page_free(void* viraddr, size_t sz)
 
 	if (phyaddr)
 		put_pages(phyaddr, PAGE_FLOOR(sz) >> PAGE_BITS);
+	#endif
 }
 
 int memory_init(void)
@@ -363,4 +389,133 @@ oom:
 	LOG_ERROR("BUG: Failed to init mm!\n");
 	while(1) {HALT; }
 #endif
+
+	free_start = (free_list_t*) &kernel_end;
+	free_start->type = BLOCK_FREE;
+	free_start->size = 0x60000000;		// 512MB hardcoded for now
+	free_start->prev = NULL;
+	free_start->next = NULL;
+
+	print_hex(free_start);
+	kputs(" This is the address of free_start\n");
+
+	kputs("memory_init() was executed and free memory initialized\n");
+	return 0;
+}
+
+void* kmalloc(size_t sz)
+{
+	if (BUILTIN_EXPECT(!sz, 0))
+		return NULL;
+
+	free_list_t* block = free_start;
+
+	spinlock_lock(&list_lock);
+
+	while (block != NULL) {
+		if (block->size >= sz && block->type == BLOCK_FREE) { //found block that is free and big enough
+			if (block->size > sz + BLOCK_HEADER_SIZE){ //split block if enough space for new block...
+				free_list_t* new_block = (free_list_t*) ((char*) block + BLOCK_HEADER_SIZE + sz);
+				new_block->prev = block;
+				new_block->next = block->next;
+				block->next = new_block;
+				new_block->size = block->size - sz - BLOCK_HEADER_SIZE;
+				block->size = sz;
+				new_block->type = BLOCK_FREE;
+			} //...take empty space if block not big enough
+			block->type = BLOCK_ALLOCATED;
+
+			spinlock_unlock(&list_lock);
+
+			LOG_DEBUG("kmalloc(%zd) = %p\n", sz, block + BLOCK_HEADER_SIZE);
+			return (free_list_t*) ((char*)block + BLOCK_HEADER_SIZE);
+		}
+		block = block->next;
+	}
+
+	spinlock_unlock(&list_lock);
+
+	LOG_DEBUG("kmalloc(%zd) = %p\n", sz, NULL);
+	kputs("Out of memory!\n");
+	//LOG_ERROR("Out of memory!");
+	return NULL;
+}
+
+void kfree(void *addr)
+{
+	if (BUILTIN_EXPECT(!addr, 0))
+		return;
+
+	if (addr < free_start)
+		return;
+
+	LOG_DEBUG("kfree(%p)\n", addr);
+
+	free_list_t* block = addr - BLOCK_HEADER_SIZE;
+	kputs("Freeing block with address ");
+	print_hex(block);
+	kputs("\n");
+
+	spinlock_lock(&list_lock);
+
+	block->type = BLOCK_FREE;
+
+	//if next or previous block is free as well, merge them
+	if (block->next != NULL && block->next->type == BLOCK_FREE) {
+		block->size += block->next->size + BLOCK_HEADER_SIZE;
+		block->next->next->prev = block;
+		block->next = block->next->next;
+	}
+
+	if (block->prev != NULL && block->prev->type == BLOCK_FREE) {
+		block->prev->size += block->size + BLOCK_HEADER_SIZE;
+		block->prev->next = block->next;
+		block->next->prev = block->prev;
+	}
+
+	spinlock_unlock(&list_lock);
+
+	return;
+}
+
+void print_free_list() {
+	free_list_t* block = free_start;
+
+	kputs("\n");
+	kputs("Every block of free_list:");
+	kputs("\n");
+
+	spinlock_lock(&list_lock);
+
+	while (block != NULL) {
+		//this is the address of the block with header, not the beginning of usuable space
+		kputs("address:");
+		print_hex(block);
+		kputs("\n");
+
+		kputs("type:\t");
+		if (block->type == BLOCK_FREE)
+			kputs("free\n");
+		else if (block->type == BLOCK_ALLOCATED)
+			kputs("allocated\n");
+		else
+			kputs("UNDEFINED\n");
+
+		kputs("size:\t");
+		print_hex(block->size);
+		kputs("\n");
+
+		kputs("prev:\t");
+		print_hex(block->prev);
+		kputs("\n");
+
+		kputs("next:\t");
+		print_hex(block->next);
+		kputs("\n");
+		kputs("\n");
+
+		block = block->next;
+	}
+
+	spinlock_unlock(&list_lock);
 }
