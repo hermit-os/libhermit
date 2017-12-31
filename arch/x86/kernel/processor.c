@@ -391,6 +391,19 @@ static void check_est(uint8_t out)
 	return;
 }
 
+int reset_fsgs(int32_t core_id)
+{
+	writefs(0);
+#if MAX_CORES > 1
+	writegs(core_id * ((size_t) &percore_end0 - (size_t) &percore_start));
+#else
+	writegs(0);
+#endif
+	wrmsr(MSR_KERNEL_GS_BASE, 0);
+
+	return 0;
+}
+
 int cpu_detection(void) {
 	uint64_t xcr0;
 	uint32_t a=0, b=0, c=0, d=0, level = 0, extended = 0;
@@ -531,13 +544,7 @@ int cpu_detection(void) {
 	//if (has_vmx())
 	//	wrmsr(MSR_IA32_FEATURE_CONTROL, rdmsr(MSR_IA32_FEATURE_CONTROL) | 0x5);
 
-	writefs(0);
-#if MAX_CORES > 1
-	writegs(atomic_int32_read(&current_boot_id) * ((size_t) &percore_end0 - (size_t) &percore_start));
-#else
-	writegs(0);
-#endif
-	wrmsr(MSR_KERNEL_GS_BASE, 0);
+	reset_fsgs(atomic_int32_read(&current_boot_id));
 
 	LOG_INFO("Core %d set per_core offset to 0x%x\n", atomic_int32_read(&current_boot_id), rdmsr(MSR_GS_BASE));
 

@@ -299,6 +299,9 @@ typedef struct {
 
 extern cpu_info_t cpu_info;
 
+// reset FS & GS registers to the default values
+int reset_fsgs(int32_t core_id);
+
 // determine the cpu features
 int cpu_detection(void);
 
