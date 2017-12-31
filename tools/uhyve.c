@@ -284,6 +284,16 @@ static void uhyve_exit(void* arg)
 	close_fd(&vcpufd);
 }
 
+static void dump_log(void)
+{
+	if (klog && verbose)
+	{
+		fputs("\nDump kernel log:\n", stderr);
+		fputs("================\n", stderr);
+		fprintf(stderr, "%s\n", klog);
+	}
+}
+
 static void uhyve_atexit(void)
 {
 	uhyve_exit(NULL);
@@ -301,12 +311,7 @@ static void uhyve_atexit(void)
 	if (vcpu_fds)
 		free(vcpu_fds);
 
-	if (klog && verbose)
-	{
-		fputs("\nDump kernel log:\n", stderr);
-		fputs("================\n", stderr);
-		fprintf(stderr, "%s\n", klog);
-	}
+	dump_log();
 
 	// clean up and close KVM
 	close_fd(&vmfd);
@@ -976,11 +981,13 @@ static int vcpu_loop(void)
 			break;
 
 		case KVM_EXIT_SHUTDOWN:
-			err(1, "KVM: receive shutdown command\n");
-			break;
+			fprintf(stderr, "KVM: receive shutdown command\n");
 
 		case KVM_EXIT_DEBUG:
 			print_registers();
+			dump_log();
+			exit(EXIT_FAILURE);
+
 		default:
 			fprintf(stderr, "KVM: unhandled exit: exit_reason = 0x%x\n", run->exit_reason);
 			exit(EXIT_FAILURE);
