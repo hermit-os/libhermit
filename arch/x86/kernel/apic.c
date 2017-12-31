@@ -914,10 +914,12 @@ extern tid_t set_idle_task(void);
 #if MAX_CORES > 1
 int smp_start(void)
 {
-	LOG_DEBUG("Try to initialize processor (local id %d)\n", atomic_int32_read(&current_boot_id));
+	int32_t core_id = atomic_int32_read(&current_boot_id);
+
+	LOG_DEBUG("Try to initialize processor (local id %d)\n", core_id);
 
 	// use the same gdt like the boot processors
-	gdt_flush();
+	//gdt_flush();
 
 	// install IDT
 	idt_install();
@@ -930,12 +932,13 @@ int smp_start(void)
 	// reset APIC
 	lapic_reset();
 
-	LOG_DEBUG("Processor %d (local id %d) is entering its idle task\n", apic_cpu_id(), atomic_int32_read(&current_boot_id));
-	LOG_DEBUG("CR0 of core %u: 0x%x\n", atomic_int32_read(&current_boot_id), read_cr0());
-	online[atomic_int32_read(&current_boot_id)] = 1;
+	LOG_DEBUG("Processor %d (local id %d) is entering its idle task\n", apic_cpu_id(), core_id);
+	LOG_DEBUG("CR0 of core %u: 0x%x\n", core_id, read_cr0());
+	online[core_id] = 1;
 
 	tid_t id = set_idle_task();
 
+	// initialize task state segment
 	tss_init(id);
 
 	// set task switched flag for the first FPU access
