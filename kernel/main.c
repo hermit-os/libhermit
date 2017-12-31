@@ -311,8 +311,9 @@ int smp_main(void)
 	print_status();
 
 	/* wait for the other cpus */
-	while(atomic_int32_read(&cpu_online) < atomic_int32_read(&possible_cpus))
+	while(atomic_int32_read(&cpu_online) < atomic_int32_read(&possible_cpus)) {
 		PAUSE;
+	}
 
 	while(1) {
 		check_workqueues();
@@ -387,7 +388,7 @@ static int initd(void* arg)
 	// initialize network
 	err = init_netifs();
 
-	if(is_uhyve()) {
+	if (is_uhyve()) {
 		int i;
 		uhyve_cmdsize_t uhyve_cmdsize;
 		uhyve_cmdval_t uhyve_cmdval;

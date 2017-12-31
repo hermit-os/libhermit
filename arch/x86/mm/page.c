@@ -290,6 +290,9 @@ void page_fault_handler(struct state *s)
 
 		spinlock_irqsave_unlock(&page_lock);
 
+		// clear cr2 to signalize that the pagefault is solved by the pagefault handler
+		write_cr2(0);
+
 		return;
 	}
 
@@ -307,6 +310,9 @@ default_handler:
 		s->rax, s->rbx, s->rcx, s->rdx, s->rbp, s->rsp, s->rdi, s->rsi, s->r8, s->r9, s->r10, s->r11, s->r12, s->r13, s->r14, s->r15);
 	if (task->heap)
 		LOG_ERROR("Heap 0x%llx - 0x%llx\n", task->heap->start, task->heap->end);
+
+	// clear cr2 to signalize that the pagefault is solved by the pagefault handler
+	write_cr2(0);
 
 	apic_eoi(s->int_no);
 	//do_abort();
