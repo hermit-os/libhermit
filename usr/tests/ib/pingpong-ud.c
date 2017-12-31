@@ -31,6 +31,7 @@
  */
 
 #define _GNU_SOURCE
+
 /*#include <config.h>*/
 
 // #include <stdio.h>
@@ -160,7 +161,7 @@ static struct pingpong_dest *pp_client_exch_dest(const char *servername, int por
 	n = getaddrinfo(servername, service, &hints, &res);
 
 	if (n < 0) {
-		fprintf(stderr, "error for %s:%d\n", servername, port);
+		fprintf(stderr, "Error for %s:%d\n", servername, port);
 		free(service);
 		return NULL;
 	}
@@ -684,6 +685,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	/* page_size = sysconf(_SC_PAGESIZE); */
 	page_size = 4092; // TODO
 
 	dev_list = ibv_get_device_list(NULL);

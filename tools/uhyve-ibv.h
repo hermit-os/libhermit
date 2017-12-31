@@ -99,6 +99,12 @@ typedef enum {
 	UHYVE_PORT_IBV_IS_QPT_SUPPORTED        = 0x56E,
 	UHYVE_PORT_IBV_GET_MR_LKEY             = 0x56F,
 	UHYVE_PORT_IBV_GET_QP_NUM              = 0x570,
+	UHYVE_PORT_IBV_CQ_EX_TO_CQ             = 0x571,
+	UHYVE_PORT_IBV_START_POLL              = 0x572,
+	UHYVE_PORT_IBV_NEXT_POLL               = 0x573,
+	UHYVE_PORT_IBV_END_POLL                = 0x574,
+	UHYVE_PORT_IBV_WC_READ_COMPLETION_TS   = 0x575,
+	UHYVE_PORT_IBV_CREATE_CQ_EX            = 0x576,
 } uhyve_ibv_t;
 
 typedef struct {
@@ -656,6 +662,49 @@ typedef struct {
 	uint32_t ret;
 } __attribute__((packed)) uhyve_ibv_get_qp_num_t;
 
+typedef struct {
+	// Parameters:
+	struct ibv_cq_ex * cq;
+	// Return value:
+	struct ibv_cq * ret;
+} __attribute__((packed)) uhyve_ibv_cq_ex_to_cq_t;
+
+typedef struct {
+	// Parameters:
+	struct ibv_cq_ex * cq;
+	struct ibv_poll_cq_attr * attr;
+	// Return value:
+	int ret;
+} __attribute__((packed)) uhyve_ibv_start_poll_t;
+
+typedef struct {
+	// Parameters:
+	struct ibv_cq_ex * cq;
+	// Return value:
+	int ret;
+} __attribute__((packed)) uhyve_ibv_next_poll_t;
+
+typedef struct {
+	// Parameters:
+	struct ibv_cq_ex * cq;
+} __attribute__((packed)) uhyve_ibv_end_poll_t;
+
+typedef struct {
+	// Parameters:
+	struct ibv_cq_ex * cq;
+	// Return value:
+	uint64_t ret;
+} __attribute__((packed)) uhyve_ibv_wc_read_completion_ts_t;
+
+typedef struct {
+	// Parameters:
+	struct ibv_context * context;
+	struct ibv_cq_init_attr_ex * cq_attr;
+	// Return value:
+	struct ibv_cq_ex * ret;
+} __attribute__((packed)) uhyve_ibv_create_cq_ex_t;
+
+
 
 void call_ibv_wc_status_str            (struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_rate_to_mult             (struct kvm_run * run, uint8_t * guest_mem);
@@ -732,6 +781,13 @@ void call_ibv_event_type_str           (struct kvm_run * run, uint8_t * guest_me
 void call_ibv_resolve_eth_l2_from_gid  (struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_is_qpt_supported         (struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_get_mr_lkey              (struct kvm_run * run, uint8_t * guest_mem);
-void call_ibv_get_qp_num              (struct kvm_run * run, uint8_t * guest_mem);
+void call_ibv_get_qp_num               (struct kvm_run * run, uint8_t * guest_mem);
+
+void call_ibv_cq_ex_to_cq(struct kvm_run * run, uint8_t * guest_mem);
+void call_ibv_start_poll(struct kvm_run * run, uint8_t * guest_mem);
+void call_ibv_next_poll(struct kvm_run * run, uint8_t * guest_mem);
+void call_ibv_end_poll(struct kvm_run * run, uint8_t * guest_mem);
+void call_ibv_wc_read_completion_ts(struct kvm_run * run, uint8_t * guest_mem);
+void call_ibv_create_cq_ex(struct kvm_run * run, uint8_t * guest_mem);
 
 #endif // UHYVE_IBV_H
