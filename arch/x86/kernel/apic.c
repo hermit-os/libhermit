@@ -620,7 +620,7 @@ int smp_init(void)
 
 
 // How many ticks are used to calibrate the APIC timer
-#define APIC_TIMER_CALIBRATION_TICKS	(3)
+#define APIC_TIMER_CALIBRATION_TICKS	(1)
 
 /*
  * detects the timer frequency of the APIC and restarts
@@ -635,8 +635,8 @@ int apic_calibration(void)
 		return -ENXIO;
 
 	const uint64_t cpu_freq_hz = (uint64_t) get_cpu_frequency() * 1000000ULL;
-	const uint64_t cycles_per_tick = cpu_freq_hz / (uint64_t) TIMER_FREQ;
-	const uint64_t wait_cycles = cycles_per_tick * APIC_TIMER_CALIBRATION_TICKS;
+	const uint64_t cycles_per_ms = cpu_freq_hz / 1000ULL;
+	const uint64_t wait_cycles = cycles_per_ms * APIC_TIMER_CALIBRATION_TICKS;
 
 	// disable interrupts to increase calibration accuracy
 	flags = irq_nested_disable();
@@ -657,7 +657,7 @@ int apic_calibration(void)
 	} while(diff < wait_cycles);
 
 	// Calculate timer increments for desired tick frequency
-	icr = (initial_counter - lapic_read(APIC_CCR)) / APIC_TIMER_CALIBRATION_TICKS;
+	icr = ((initial_counter - lapic_read(APIC_CCR)) * 1000ULL) / (TIMER_FREQ * APIC_TIMER_CALIBRATION_TICKS);
 	irq_nested_enable(flags);
 
 	lapic_reset();

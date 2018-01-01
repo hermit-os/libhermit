@@ -361,12 +361,17 @@ static void check_est(uint8_t out)
 			LOG_INFO("P-State HWP enabled\n");
 	}
 
-	if (c & CPU_FEATURE_EPB) {
+	if (c & CPU_FEATURE_HWP_EPP) {
 		// for maximum performance we have to clear BIAS
 		wrmsr(MSR_IA32_ENERGY_PERF_BIAS, 0);
 		if (out)
 			LOG_INFO("Found Performance and Energy Bias Hint support: 0x%llx\n", rdmsr(MSR_IA32_ENERGY_PERF_BIAS));
 	}
+
+	if (c & CPU_FEATURE_ARAT)
+		LOG_INFO("Timer runs with a constant rate!");
+	else
+		LOG_INFO("Timer doesn't run with a constant rate!");
 
 #if 0
 	if (out) {
