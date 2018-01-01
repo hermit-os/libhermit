@@ -48,24 +48,22 @@
  *  ctx_close_connection    - Closing the sockets interface.
  */
 
-#ifndef PERFTEST_RESOURCES_H
-#define PERFTEST_RESOURCES_H
+#ifndef WR_BW_H
+#define WR_BW_H
 
 #include <hermit/ibv.h>
 #include <hermit/verbs.h>
 
 #include <stdint.h>
-#include <unistd.h>
-// #include <byteswap.h>
 #include <math.h>
-// #include <netinet/in.h>
+
+#include <netinet/in.h>
 #include <sys/time.h>
 #include <sys/types.h>
-// #include <sys/socket.h>
+#include <sys/socket.h>
 #include <netdb.h>
 #include <fcntl.h> // ?
 
-#include "perftest_parameters.h"
 
 #define NUM_OF_RETRIES		(10)
 
@@ -83,12 +81,6 @@
 #define PINGPONG_READ_WRID   (1)
 #define PINGPONG_ATOMIC_WRID (22)
 #define DEFF_QKEY            (0x11111111)
-
-#ifdef HAVE_XRCD
-#define SERVER_FD "/tmp/xrc_domain_server"
-#define CLIENT_FD "/tmp/xrc_domain_client"
-#endif
-
 
 #define NOTIFY_COMP_ERROR_SEND(wc,scnt,ccnt)                     											\
 	{ fprintf(stderr," Completion with error at client\n");      											\
@@ -127,73 +119,61 @@
  ******************************************************************************/
 
 struct pingpong_context {
-	// struct rdma_event_channel		*cm_channel;
-	// struct rdma_cm_id			*cm_id_control;
-	// struct rdma_cm_id			*cm_id;
-	struct ibv_context			*context;
-	struct ibv_comp_channel			*channel;
-	struct ibv_pd				*pd;
-	struct ibv_mr				**mr;
-	struct ibv_cq				*send_cq;
-	struct ibv_cq				*recv_cq;
-	void					**buf;
-	struct ibv_ah				**ah;
-	struct ibv_qp				**qp;
-	struct ibv_srq				*srq;
-	struct ibv_sge				*sge_list;
-	struct ibv_sge				*recv_sge_list;
-	struct ibv_send_wr			*wr;
-	struct ibv_recv_wr			*rwr;
-	uint64_t				size;
-	uint64_t				*my_addr;
-	uint64_t				*rx_buffer_addr;
-	uint64_t				*rem_addr;
-	uint64_t				buff_size;
-	uint64_t				send_qp_buff_size;
-	uint64_t				flow_buff_size;
-	int					tx_depth;
-	int					huge_shmid;
-	uint64_t				*scnt;
-	uint64_t				*ccnt;
-	int					is_contig_supported;
-	uint32_t                                *ctrl_buf;
-	uint32_t                                *credit_buf;
-	struct ibv_mr                           *credit_mr;
-	struct ibv_sge                          *ctrl_sge_list;
-	struct ibv_send_wr                      *ctrl_wr;
-	int                                     send_rcredit;
-	int                                     credit_cnt;
-	int					cache_line_size;
-	int					cycle_buffer;
-	#ifdef HAVE_XRCD
-	struct ibv_xrcd				*xrc_domain;
-	int 					fd;
-	#endif
-	#ifdef HAVE_ACCL_VERBS
-	struct ibv_exp_res_domain		*res_domain;
-	struct ibv_exp_cq_family		*send_cq_family;
-	struct ibv_exp_cq_family		*recv_cq_family;
-	struct ibv_exp_qp_burst_family		**qp_burst_family;
-	#endif
+	struct ibv_context      *context;
+	struct ibv_comp_channel *channel;
+
+	struct ibv_pd           *pd;
+	struct ibv_mr           **mr;
+	struct ibv_cq           *send_cq;
+	struct ibv_cq           *recv_cq;
+
+	void                    **buf;
+
+	struct ibv_ah           **ah;
+	struct ibv_qp           **qp;
+	struct ibv_srq          *srq;
+
+	struct ibv_sge          *sge_list;
+	struct ibv_sge          *recv_sge_list;
+	struct ibv_send_wr      *wr;
+	struct ibv_recv_wr      *rwr;
+
+	uint64_t                size;
+	uint64_t                *my_addr;
+	uint64_t                *rx_buffer_addr;
+	uint64_t                *rem_addr;
+
+	uint64_t                buff_size;
+	uint64_t                send_qp_buff_size;
+	uint64_t                flow_buff_size;
+	int                     tx_depth;
+	int                     huge_shmid;
+
+	uint64_t                *scnt;
+	uint64_t                *ccnt;
+
+	int                     is_contig_supported;
+	uint32_t                *ctrl_buf;
+	uint32_t                *credit_buf;
+	struct ibv_mr           *credit_mr;
+	struct ibv_sge          *ctrl_sge_list;
+	struct ibv_send_wr      *ctrl_wr;
+	int                     send_rcredit;
+	int                     credit_cnt;
+	int                     cache_line_size;
+	int                     cycle_buffer;
 };
 
 struct pingpong_dest {
 	int                lid;
-	int                out_reads;
+	// int                out_reads;
 	int                qpn;
 	int                psn;
-	unsigned           rkey;
-	unsigned long long vaddr;
+	// unsigned           rkey;
+	// unsigned long long vaddr;
 	union ibv_gid      gid;
-	unsigned           srqn;
-	int                gid_index;
-};
-
-struct raw_ethernet_info { // !
-	uint8_t  mac[6];
-	uint32_t ip;
-	uint8_t  ip6[16];
-	int      port;
+	// unsigned           srqn;
+	// int                gid_index;
 };
 
 /******************************************************************************
@@ -212,10 +192,10 @@ struct raw_ethernet_info { // !
  *
  * Return Value : SUCCESS, FAILURE.
  */
-// int check_add_port(char **service,int port,
-					 // const char *servername,
-					 // struct addrinfo *hints,
-					 // struct addrinfo **res);
+int check_add_port(char **service,int port,
+				   const char *servername,
+				   struct addrinfo *hints,
+				   struct addrinfo **res);
 
 /* ctx_find_dev
  *
@@ -223,7 +203,6 @@ struct raw_ethernet_info { // !
  *	or the first one found , in case ib_devname == NULL
  *
  * Parameters :
- *
  *	ib_devname - The name of the device requested or NULL for the first one.
  *
  * Return Value : the device or NULL in case of failure.
@@ -253,21 +232,6 @@ void alloc_ctx(struct pingpong_context *ctx,struct perftest_parameters *user_par
 int destroy_ctx(struct pingpong_context *ctx,
 				struct perftest_parameters *user_param);
 
-/* verify_params_with_device_context
- *
- * Description :
- * 		Verify user params that require information from the ibv_context
- *
- * Parameters :
- *	context - ibv_context
- * 	user_param - the perftest parameters.
- *
- * Return Value : SUCCESS, FAILURE.
- */
-int verify_params_with_device_context(struct ibv_context *ctx,
-				      struct perftest_parameters *user_param);
-
-
 /* ctx_init
  *
  * Description :
@@ -285,12 +249,10 @@ int ctx_init(struct pingpong_context *ctx,struct perftest_parameters *user_param
 /* ctx_qp_create.
  *
  * Description :
- *
  *	Creates a QP , according to the attributes given in param.
  *	The relevent attributes are tx_depth,rx_depth,inline_size and connection_type.
  *
  * Parameters :
- *
  *	pd      - The Protection domain , each the qp will be assigned to.
  *	send_cq - The CQ that will produce send CQE.
  *	recv_qp - The CQ that will produce recv CQE.
@@ -833,4 +795,5 @@ int alloc_hugepage_region (struct pingpong_context *ctx);
 
 int run_iter_fs(struct pingpong_context *ctx, struct perftest_parameters *user_param);
 
-#endif /* PERFTEST_RESOURCES_H */
+#endif /* WR_BW_H */
+

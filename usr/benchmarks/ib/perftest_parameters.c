@@ -3,23 +3,20 @@
 #include <string.h>
 #include <getopt.h>
 #include <limits.h>
-/* #include <arpa/inet.h> */
-#include <netinet/in.h>
-#if defined(__FreeBSD__)
-#include <netinet/in.h>
-#include <sys/socket.h>
-#endif
+/* #include <netinet/in.h> */
+#include <math.h>
+
 #include "perftest_parameters.h"
-#include "raw_ethernet_resources.h"
-#include<math.h>
+
 #define MAC_LEN (17)
 #define ETHERTYPE_LEN (6)
 #define MAC_ARR_LEN (6)
 #define HEX_BASE (16)
-static const char *connStr[] = {"RC","UC","UD","RawEth","XRC","DC"};
-static const char *testsStr[] = {"Send","RDMA_Write","RDMA_Read","Atomic"};
-static const char *portStates[] = {"Nop","Down","Init","Armed","","Active Defer"};
-static const char *qp_state[] = {"OFF","ON"};
+
+static const char *connStr[]        = {"RC","UC","UD","RawEth","XRC","DC"};
+static const char *testsStr[]       = {"Send","RDMA_Write","RDMA_Read","Atomic"};
+static const char *portStates[]     = {"Nop","Down","Init","Armed","","Active Defer"};
+static const char *qp_state[]       = {"OFF","ON"};
 static const char *exchange_state[] = {"Ethernet","rdma_cm"};
 static const char *atomicTypesStr[] = {"CMP_AND_SWAP","FETCH_AND_ADD"};
 
@@ -34,19 +31,6 @@ static const char *atomicTypesStr[] = {"CMP_AND_SWAP","FETCH_AND_ADD"};
  *
  * Return Value : SUCCESS, FAILURE.
  ******************************************************************************/
-#if defined(__FreeBSD__)
-#define strdupa(_s)                                             \
-({                                                              \
-        char *_d;                                               \
-        int _len;                                               \
-                                                                \
-        _len = strlen(_s) + 1;                                  \
-        _d = alloca(_len);                                      \
-        if (_d)                                                 \
-                memcpy(_d, _s, _len);                           \
-        _d;                                                     \
-})
-#endif
 
 static int parse_mac_from_str(char *mac, u_int8_t *addr)
 {
@@ -86,6 +70,7 @@ static int parse_mac_from_str(char *mac, u_int8_t *addr)
 	}
 	return SUCCESS;
 }
+
 static int parse_ethertype_from_str(char *ether_str, uint16_t *ethertype_val)
 {
 	if (strlen(ether_str) != ETHERTYPE_LEN) {
@@ -130,13 +115,13 @@ int check_if_valid_udp_port(int udp_port)
 {
 	return ON;
 }
+
 /******************************************************************************
   get cache line size from system
  ******************************************************************************/
 static int get_cache_line_size()
 {
 	int size = 0;
- #if !defined(__FreeBSD__)
 	size = sysconf(_SC_LEVEL1_DCACHE_LINESIZE);
 	if (size == 0) {
 		#if defined(__sparc__) && defined(__arch64__)
@@ -158,7 +143,6 @@ static int get_cache_line_size()
 			fclose(fp);
 		}
 	}
-#endif
 	if (size <= 0)
 		size = DEF_CACHE_LINE_SIZE;
 
@@ -672,7 +656,7 @@ static void init_perftest_params(struct perftest_parameters *user_param)
 	user_param->reply_every		= 1;
 	user_param->vlan_en             = OFF;
 	user_param->vlan_pcp		= 1;
-	user_param->print_eth_func 	= &print_ethernet_header;
+	/* user_param->print_eth_func 	= &print_ethernet_header; */
 
 	if (user_param->tst == LAT) {
 		user_param->r_flag->unsorted	= OFF;
@@ -981,11 +965,6 @@ static void force_dependecies(struct perftest_parameters *user_param)
 			exit(1);
 		}
 
-		if (user_param->use_rdma_cm == ON || user_param->work_rdma_cm == ON) {
-			fprintf(stderr," RDMA CM isn't supported for Raw Ethernet tests\n");
-			exit(1);
-		}
-
 		if (user_param->use_gid_user) {
 			fprintf(stderr," GID index isn't supported for Raw Ethernet tests\n");
 			exit(1);
@@ -1063,34 +1042,7 @@ static void force_dependecies(struct perftest_parameters *user_param)
 		exit(1);
 	}
 
-	if (user_param->work_rdma_cm) {
-
-		if (user_param->connection_type == UC) {
-			printf(RESULT_LINE);
-			printf(" UC is not supported in librdmacm\n");
-			exit(1);
-		}
-
-		if (user_param->use_mcg) {
-			printf(RESULT_LINE);
-			printf(" Perftest still doesn't support Multicast with rdma_cm\n");
-			exit(1);
-		}
-
-		if (user_param->dualport) {
-			printf(RESULT_LINE);
-			printf(" Perftest still doesn't support Dual Port with rdma_cm\n");
-			exit(1);
-		}
-
-		if (user_param->num_of_qps > 1) {
-			printf(RESULT_LINE);
-			fprintf(stdout," Perftest only supports 1 rmda_cm QP for now\n");
-			exit(1);
-		}
-		user_param->use_rdma_cm = ON;
-
-	} else if (user_param->tos != DEF_TOS && user_param->connection_type != RawEth) {
+	if (user_param->tos != DEF_TOS && user_param->connection_type != RawEth) {
 		fprintf(stdout," TOS only valid for rdma_cm based QP and RawEth QP \n");
 		exit(1);
 	}
@@ -1154,21 +1106,8 @@ static void force_dependecies(struct perftest_parameters *user_param)
 
 	/* XRC Part */
 	if (user_param->connection_type == XRC) {
-		if (user_param->work_rdma_cm == ON) {
-			printf(RESULT_LINE);
-			fprintf(stderr," XRC does not support RDMA_CM\n");
-			exit(1);
-		}
 		user_param->use_xrc = ON;
 		user_param->use_srq = ON;
-	}
-
-	if(user_param->connection_type == DC) {
-		if (user_param->work_rdma_cm == ON) {
-			printf(RESULT_LINE);
-			fprintf(stderr," DC does not support RDMA_CM\n");
-			exit(1);
-		}
 	}
 
 	#ifndef HAVE_RSS_EXP
@@ -1203,10 +1142,6 @@ static void force_dependecies(struct perftest_parameters *user_param)
 			exit(1);
 		}
 	} else if (user_param->rate_limit_type == HW_RATE_LIMIT) {
-		if (user_param->use_rdma_cm == ON || user_param->work_rdma_cm == ON) {
-			fprintf(stderr," HW rate limit isn't supported yet with rdma_cm scenarios\n");
-			exit(1);
-		}
 		double rate_limit_gbps = 0;
 		switch (user_param->rate_units) {
 			case MEGA_BYTE_PS:
@@ -2506,7 +2441,7 @@ int parser(struct perftest_parameters *user_param,char *argv[], int argc)
 		user_param->use_ooo = 1;
 	if(vlan_en) {
 		user_param->vlan_en = ON;
-		user_param->print_eth_func = &print_ethernet_vlan_header;
+		/* user_param->print_eth_func = &print_ethernet_vlan_header; */
 		vlan_en = 0;
 	}
 	if (optind == argc - 1) {
@@ -2746,25 +2681,7 @@ void ctx_print_test_info(struct perftest_parameters *user_param)
 		printf(" Outstand reads  : %d\n",user_param->out_reads);
 
 	printf(" rdma_cm QPs	 : %s\n",qp_state[user_param->work_rdma_cm]);
-
-	if (user_param->use_rdma_cm)
-		temp = 1;
-
 	printf(" Data ex. method : %s",exchange_state[temp]);
-
-	if (user_param->work_rdma_cm) {
-
-		if (user_param->tos != DEF_TOS) {
-			printf(" \tTOS    : %d",user_param->tos);
-		}
-
-		if (user_param->machine == SERVER) {
-			putchar('\n');
-			printf(RESULT_LINE);
-			printf(" Waiting for client rdma_cm QP to connect\n");
-			printf(" Please run the same command with the IB/RoCE interface IP");
-		}
-	}
 	putchar('\n');
 
 	printf(RESULT_LINE);

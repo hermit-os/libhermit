@@ -41,11 +41,9 @@
 
 #include <netinet/in.h>
 
-// #include <infiniband/verbs.h>
 #include <hermit/ibv.h>
 #include <hermit/verbs.h>
 
-// #include <rdma/rdma_cma.h>
 #include "perftest_resources.h"
 
 /* Macro for 64 bit variables to switch to/from net */
@@ -126,7 +124,7 @@ double bswap_double(double x);
 
 /* create_comm_struct
  *
- * Description : Creating the communication struct for Etherent or rdma_cm options.
+ * Description : Creating the communication struct for Etherent.
  *
  * Parameters :
  *	comm - An empty Communication struct.
@@ -158,9 +156,9 @@ int set_up_connection(struct pingpong_context *ctx,
  *
  * Description :
  *
- *  Connect the client the a well known server to a requested port.
+ *  Connect the client to a well known server to a requested port.
  *  It assumes the Server is waiting for request on the port.
- *  It uses Ethernet sockets or rdma_cm as mentioned in use_rdma_cm.
+ *  It uses Ethernet sockets.
  *
  * Parameters :
  *		comm - The communication struct with all the data.
@@ -168,19 +166,6 @@ int set_up_connection(struct pingpong_context *ctx,
  * Return Value : SUCCESS,FAILURE.
  */
 int establish_connection(struct perftest_comm *comm);
-
-/* rdma_client_connect .
- *
- * Description : Connects the client to a QP on the other machine with rdma_cm.
- *
- * Parameters :
- *		ctx - An empty resources struct to fill the resources created for this QP.
- *		user_param - Perftest parameters.
- *
- * Return Value : SUCCESS,FAILURE.
- */
-int rdma_client_connect(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param);
 
 /* retry_rdma_connect .
  *
@@ -196,18 +181,6 @@ int rdma_client_connect(struct pingpong_context *ctx,
 int retry_rdma_connect(struct pingpong_context *ctx,
 		struct perftest_parameters *user_param);
 
-/* rdma_server_connect .
- *
- * Description : Assinging a server to listen on a rdma_cm port and connect to it.
- *
- * Parameters :
- *		ctx - An empty resources struct to fill the resources created for this QP.
- *		user_param - Perftest parameters.
- *
- * Return Value : SUCCESS,FAILURE.
- */
-int rdma_server_connect(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param);
 /* ctx_hand_shake .
  *
  * Description :

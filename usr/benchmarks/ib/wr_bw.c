@@ -38,10 +38,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "perftest_parameters.h"
-#include "perftest_resources.h"
-#include "perftest_communication.h"
-
 
 int main(int argc, char *argv[])
 {
@@ -95,8 +91,11 @@ int main(int argc, char *argv[])
 		return FAILURE;
 	}
 
-	/* copy the relevant user parameters to the comm struct */
-	create_comm_struct(&user_comm,&user_param);
+	/* copy the relevant user parameters to the comm struct + creating rdma_cm resources. */
+	if (create_comm_struct(&user_comm,&user_param)) {
+		fprintf(stderr," Unable to create RDMA_CM resources\n");
+		return FAILURE;
+	}
 
 	if (user_param.output == FULL_VERBOSITY && user_param.machine == SERVER) {
 		printf("\n************************************\n");
@@ -128,10 +127,33 @@ int main(int argc, char *argv[])
 	/* Allocating arrays needed for the test. */
 	alloc_ctx(&ctx,&user_param);
 
-	/* create all the basic IB resources (data buffer, PD, MR, CQ and events channel) */
-	if (ctx_init(&ctx, &user_param)) {
-		fprintf(stderr, " Couldn't create IB resources\n");
-		return FAILURE;
+	/* Create (if necessary) the rdma_cm ids and channel. */
+	if (user_param.work_rdma_cm == ON) {
+
+		if (user_param.machine == CLIENT) {
+			if (retry_rdma_connect(&ctx,&user_param)) {
+				fprintf(stderr,"Unable to perform rdma_client function\n");
+				return FAILURE;
+			}
+
+		} else {
+			if (create_rdma_resources(&ctx,&user_param)) {
+				fprintf(stderr," Unable to create the rdma_resources\n");
+				return FAILURE;
+			}
+			if (rdma_server_connect(&ctx,&user_param)) {
+				fprintf(stderr,"Unable to perform rdma_client function\n");
+				return FAILURE;
+			}
+		}
+
+	} else {
+
+		/* create all the basic IB resources (data buffer, PD, MR, CQ and events channel) */
+		if (ctx_init(&ctx, &user_param)) {
+			fprintf(stderr, " Couldn't create IB resources\n");
+			return FAILURE;
+		}
 	}
 
 	/* Set up the Connection. */
@@ -376,3 +398,4 @@ int main(int argc, char *argv[])
 
 	return destroy_ctx(&ctx,&user_param);
 }
+

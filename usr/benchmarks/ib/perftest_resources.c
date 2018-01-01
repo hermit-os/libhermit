@@ -2,26 +2,22 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#if !defined(__FreeBSD__)
 #include <malloc.h>
-#endif
 #include <getopt.h>
 #include <limits.h>
 #include <errno.h>
 #include <signal.h>
 #include <string.h>
 #include <ctype.h>
-#include <sys/mman.h>
+/* #include <sys/mman.h> */
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <pthread.h>
-#if defined(__FreeBSD__)
-#include <sys/stat.h>
-#endif
 
 #include "perftest_resources.h"
-#include "raw_ethernet_resources.h"
-#include "config.h"
+#include "perftest_parameters.h"
+
+/* #include "config.h" */
 
 #ifdef HAVE_VERBS_EXP
 static enum ibv_exp_wr_opcode exp_opcode_verbs_array[] = {IBV_EXP_WR_SEND,IBV_EXP_WR_RDMA_WRITE,IBV_EXP_WR_RDMA_READ};
@@ -137,34 +133,33 @@ static int pp_free_gpu(struct pingpong_context *ctx)
 }
 #endif
 
-static int pp_init_mmap(struct pingpong_context *ctx, size_t size,
-			const char *fname, unsigned long offset)
-{
-	int fd = open(fname, O_RDWR);
-	if (fd < 0) {
-		printf("Unable to open '%s': %s\n", fname, strerror(errno));
-		return 1;
-	}
+/* static int pp_init_mmap(struct pingpong_context *ctx, size_t size, */
+			/* const char *fname, unsigned long offset) */
+/* { */
+	/* int fd = open(fname, O_RDWR); */
+	/* if (fd < 0) { */
+		/* printf("Unable to open '%s': %s\n", fname, strerror(errno)); */
+		/* return 1; */
+	/* } */
 
-	ctx->buf[0] = mmap(NULL, size, PROT_WRITE | PROT_READ, MAP_SHARED, fd,
-			offset);
-	close(fd);
+	/* ctx->buf[0] = mmap(NULL, size, PROT_WRITE | PROT_READ, MAP_SHARED, fd, offset); */
+	/* close(fd); */
 
-	if (ctx->buf[0] == MAP_FAILED) {
-		printf("Unable to mmap '%s': %s\n", fname, strerror(errno));
-		return 1;
-	}
+	/* if (ctx->buf[0] == MAP_FAILED) { */
+		/* printf("Unable to mmap '%s': %s\n", fname, strerror(errno)); */
+		/* return 1; */
+	/* } */
 
-	printf("allocated mmap buffer of size %zd at %p\n", size, ctx->buf[0]);
+	/* printf("allocated mmap buffer of size %zd at %p\n", size, ctx->buf[0]); */
 
-	return 0;
-}
+	/* return 0; */
+/* } */
 
-static int pp_free_mmap(struct pingpong_context *ctx)
-{
-	munmap(ctx->buf[0], ctx->buff_size);
-	return 0;
-}
+/* static int pp_free_mmap(struct pingpong_context *ctx) */
+/* { */
+	/* munmap(ctx->buf[0], ctx->buff_size); */
+	/* return 0; */
+/* } */
 
 #ifdef HAVE_VERBS_EXP
 static void get_verbs_pointers(struct pingpong_context *ctx)
@@ -530,65 +525,25 @@ static struct ibv_qp *ctx_rss_eth_qp_create(struct pingpong_context *ctx,struct 
 /******************************************************************************
  *
  ******************************************************************************/
-int check_add_port(char **service,int port,
-		const char *servername,
-		struct addrinfo *hints,
-		struct addrinfo **res)
-{
-	int number;
-
-	if (asprintf(service,"%d", port) < 0) {
-		return FAILURE;
-	}
-
-	number = getaddrinfo(servername,*service,hints,res);
-
-	if (number < 0) {
-		fprintf(stderr, "%s for %s:%d\n", gai_strerror(number), servername, port);
-		return FAILURE;
-	}
-
-	return SUCCESS;
-}
-
-/******************************************************************************
- *
- ******************************************************************************/
-/* int create_rdma_resources(struct pingpong_context *ctx, */
-		/* struct perftest_parameters *user_param) */
+/* int check_add_port(char **service,int port, */
+		/* const char *servername, */
+		/* struct addrinfo *hints, */
+		/* struct addrinfo **res) */
 /* { */
-	/* int is_udp_ps = user_param->connection_type == UD || user_param->connection_type == RawEth; */
-	/* enum rdma_port_space port_space = (is_udp_ps) ? RDMA_PS_UDP : RDMA_PS_TCP; */
-	/* struct rdma_cm_id **cm_id = (user_param->machine == CLIENT) ? &ctx->cm_id : &ctx->cm_id_control; */
+	/* int number; */
 
-	/* ctx->cm_channel = rdma_create_event_channel(); */
-	/* if (ctx->cm_channel == NULL) { */
-		/* fprintf(stderr, " rdma_create_event_channel failed\n"); */
+	/* if (asprintf(service,"%d", port) < 0) { */
 		/* return FAILURE; */
 	/* } */
 
-	/* if (rdma_create_id(ctx->cm_channel,cm_id,NULL,port_space)) { */
-		/* fprintf(stderr,"rdma_create_id failed\n"); */
+	/* number = getaddrinfo(servername,*service,hints,res); */
+
+	/* if (number < 0) { */
+		/* fprintf(stderr, "%s for %s:%d\n", gai_strerror(number), servername, port); */
 		/* return FAILURE; */
 	/* } */
 
 	/* return SUCCESS; */
-/* } */
-
-/******************************************************************************
- *
- ******************************************************************************/
-/* int destroy_rdma_resources(struct pingpong_context *ctx, */
-		/* struct perftest_parameters *user_param) */
-/* { */
-	/* int ret; */
-	/* if (user_param->machine == CLIENT) { */
-		/* ret = rdma_destroy_id(ctx->cm_id); */
-	/* } else { */
-		/* ret = rdma_destroy_id(ctx->cm_id_control); */
-	/* } */
-	/* rdma_destroy_event_channel(ctx->cm_channel); */
-	/* return ret; */
 /* } */
 
 /******************************************************************************
@@ -737,9 +692,6 @@ int destroy_ctx(struct pingpong_context *ctx,
 
 	dereg_counter = (user_param->mr_per_qp) ? user_param->num_of_qps : 1;
 
-	if (user_param->work_rdma_cm == ON)
-		rdma_disconnect(ctx->cm_id);
-
 	/* in dc with bidirectional,
 	 * there are send qps and recv qps. the actual number of send/recv qps
 	 * is num_of_qps / 2.
@@ -837,16 +789,6 @@ int destroy_ctx(struct pingpong_context *ctx,
 		}
 	}
 
-	if (user_param->verb == SEND && user_param->work_rdma_cm == ON && ctx->send_rcredit) {
-		if (ibv_dereg_mr(ctx->credit_mr)) {
-			fprintf(stderr, "Failed to deregister send credit MR\n");
-			test_result = 1;
-		}
-		free(ctx->ctrl_buf);
-		free(ctx->ctrl_sge_list);
-		free(ctx->ctrl_wr);
-	}
-
 	if (ibv_dealloc_pd(ctx->pd)) {
 		fprintf(stderr, "Failed to deallocate PD - %s\n", strerror(errno));
 		test_result = 1;
@@ -858,12 +800,9 @@ int destroy_ctx(struct pingpong_context *ctx,
 			test_result = 1;
 		}
 	}
-	if (user_param->use_rdma_cm == OFF) {
-
-		if (ibv_close_device(ctx->context)) {
-			fprintf(stderr, "Failed to close device context\n");
-			test_result = 1;
-		}
+	if (ibv_close_device(ctx->context)) {
+		fprintf(stderr, "Failed to close device context\n");
+		test_result = 1;
 	}
 
 	#ifdef HAVE_CUDA
@@ -872,9 +811,10 @@ int destroy_ctx(struct pingpong_context *ctx,
 	}
 	else
 	#endif
-	if (user_param->mmap_file != NULL) {
-		pp_free_mmap(ctx);
-	} else if (ctx->is_contig_supported == FAILURE) {
+	/* if (user_param->mmap_file != NULL) { */
+		/* pp_free_mmap(ctx); */
+	/* } else if (ctx->is_contig_supported == FAILURE) { */
+	if (ctx->is_contig_supported == FAILURE) {
 		for (i = 0; i < dereg_counter; i++) {
 			if (user_param->use_hugepages) {
 				shmdt(ctx->buf[i]);
@@ -1174,50 +1114,42 @@ int create_single_mr(struct pingpong_context *ctx, struct perftest_parameters *u
 	}
 	#endif
 
-	if (user_param->mmap_file != NULL) {
-		#if defined(__FreeBSD__)
-		posix_memalign(ctx->buf, user_param->cycle_buffer, ctx->buff_size);
-		#else
-		ctx->buf = memalign(user_param->cycle_buffer, ctx->buff_size);
-		#endif
-		if (pp_init_mmap(ctx, ctx->buff_size, user_param->mmap_file,
-				 user_param->mmap_offset))
-		{
+	/* if (user_param->mmap_file != NULL) { */
+		/* ctx->buf = memalign(user_param->cycle_buffer, ctx->buff_size); */
+		/* if (pp_init_mmap(ctx, ctx->buff_size, user_param->mmap_file, */
+					/* user_param->mmap_offset)) */
+		/* { */
+			/* fprintf(stderr, "Couldn't allocate work buf.\n"); */
+			/* return FAILURE; */
+		/* } */
+	/* } else { */
+
+	/* Allocating buffer for data, in case driver not support contig pages. */
+	if (ctx->is_contig_supported == FAILURE) {
+		if (user_param->use_hugepages) {
+			if (alloc_hugepage_region(ctx) != SUCCESS){
+				fprintf(stderr, "Failed to allocate hugepage region.\n");
+				return FAILURE;
+			}
+			memset(ctx->buf[qp_index], 0, ctx->buff_size);
+		} else if  (ctx->is_contig_supported == FAILURE) {
+			ctx->buf[qp_index] = memalign(user_param->cycle_buffer, ctx->buff_size);
+		}
+		if (!ctx->buf[qp_index]) {
 			fprintf(stderr, "Couldn't allocate work buf.\n");
 			return FAILURE;
 		}
 
+		memset(ctx->buf[qp_index], 0, ctx->buff_size);
 	} else {
-		/* Allocating buffer for data, in case driver not support contig pages. */
-		if (ctx->is_contig_supported == FAILURE) {
-			#if defined(__FreeBSD__)
-			posix_memalign(ctx->buf[qp_index], user_param->cycle_buffer, ctx->buff_size);
-			#else
-			if (user_param->use_hugepages) {
-				if (alloc_hugepage_region(ctx) != SUCCESS){
-					fprintf(stderr, "Failed to allocate hugepage region.\n");
-					return FAILURE;
-				}
-				memset(ctx->buf[qp_index], 0, ctx->buff_size);
-			} else if  (ctx->is_contig_supported == FAILURE) {
-				ctx->buf[qp_index] = memalign(user_param->cycle_buffer, ctx->buff_size);
-			}
-			#endif
-			if (!ctx->buf[qp_index]) {
-				fprintf(stderr, "Couldn't allocate work buf.\n");
-				return FAILURE;
-			}
-
-			memset(ctx->buf[qp_index], 0, ctx->buff_size);
-		} else {
-			ctx->buf[qp_index] = NULL;
-			#ifdef HAVE_VERBS_EXP
-			exp_flags |= IBV_EXP_ACCESS_ALLOCATE_MR;
-			#else
-			flags |= (1 << 5);
-			#endif
-		}
+		ctx->buf[qp_index] = NULL;
+		#ifdef HAVE_VERBS_EXP
+		exp_flags |= IBV_EXP_ACCESS_ALLOCATE_MR;
+		#else
+		flags |= (1 << 5);
+		#endif
 	}
+	/* } */
 
 	if (user_param->verb == WRITE) {
 		flags |= IBV_ACCESS_REMOTE_WRITE;
@@ -1319,6 +1251,7 @@ int create_mr(struct pingpong_context *ctx, struct perftest_parameters *user_par
 #define HUGEPAGE_ALIGN  (2*1024*1024)
 #define SHMAT_ADDR (void *)(0x0UL)
 #define SHMAT_FLAGS (0)
+#define SHM_HUGETLB (2048) // !
 
 int alloc_hugepage_region (struct pingpong_context *ctx)
 {
@@ -1328,7 +1261,7 @@ int alloc_hugepage_region (struct pingpong_context *ctx)
 
     /* create hugepage shared region */
     ctx->huge_shmid = shmget(IPC_PRIVATE, buf_size,
-                        SHM_HUGETLB | IPC_CREAT | SHM_R | SHM_W);
+                        SHM_HUGETLB | IPC_CREAT /* | IPC_R | IPC_W */); // !
     if (ctx->huge_shmid < 0) {
         fprintf(stderr, "Failed to allocate hugepages. Please configure hugepages\n");
         return FAILURE;
@@ -1561,23 +1494,20 @@ int ctx_init(struct pingpong_context *ctx, struct perftest_parameters *user_para
 			fprintf(stderr, "Failed to create QP.\n");
 			return FAILURE;
 		}
-
-		if (user_param->work_rdma_cm == OFF) {
-			modify_qp_to_init(ctx, user_param, i, num_of_qps);
-			#ifdef HAVE_ACCL_VERBS
-			if (user_param->verb_type == ACCL_INTF) {
-				memset(&intf_params, 0, sizeof(intf_params));
-				intf_params.intf_scope = IBV_EXP_INTF_GLOBAL;
-				intf_params.intf = IBV_EXP_INTF_QP_BURST;
-				intf_params.obj = ctx->qp[i];
-				ctx->qp_burst_family[i] = ibv_exp_query_intf(ctx->context, &intf_params, &intf_status);
-				if (!ctx->qp_burst_family[i]) {
-					fprintf(stderr, "Couldn't get QP burst family.\n");
-					return FAILURE;
-				}
+		modify_qp_to_init(ctx, user_param, i, num_of_qps);
+		#ifdef HAVE_ACCL_VERBS
+		if (user_param->verb_type == ACCL_INTF) {
+			memset(&intf_params, 0, sizeof(intf_params));
+			intf_params.intf_scope = IBV_EXP_INTF_GLOBAL;
+			intf_params.intf = IBV_EXP_INTF_QP_BURST;
+			intf_params.obj = ctx->qp[i];
+			ctx->qp_burst_family[i] = ibv_exp_query_intf(ctx->context, &intf_params, &intf_status);
+			if (!ctx->qp_burst_family[i]) {
+				fprintf(stderr, "Couldn't get QP burst family.\n");
+				return FAILURE;
 			}
-			#endif
 		}
+		#endif
 	}
 
 	return SUCCESS;
@@ -1871,16 +1801,6 @@ struct ibv_qp* ctx_qp_create(struct pingpong_context *ctx,
 			  return NULL;
 	}
 
-	/* if (user_param->work_rdma_cm) { */
-		/* if (rdma_create_qp(ctx->cm_id,ctx->pd,&attr)) { */
-			/* fprintf(stderr, " Couldn't create rdma QP - %s\n",strerror(errno)); */
-			/* return NULL; */
-		/* } */
-		/* qp = ctx->cm_id->qp; */
-
-	/* } else { */
-		/* qp = ibv_create_qp(ctx->pd,&attr); */
-	/* } */
 	qp = ibv_create_qp(ctx->pd,&attr);
 	return qp;
 }
@@ -2333,7 +2253,7 @@ static int ctx_modify_qp_to_rts(struct ibv_qp *qp,
 		flags |= IBV_EXP_QP_RATE_LIMIT;
 		return ibv_exp_modify_qp(qp, (struct ibv_exp_qp_attr*)_attr, flags);
 	}
-	#elif HAVE_PACKET_PACING
+	#elif defined(HAVE_PACKET_PACING)
 	if (user_param->rate_limit_type == PP_RATE_LIMIT) {
 		attr->rate_limit = user_param->rate_limit;
 		flags |= IBV_QP_RATE_LIMIT;
@@ -2628,15 +2548,8 @@ void ctx_set_send_exp_wqes(struct pingpong_context *ctx,
 				if (user_param->connection_type == UD) {
 
 					ctx->exp_wr[i*user_param->post_list + j].wr.ud.ah = ctx->ah[i];
-					if (user_param->work_rdma_cm) {
-
-						ctx->exp_wr[i*user_param->post_list + j].wr.ud.remote_qkey = user_param->rem_ud_qkey;
-						ctx->exp_wr[i*user_param->post_list + j].wr.ud.remote_qpn  = user_param->rem_ud_qpn;
-
-					} else {
-						ctx->exp_wr[i*user_param->post_list + j].wr.ud.remote_qkey = DEF_QKEY;
-						ctx->exp_wr[i*user_param->post_list + j].wr.ud.remote_qpn  = rem_dest[xrc_offset + i].qpn;
-					}
+					ctx->exp_wr[i*user_param->post_list + j].wr.ud.remote_qkey = DEF_QKEY;
+					ctx->exp_wr[i*user_param->post_list + j].wr.ud.remote_qpn  = rem_dest[xrc_offset + i].qpn;
 
 				#ifdef HAVE_DC
 				} else if (user_param->connection_type == DC) {
@@ -2787,15 +2700,8 @@ void ctx_set_send_reg_wqes(struct pingpong_context *ctx,
 				if (user_param->connection_type == UD) {
 
 					ctx->wr[i*user_param->post_list + j].wr.ud.ah = ctx->ah[i];
-					if (user_param->work_rdma_cm) {
-
-						ctx->wr[i*user_param->post_list + j].wr.ud.remote_qkey = user_param->rem_ud_qkey;
-						ctx->wr[i*user_param->post_list + j].wr.ud.remote_qpn  = user_param->rem_ud_qpn;
-
-					} else {
-						ctx->wr[i*user_param->post_list + j].wr.ud.remote_qkey = DEF_QKEY;
-						ctx->wr[i*user_param->post_list + j].wr.ud.remote_qpn  = rem_dest[xrc_offset + i].qpn;
-					}
+					ctx->wr[i*user_param->post_list + j].wr.ud.remote_qkey = DEF_QKEY;
+					ctx->wr[i*user_param->post_list + j].wr.ud.remote_qpn  = rem_dest[xrc_offset + i].qpn;
 				}
 			}
 
@@ -4992,7 +4898,7 @@ int check_packet_pacing_support(struct pingpong_context *ctx)
 	return MASK_IS_SET(IBV_EXP_DEVICE_ATTR_PACKET_PACING_CAPS, attr.comp_mask) ?
 		SUCCESS : FAILURE;
 }
-#elif HAVE_PACKET_PACING
+#elif defined(HAVE_PACKET_PACING)
 int check_packet_pacing_support(struct pingpong_context *ctx)
 {
 	struct ibv_device_attr_ex attr;

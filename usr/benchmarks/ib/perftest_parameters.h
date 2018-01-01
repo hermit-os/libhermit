@@ -54,13 +54,16 @@
 #ifndef PERFTEST_PARAMETERS_H
 #define PERFTEST_PARAMETERS_H
 
-// #include <infiniband/verbs.h>
 #include <hermit/ibv.h>
 #include <hermit/verbs.h>
 
 #include <unistd.h>
-
 #include <malloc.h>
+#include <stddef.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+
+// #include <endian.h>
 
 #include "get_clock.h"
 
@@ -68,13 +71,54 @@
 // #include <config.h>
 // #endif
 
+/* ------------------------------------------------------------------- */
+/* Config TODO */
+
+// #define HAVE_VERBS_EXP
+
+// #define HAVE_RAW_ETH_EXP
+// #define HAVE_RAW_ETH_REG
+// #define HAVE_XRCD
+
+#define HAVE_ENDIAN
+// #define HAVE_SCIF
+// #define HAVE_MASKED_ATOMICS
+// #define HAVE_RSS_EXP
+// #define HAVE_DC
+// #define HAVE_ACCL_VERBS
+
+#define HAVE_IPV6
+#define HAVE_IPV4_EXT
+
+#define HAVE_SNIFFER
+// #define HAVE_SNIFFER_EXP
+
+#define HAVE_EX
+
+#define HAVE_EX_ODP
+// #define HAVE_EXP_ODP
+
+// #define HAVE_CUDA
+// #define HAVE_SCATTER_FCS
+// #define HAVE_GID_ATTR
+
+// #define HAVE_PACKET_PACING_EXP
+#define HAVE_PACKET_PACING
+
+// #define HAVE_OOO_ATTR
+// #define HAVE_EXP_OOO_ATTR
+
+#define VERSION "1"
+
+/* -------------------------------------------------------------------
+
 /* Connection types available. */
 #define RC  (0)
-// #define UC  (1)
+#define UC  (1)
 #define UD  (2)
-// #define RawEth  (3)
-// #define XRC (4)
-// #define DC  (5)
+#define RawEth  (3)
+#define XRC (4)
+#define DC  (5)
 
 /* Genral control definitions */
 #define OFF	     (0)
@@ -158,12 +202,12 @@
 #define MAX_EQ_NUM    (2048)
 
 /* Raw etherent defines */
-// #define RAWETH_MIN_MSG_SIZE	(64)
-// #define MIN_MTU_RAW_ETERNET	(64)
-// #define MAX_MTU_RAW_ETERNET	(9600)
-// #define MIN_FS_PORT		(5000)
-// #define MAX_FS_PORT		(65536)
-// #define VLAN_PCP_VARIOUS        (8)
+#define RAWETH_MIN_MSG_SIZE	(64)
+#define MIN_MTU_RAW_ETERNET	(64)
+#define MAX_MTU_RAW_ETERNET	(9600)
+#define MIN_FS_PORT		(5000)
+#define MAX_FS_PORT		(65536)
+#define VLAN_PCP_VARIOUS        (8)
 
 #define RESULT_LINE "---------------------------------------------------------------------------------------\n"
 
@@ -324,41 +368,43 @@ struct ETH_vlan_header {
 }__attribute__((packed));*/
 
 struct perftest_parameters {
-
 	int				port;
-	char				*ib_devname;
-	char				*servername;
-	uint8_t				ib_port;
-	uint8_t				ib_port2;
-	int				mtu;
-	enum ibv_mtu			curr_mtu;
-	uint64_t			size;
-	uint64_t			dct_key;
+	char			*ib_devname;
+	char			*servername;
+	uint8_t		ib_port;
+	uint8_t		ib_port2;
+
+	int				mtu; // minimum translation unit
+	enum      ibv_mtu			curr_mtu;
+	uint64_t  size; // BW: 65536, LAT: 2
+	uint64_t  dct_key;
 	int				iters;
-	uint64_t			iters_per_port[2];
-	uint64_t			*port_by_qp;
-	int				tx_depth;
-	uint8_t				qp_timeout;
-	uint8_t				sl;
+
+	uint64_t  iters_per_port[2];
+	uint64_t	*port_by_qp;
+
+	int				tx_depth; // <= iters
+	uint8_t		qp_timeout;
+	uint8_t		sl; // service lvl
 	int				gid_index;
 	int				gid_index2;
 	int				use_gid_user;
-	uint8_t				source_mac[6];
-	uint8_t				dest_mac[6];
+	uint8_t		source_mac[6];
+	uint8_t		dest_mac[6];
 	int				is_source_mac;
 	int				is_dest_mac;
-	uint8_t				server_ip6[16];
-	uint8_t				client_ip6[16];
-	uint8_t				local_ip6[16];
-	uint8_t				remote_ip6[16];
-	uint8_t				local_mac[6];
-	uint8_t				remote_mac[6];
-	uint32_t			client_ip;
-	uint32_t			server_ip;
+	uint8_t		server_ip6[16];
+	uint8_t		client_ip6[16];
+	uint8_t		local_ip6[16];
+	uint8_t		remote_ip6[16];
+	uint8_t		local_mac[6];
+	uint8_t		remote_mac[6];
+	uint32_t	client_ip;
+	uint32_t	server_ip;
 	int				is_server_ip;
 	int				is_client_ip;
-	uint32_t			local_ip;
-	uint32_t			remote_ip;
+	uint32_t	local_ip;
+	uint32_t	remote_ip;
 	int				server_port;
 	int				client_port;
 	int				tcp;
@@ -366,9 +412,9 @@ struct perftest_parameters {
 	int				is_client_port;
 	int				local_port;
 	int				remote_port;
-	int 				is_old_raw_eth_param;
-	int 				is_new_raw_eth_param;
-	uint16_t			ethertype;
+	int       is_old_raw_eth_param;
+	int       is_new_raw_eth_param;
+	uint16_t	ethertype;
 	int				is_ethertype;
 	int				cpu_freq_f;
 	int				connection_type;
@@ -376,86 +422,86 @@ struct perftest_parameters {
 	int				use_event;
 	int				eq_num;
 	int				use_eq_num;
-	int 				inline_size;
+	int       inline_size;
 	int				inline_recv_size;
 	int				out_reads;
 	int				rx_depth;
 	int				duplex;
 	int				noPeak;
 	int				cq_mod;
-	int 				spec;
-	int 				dualport;
-	int 				post_list;
+	int       spec;
+	int       dualport;
+	int       post_list;
 	int				duration;
-	int 				use_srq;
+	int       use_srq;
 	int				use_xrc;
 	int				use_rss;
 	int				srq_exists;
 	int				tos;
 	int				margin;
-	int 				is_bw_limit_passed;
-	int 				is_msgrate_limit_passed;
-	int 				is_limit_bw;
-	int 				is_limit_msgrate;
-	float				limit_bw;
-	float				limit_msgrate;
-	uint32_t			rem_ud_qpn;
-	uint32_t			rem_ud_qkey;
-	int8_t				link_type;
-	int8_t				link_type2;
-	MachineType			machine;
-	PrintDataSide			side;
-	VerbType			verb;
-	TestType			tst;
-	AtomicType			atomicType;
-	TestMethod			test_type;
-	DurationStates			state;
-	int				sockfd;
-	char				version[MAX_VERSION];
-	char				rem_version[MAX_VERSION];
-	cycles_t			*tposted;
-	cycles_t			*tcompleted;
+	int       is_bw_limit_passed;
+	int       is_msgrate_limit_passed;
+	int       is_limit_bw;
+	int       is_limit_msgrate;
+	float			limit_bw;
+	float			limit_msgrate;
+	uint32_t	rem_ud_qpn;
+	uint32_t	rem_ud_qkey;
+	int8_t		link_type;
+	int8_t		link_type2;
+	MachineType    machine;
+	PrintDataSide  side;
+	VerbType       verb;
+	TestType       tst;
+	AtomicType     atomicType;
+	TestMethod     test_type;
+	DurationStates state;
+	int            sockfd;
+	char           version[MAX_VERSION];
+	char           rem_version[MAX_VERSION];
+	cycles_t       *tposted;
+	cycles_t       *tcompleted;
 	int				use_mcg;
-	int 				use_rdma_cm;
+	int      use_rdma_cm;
 	int				is_reversed;
 	int				work_rdma_cm;
 	char				*user_mgid;
 	int				buff_size;
-	int             		pkey_index;
+	int      pkey_index;
 	int				raw_qos;
 	int				use_cuda;
 	char				*mmap_file;
 	unsigned long			mmap_offset;
 	/* New test params format pilot. will be used in all flags soon,. */
-	enum ctx_test_method 		test_method;
-	enum ibv_transport_type 	transport_type;
-	enum ctx_report_fmt		report_fmt;
-	struct report_options  		*r_flag	;
-	int 				mac_fwd;
-	int report_both; /* in bidirectional tests, report tx and rx separately */
+	enum     ctx_test_method 		test_method;
+	enum     ibv_transport_type 	transport_type;
+	enum     ctx_report_fmt		report_fmt;
+	struct   report_options  		*r_flag	;
+	int      mac_fwd;
+	int      report_both; /* in bidirectional tests, report tx and rx separately */
 	/* results limits */
-	float 				min_bw_limit;
-	float 				min_msgRate_limit;
+	float    min_bw_limit;
+	float    min_msgRate_limit;
 	/* Rate Limiter */
 	char				*rate_limit_str;
-	double 				rate_limit;
+	double   rate_limit;
 	int				valid_hw_rate_limit;
-	int 				burst_size;
-	enum 				rate_limiter_units rate_units;
-	enum 				rate_limiter_types rate_limit_type;
+	int      burst_size;
+	enum     rate_limiter_units rate_units;
+	enum     rate_limiter_types rate_limit_type;
 	int				is_rate_limit_type;
-	enum verbosity_level 		output;
-	int 				cpu_util;
-	struct cpu_util_data 		cpu_util_data;
-	int 				latency_gap;
-	int 				flow_label;
-	int 				retry_count;
-	int 				dont_xchg_versions;
-	int 				use_exp;
-	int 				ipv6;
-	int 				raw_ipv6;
-	int 				report_per_port;
-	int 				use_odp;
+	enum     verbosity_level 		output;
+	int      cpu_util;
+	struct   cpu_util_data 		cpu_util_data;
+	int      latency_gap;
+	int      flow_label;
+	int      retry_count;
+	int      dont_xchg_versions;
+	int      use_exp;
+	int      ipv6;
+	int      raw_ipv6;
+	int      report_per_port;
+	int      use_odp;
 	int				use_hugepages;
 	int				use_promiscuous;
 	int				use_sniffer;
@@ -464,7 +510,7 @@ struct perftest_parameters {
 	int				masked_atomics;
 	int				cycle_buffer;
 	int				cache_line_size;
-	enum verbs_intf			verb_type;
+	enum     verbs_intf			verb_type;
 	int				is_exp_cq;
 	int				is_exp_qp;
 	int				use_res_domain;
@@ -478,10 +524,9 @@ struct perftest_parameters {
 	uint32_t			reply_every;
 	int				perform_warm_up;
 	int				use_ooo;
-	int                             vlan_en;
-	uint32_t			vlan_pcp;
-	void 				(*print_eth_func)(void*);
-
+	int      vlan_en;
+	uint32_t vlan_pcp;
+	// void     (*print_eth_func)(void*);
 };
 
 struct report_options {
