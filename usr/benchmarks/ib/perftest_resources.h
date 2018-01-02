@@ -58,7 +58,7 @@
 #include <unistd.h>
 // #include <byteswap.h>
 #include <math.h>
-// #include <netinet/in.h>
+#include <netinet/in.h>
 #include <sys/time.h>
 #include <sys/types.h>
 // #include <sys/socket.h>
@@ -469,7 +469,7 @@ int run_iter_bw(struct pingpong_context *ctx,struct perftest_parameters *user_pa
  *	user_param  - user_parameters struct for this test.
  *
  */
-int run_iter_bw_infinitely(struct pingpong_context *ctx,struct perftest_parameters *user_param);
+// int run_iter_bw_infinitely(struct pingpong_context *ctx,struct perftest_parameters *user_param);
 
 /* run_iter_bw_infinitely_server
  *

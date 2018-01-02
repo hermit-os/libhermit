@@ -21,7 +21,7 @@
 
 typedef uint16_t in_port_t;
 
-int inet_pton(int af, const char *src, void *dst);
+// int inet_pton(int af, const char *src, void *dst);
 
 /** 255.255.255.255 */
 #define IPADDR_NONE         ((uint32_t)0xffffffffUL)

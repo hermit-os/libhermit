@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "perftest_parameters.h"
 #include "perftest_resources.h"
@@ -318,14 +319,14 @@ int main(int argc, char *argv[])
 			printf((user_param.cpu_util_data.enable ? RESULT_EXT_CPU_UTIL : RESULT_EXT));
 			print_full_bw_report(&user_param, &rem_bw_rep, NULL);
 		}
-	} else if (user_param.test_method == RUN_INFINITELY) {
+	/* } else if (user_param.test_method == RUN_INFINITELY) { */
 
-		ctx_set_send_wqes(&ctx,&user_param,rem_dest);
+		/* ctx_set_send_wqes(&ctx,&user_param,rem_dest); */
 
-		if(run_iter_bw_infinitely(&ctx,&user_param)) {
-			fprintf(stderr," Error occurred while running infinitely! aborting ...\n");
-			return FAILURE;
-		}
+		/* if(run_iter_bw_infinitely(&ctx,&user_param)) { */
+			/* fprintf(stderr," Error occurred while running infinitely! aborting ...\n"); */
+			/* return FAILURE; */
+		/* } */
 	}
 
 	if (user_param.output == FULL_VERBOSITY) {
