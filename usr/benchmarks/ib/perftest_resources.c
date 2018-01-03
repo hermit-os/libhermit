@@ -2907,9 +2907,7 @@ int perform_warm_up(struct pingpong_context *ctx,struct perftest_parameters *use
 	ne = ibv_poll_cq(ctx->send_cq,user_param->tx_depth,wc_for_cleaning);
 
 	for (index=0 ; index < num_of_qps ; index++) {
-
 		for (warmindex = 0 ;warmindex < warmupsession ;warmindex += user_param->post_list) {
-
 			#ifdef HAVE_VERBS_EXP
 			if (user_param->use_exp == 1)
 				err = (ctx->exp_post_send_func_pointer)(ctx->qp[index],
@@ -2928,22 +2926,17 @@ int perform_warm_up(struct pingpong_context *ctx,struct perftest_parameters *use
 		}
 
 		do {
-
 			ne = ibv_poll_cq(ctx->send_cq,1,&wc);
 			if (ne > 0) {
-
 				if (wc.status != IBV_WC_SUCCESS) {
 					return_value = FAILURE;
 					goto cleaning;
 				}
-
 				warmindex -= user_param->post_list;
-
 			} else if (ne < 0) {
 				return_value = FAILURE;
 				goto cleaning;
 			}
-
 		} while (warmindex);
 	}
 
@@ -4762,6 +4755,7 @@ cleaning:
 	free(wc);
 	return return_value;
 }
+
 /******************************************************************************
  *
  ******************************************************************************/

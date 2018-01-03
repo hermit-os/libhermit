@@ -13,10 +13,10 @@
 #define MAC_ARR_LEN (6)
 #define HEX_BASE (16)
 
-static const char *connStr[]        = {"RC","UC","UD","RawEth","XRC","DC"};
-static const char *testsStr[]       = {"Send","RDMA_Write","RDMA_Read","Atomic"};
-static const char *portStates[]     = {"Nop","Down","Init","Armed","","Active Defer"};
-static const char *qp_state[]       = {"OFF","ON"};
+static const char *connStr[] = {"RC","UC","UD","RawEth","XRC","DC"};
+static const char *testsStr[] = {"Send","RDMA_Write","RDMA_Read","Atomic"};
+static const char *portStates[] = {"Nop","Down","Init","Armed","","Active Defer"};
+static const char *qp_state[] = {"OFF","ON"};
 static const char *exchange_state[] = {"Ethernet","rdma_cm"};
 static const char *atomicTypesStr[] = {"CMP_AND_SWAP","FETCH_AND_ADD"};
 
@@ -25,9 +25,9 @@ static const char *atomicTypesStr[] = {"CMP_AND_SWAP","FETCH_AND_ADD"};
  *
  * Description : parse string by format of"XX:XX:XX:XX:XX:XX" to uint8_t array in size 6 for MAC adderes
  *
- *  Parameters :
- *		mac - char*.
- *		*addr - pointer to output array
+ * Parameters :
+ * mac - char*.
+ * *addr - pointer to output array
  *
  * Return Value : SUCCESS, FAILURE.
  ******************************************************************************/
@@ -43,7 +43,7 @@ static int parse_mac_from_str(char *mac, u_int8_t *addr)
 		return FAILURE;
 	}
 	if (addr == NULL) {
-		fprintf(stderr, "invalid  output addr array\n");
+		fprintf(stderr, "invalid output addr array\n");
 		return FAILURE;
 	}
 
@@ -90,9 +90,9 @@ static int parse_ethertype_from_str(char *ether_str, uint16_t *ethertype_val)
  starting at CP to the binary network format and store result for
  interface type AF in buffer starting at BUF.
  *
- *  Parameters :
- *		*ip - char* ip string.
- *		*addr - pointer to output array
+ * Parameters :
+ * *ip - char* ip string.
+ * *addr - pointer to output array
  *
  * Return Value : SUCCESS, FAILURE.
  *
@@ -148,6 +148,7 @@ static int get_cache_line_size()
 
 	return size;
 }
+
 /******************************************************************************
  *
  ******************************************************************************/
@@ -156,336 +157,336 @@ static void usage(const char *argv0, VerbType verb, TestType tst, int connection
 	printf("Usage:\n");
 
 	if (tst != FS_RATE) {
-		printf("  %s            start a server and wait for connection\n", argv0);
-		printf("  %s <host>     connect to server at <host>\n", argv0);
+		printf(" %s start a server and wait for connection\n", argv0);
+		printf(" %s <host> connect to server at <host>\n", argv0);
 	} else
-		printf("  %s             run a server to measure FS rate \n", argv0);
+		printf(" %s run a server to measure FS rate \n", argv0);
 
 	printf("\n");
 	printf("Options:\n");
 
 	if (verb != ATOMIC && connection_type != RawEth) {
-		printf("  -a, --all ");
+		printf(" -a, --all ");
 		printf(" Run sizes from 2 till 2^23\n");
 	}
 
 	if (verb == ATOMIC) {
-		printf("  -A, --atomic_type=<type> ");
+		printf(" -A, --atomic_type=<type> ");
 		printf(" type of atomic operation from {CMP_AND_SWAP,FETCH_AND_ADD} (default FETCH_AND_ADD)\n");
 	}
 
 	if (tst == BW) {
-		printf("  -b, --bidirectional ");
+		printf(" -b, --bidirectional ");
 		printf(" Measure bidirectional bandwidth (default unidirectional)\n");
 	}
 
 	if (connection_type != RawEth) {
 		if (verb == SEND) {
-			printf("  -c, --connection=<RC/XRC/UC/UD/DC> ");
+			printf(" -c, --connection=<RC/XRC/UC/UD/DC> ");
 			printf(" Connection type RC/XRC/UC/UD/DC (default RC)\n");
-		} else 	if (verb == WRITE) {
-			printf("  -c, --connection=<RC/XRC/UC/DC> ");
+		} else if (verb == WRITE) {
+			printf(" -c, --connection=<RC/XRC/UC/DC> ");
 			printf(" Connection type RC/XRC/UC/DC (default RC)\n");
 		} else if (verb == READ || verb == ATOMIC) {
-			printf("  -c, --connection=<RC/XRC/DC> ");
+			printf(" -c, --connection=<RC/XRC/DC> ");
 			printf(" Connection type RC/XRC/DC (default RC)\n");
 		}
 	}
 
 	if (tst == LAT) {
-		printf("  -C, --report-cycles ");
+		printf(" -C, --report-cycles ");
 		printf(" report times in cpu cycle units (default microseconds)\n");
 	}
 
-	printf("  -d, --ib-dev=<dev> ");
+	printf(" -d, --ib-dev=<dev> ");
 	printf(" Use IB device <dev> (default first device found)\n");
 
-	printf("  -D, --duration ");
+	printf(" -D, --duration ");
 	printf(" Run test for a customized period of seconds.\n");
 
 	if (verb != WRITE && connection_type != RawEth) {
-		printf("  -e, --events ");
+		printf(" -e, --events ");
 		printf(" Sleep on CQ events (default poll)\n");
 
-		printf("  -X, --vector=<completion vector> ");
+		printf(" -X, --vector=<completion vector> ");
 		printf(" Set <completion vector> used for events\n");
 	}
 
-	printf("  -f, --margin ");
+	printf(" -f, --margin ");
 	printf(" measure results within margins. (default=2sec)\n");
 
-	printf("  -F, --CPU-freq ");
+	printf(" -F, --CPU-freq ");
 	printf(" Do not show a warning even if cpufreq_ondemand module is loaded, and cpu-freq is not on max.\n");
 
 	if (verb == SEND && tst != FS_RATE) {
-		printf("  -g, --mcg ");
+		printf(" -g, --mcg ");
 		printf(" Send messages to multicast group with 1 QP attached to it.\n");
 	}
 
-	printf("  -h, --help ");
+	printf(" -h, --help ");
 	printf(" Show this help screen.\n");
 
 	if (tst == LAT || tst == LAT_BY_BW || tst == FS_RATE) {
-		printf("  -H, --report-histogram ");
+		printf(" -H, --report-histogram ");
 		printf(" Print out all results (default print summary only)\n");
 	}
 
-	printf("  -i, --ib-port=<port> ");
+	printf(" -i, --ib-port=<port> ");
 	printf(" Use port <port> of IB device (default %d)\n",DEF_IB_PORT);
 
 	if (verb != READ && verb != ATOMIC) {
-		printf("  -I, --inline_size=<size> ");
+		printf(" -I, --inline_size=<size> ");
 		printf(" Max size of message to be sent in inline\n");
 	}
 
 	if (tst == BW || tst == LAT_BY_BW) {
-		printf("  -l, --post_list=<list size>");
+		printf(" -l, --post_list=<list size>");
 		printf(" Post list of WQEs of <list size> size (instead of single post)\n");
 	}
 
 	if (tst != FS_RATE) {
 		if (connection_type == RawEth) {
-			printf("  -m, --mtu=<mtu> ");
+			printf(" -m, --mtu=<mtu> ");
 			printf(" MTU size : 64 - 9600 (default port mtu)\n");
 		} else {
-			printf("  -m, --mtu=<mtu> ");
+			printf(" -m, --mtu=<mtu> ");
 			printf(" MTU size : 256 - 4096 (default port mtu)\n");
 		}
 
 		if (verb == SEND) {
-			printf("  -M, --MGID=<multicast_gid> ");
+			printf(" -M, --MGID=<multicast_gid> ");
 			printf(" In multicast, uses <multicast_gid> as the group MGID.\n");
 		}
 	}
 
-	printf("  -n, --iters=<iters> ");
+	printf(" -n, --iters=<iters> ");
 	printf(" Number of exchanges (at least %d, default %d)\n", MIN_ITER, ((verb == WRITE) && (tst == BW)) ? DEF_ITERS_WB : DEF_ITERS);
 
 	if (tst == BW) {
-		printf("  -N, --noPeak");
+		printf(" -N, --noPeak");
 		printf(" Cancel peak-bw calculation (default with peak up to iters=20000)\n");
 	}
 
 	if (verb == READ || verb == ATOMIC) {
-		printf("  -o, --outs=<num> ");
+		printf(" -o, --outs=<num> ");
 		printf(" num of outstanding read/atom(default max of device)\n");
 	}
 
 	if (tst == BW && connection_type != RawEth) {
-		printf("  -O, --dualport ");
+		printf(" -O, --dualport ");
 		printf(" Run test in dual-port mode.\n");
 	}
 
-	printf("  -p, --port=<port> ");
+	printf(" -p, --port=<port> ");
 	printf(" Listen on/connect to port <port> (default %d)\n",DEF_PORT);
 
 	if (tst == BW ) {
-		printf("  -q, --qp=<num of qp's>  Num of qp's(default %d)\n", DEF_NUM_QPS);
+		printf(" -q, --qp=<num of qp's> Num of qp's(default %d)\n", DEF_NUM_QPS);
 	}
 
 	if (tst == BW) {
-		printf("  -Q, --cq-mod ");
+		printf(" -Q, --cq-mod ");
 		printf(" Generate Cqe only after <--cq-mod> completion\n");
 	}
 
 	if (verb == SEND && tst != FS_RATE) {
-		printf("  -r, --rx-depth=<dep> ");
+		printf(" -r, --rx-depth=<dep> ");
 		printf(" Rx queue size (default %d).",DEF_RX_SEND);
 		printf(" If using srq, rx-depth controls max-wr size of the srq\n");
 	}
 
 	if (connection_type != RawEth) {
-		printf("  -R, --rdma_cm ");
+		printf(" -R, --rdma_cm ");
 		printf(" Connect QPs with rdma_cm and run test on those QPs\n");
 	}
 
 	if (verb != ATOMIC) {
-		printf("  -s, --size=<size> ");
+		printf(" -s, --size=<size> ");
 		printf(" Size of message to exchange (default %d)\n", tst == LAT ? DEF_SIZE_LAT : DEF_SIZE_BW);
 	}
 
 	if (tst != FS_RATE) {
-		printf("  -S, --sl=<sl> ");
+		printf(" -S, --sl=<sl> ");
 		printf(" SL (default %d)\n",DEF_SL);
 
 		if (tst == BW || tst == LAT_BY_BW) {
-			printf("  -t, --tx-depth=<dep> ");
+			printf(" -t, --tx-depth=<dep> ");
 			printf(" Size of tx queue (default %d)\n", tst == LAT ? DEF_TX_LAT : DEF_TX_BW);
 		}
 
-		printf("  -T, --tos=<tos value> ");
+		printf(" -T, --tos=<tos value> ");
 		printf(" Set <tos_value> to RDMA-CM QPs. available only with -R flag. values 0-256 (default off)\n");
 	}
 
-	printf("  -u, --qp-timeout=<timeout> ");
+	printf(" -u, --qp-timeout=<timeout> ");
 	printf(" QP timeout, timeout value is 4 usec * 2 ^(timeout), default %d\n",DEF_QP_TIME);
 
 	if (tst == LAT || tst == LAT_BY_BW || tst == FS_RATE) {
-		printf("  -U, --report-unsorted ");
+		printf(" -U, --report-unsorted ");
 		printf(" (implies -H) print out unsorted results (default sorted)\n");
 	}
 
-	printf("  -V, --version ");
+	printf(" -V, --version ");
 	printf(" Display version number\n");
 
 	if (tst == BW) {
-		printf("  -w, --limit_bw=<value> ");
+		printf(" -w, --limit_bw=<value> ");
 		printf(" Set verifier limit for bandwidth\n");
 	}
 
 	if (connection_type != RawEth) {
-		printf("  -x, --gid-index=<index> ");
+		printf(" -x, --gid-index=<index> ");
 		printf(" Test uses GID with GID index (Default : IB - no gid . ETH - 0)\n");
 	}
 
 	if (tst == BW) {
-		printf("  -y, --limit_msgrate=<value> ");
+		printf(" -y, --limit_msgrate=<value> ");
 		printf(" Set verifier limit for Msg Rate\n");
 	}
 
 	if (connection_type != RawEth) {
-		printf("  -z, --com_rdma_cm ");
+		printf(" -z, --com_rdma_cm ");
 		printf(" Communicate with rdma_cm module to exchange data - use regular QPs\n");
 	}
 
 	/*Long flags*/
 	putchar('\n');
 
-	printf("      --cpu_util ");
+	printf(" --cpu_util ");
 	printf(" Show CPU Utilization in report, valid only in Duration mode \n");
 
 	if (tst != FS_RATE) {
-		printf("      --dlid ");
+		printf(" --dlid ");
 		printf(" Set a Destination LID instead of getting it from the other side.\n");
 	}
 
 	if (connection_type != RawEth) {
-		printf("      --dont_xchg_versions ");
+		printf(" --dont_xchg_versions ");
 		printf(" Do not exchange versions and MTU with other side \n");
 	}
 
 	if (tst != FS_RATE) {
-		printf("      --force-link=<value> ");
+		printf(" --force-link=<value> ");
 		printf(" Force the link(s) to a specific type: IB or Ethernet.\n");
 	}
 
 	if (verb != WRITE) {
-		printf("      --inline_recv=<size> ");
+		printf(" --inline_recv=<size> ");
 		printf(" Max size of message to be sent in inline receive\n");
 	}
 
 	if (connection_type != RawEth) {
-		printf("      --ipv6 ");
+		printf(" --ipv6 ");
 		printf(" Use IPv6 GID. Default is IPv4\n");
 	}
 
 	if (tst == LAT) {
-		printf("      --latency_gap=<delay_time> ");
+		printf(" --latency_gap=<delay_time> ");
 		printf(" delay time between each post send\n");
 	}
 
 	if (connection_type != RawEth) {
-		printf("      --mmap=file ");
+		printf(" --mmap=file ");
 		printf(" Use an mmap'd file as the buffer for testing P2P transfers.\n");
-		printf("      --mmap-offset=<offset> ");
+		printf(" --mmap-offset=<offset> ");
 		printf(" Use an mmap'd file as the buffer for testing P2P transfers.\n");
 	}
 
 	if (tst == BW) {
-		printf("      --mr_per_qp ");
+		printf(" --mr_per_qp ");
 		printf(" Create memory region for each qp.\n");
 	}
 
 	#if defined HAVE_EX_ODP || defined HAVE_EXP_ODP
-	printf("      --odp ");
+	printf(" --odp ");
 	printf(" Use On Demand Paging instead of Memory Registration.\n");
 	#endif
 
-	printf("      --output=<units>");
+	printf(" --output=<units>");
 	printf(" Set verbosity output level: bandwidth , message_rate, latency \n");
 	printf(" Latency measurement is Average calculation \n");
 
 	if (tst != FS_RATE) {
-		printf("      --perform_warm_up");
+		printf(" --perform_warm_up");
 		printf(" Perform some iterations before start measuring in order to warming-up memory cache, valid in Atomic, Read and Write BW tests\n");
 
-		printf("      --pkey_index=<pkey index> PKey index to use for QP\n");
+		printf(" --pkey_index=<pkey index> PKey index to use for QP\n");
 	}
 
 	if ( tst == BW ) {
-		printf("      --report-both ");
+		printf(" --report-both ");
 		printf(" Report RX & TX results separately on Bidirectinal BW tests\n");
 
-		printf("      --report_gbits ");
+		printf(" --report_gbits ");
 		printf(" Report Max/Average BW of test in Gbit/sec (instead of MB/sec)\n");
 
 		if (connection_type != RawEth) {
-			printf("      --report-per-port ");
+			printf(" --report-per-port ");
 			printf(" Report BW data on both ports when running Dualport and Duration mode\n");
 		}
 
-		printf("      --reversed ");
+		printf(" --reversed ");
 		printf(" Reverse traffic direction - Server send to client\n");
 
-		printf("      --run_infinitely ");
+		printf(" --run_infinitely ");
 		printf(" Run test forever, print results every <duration> seconds\n");
 	}
 
 	if (connection_type != RawEth) {
-		printf("      --retry_count=<value> ");
+		printf(" --retry_count=<value> ");
 		printf(" Set retry count value in rdma_cm mode\n");
 	}
 
 	if (tst != FS_RATE) {
-		printf("      --tclass=<value> ");
+		printf(" --tclass=<value> ");
 		printf(" Set the Traffic Class in GRH (if GRH is in use)\n");
 
 		#ifdef HAVE_CUDA
-		printf("      --use_cuda ");
+		printf(" --use_cuda ");
 		printf(" Use CUDA lib for GPU-Direct testing.\n");
 		#endif
 
 		#ifdef HAVE_VERBS_EXP
-		printf("      --use_exp ");
+		printf(" --use_exp ");
 		printf(" Use Experimental verbs in data path. Default is OFF.\n");
 		#endif
 
-		printf("      --use_hugepages ");
+		printf(" --use_hugepages ");
 		printf(" Use Hugepages instead of contig, memalign allocations.\n");
 
 
 		#ifdef HAVE_ACCL_VERBS
-		printf("      --use_res_domain ");
+		printf(" --use_res_domain ");
 		printf(" Use shared resource domain\n");
 
-		printf("      --verb_type=<option> ");
+		printf(" --verb_type=<option> ");
 		printf(" Set verb type: normal, accl. Default is normal.\n");
 		#endif
 	}
 
 	if (tst == BW || tst == LAT_BY_BW) {
-		printf("      --wait_destroy=<seconds> ");
+		printf(" --wait_destroy=<seconds> ");
 		printf(" Wait <seconds> before destroying allocated resources (QP/CQ/PD/MR..)\n");
 
 		printf("\n Rate Limiter:\n");
-		printf("      --burst_size=<size>");
+		printf(" --burst_size=<size>");
 		printf(" Set the amount of messages to send in a burst when using rate limiter\n");
 
-		printf("      --rate_limit=<rate>");
+		printf(" --rate_limit=<rate>");
 		printf(" Set the maximum rate of sent packages. default unit is [Gbps]. use --rate_units to change that.\n");
 
-		printf("      --rate_units=<units>");
+		printf(" --rate_units=<units>");
 		printf(" [Mgp] Set the units for rate limit to MBps (M), Gbps (g) or pps (p). default is Gbps (g).\n");
-		printf("      Note (1): pps not supported with HW limit.\n");
-		printf("      Note (2): When using PP rate_units is forced to Kbps.\n");
+		printf(" Note (1): pps not supported with HW limit.\n");
+		printf(" Note (2): When using PP rate_units is forced to Kbps.\n");
 
-		printf("      --rate_limit_type=<type>");
+		printf(" --rate_limit_type=<type>");
 		printf(" [HW/SW/PP] Limit the QP's by HW, PP or by SW. Disabled by default. When rate_limit Not is specified HW limit is Default.\n");
-		printf("      Note (1) in Latency under load test SW rate limit is forced\n");
+		printf(" Note (1) in Latency under load test SW rate limit is forced\n");
 
 	}
 	#if defined HAVE_OOO_ATTR || defined HAVE_EXP_OOO_ATTR
-	printf("      --use_ooo ");
+	printf(" --use_ooo ");
 	printf(" Use out of order data placement\n");
 	#endif
 	putchar('\n');
@@ -495,87 +496,87 @@ static void usage(const char *argv0, VerbType verb, TestType tst, int connection
  ******************************************************************************/
 void usage_raw_ethernet(TestType tst)
 {
-	printf("  Raw Ethernet options :\n");
-	printf("  -B, --source_mac ");
+	printf(" Raw Ethernet options :\n");
+	printf(" -B, --source_mac ");
 	printf(" source MAC address by this format XX:XX:XX:XX:XX:XX **MUST** be entered \n");
 
-	printf("  -E, --dest_mac ");
+	printf(" -E, --dest_mac ");
 	printf(" destination MAC address by this format XX:XX:XX:XX:XX:XX **MUST** be entered \n");
 
-	printf("  -G, --use_rss ");
+	printf(" -G, --use_rss ");
 	printf(" use RSS on server side. need to open 2^x qps (using -q flag. default is -q 2). open 2^x clients that transmit to this server\n");
 
-	printf("  -J, --dest_ip ");
+	printf(" -J, --dest_ip ");
 	#ifdef HAVE_IPV6
 	printf(" destination ip address by this format X.X.X.X for IPv4 or X:X:X:X:X:X for IPv6 (using to send packets with IP header)\n");
 	#else
 	printf(" destination ip address by this format X.X.X.X (using to send packets with IP header)\n");
 	#endif
 
-	printf("  -j, --source_ip ");
+	printf(" -j, --source_ip ");
 	#ifdef HAVE_IPV6
 	printf(" source ip address by this format X.X.X.X for IPv4 or X:X:X:X:X:X for IPv6 (using to send packets with IP header)\n");
 	#else
 	printf(" source ip address by this format X.X.X.X (using to send packets with IP header)\n");
 	#endif
 
-	printf("  -K, --dest_port ");
+	printf(" -K, --dest_port ");
 	printf(" destination port number (using to send packets with UDP header as default, or you can use --tcp flag to send TCP Header)\n");
 
-	printf("  -k, --source_port ");
+	printf(" -k, --source_port ");
 	printf(" source port number (using to send packets with UDP header as default, or you can use --tcp flag to send TCP Header)\n");
 
-	printf("  -Y, --ethertype ");
+	printf(" -Y, --ethertype ");
 	printf(" ethertype value in the ethernet frame by this format 0xXXXX\n");
 
-	printf("  -Z, --server ");
+	printf(" -Z, --server ");
 	printf(" choose server side for the current machine (--server/--client must be selected )\n");
 
-	printf("      --vlan_en ");
+	printf(" --vlan_en ");
 	printf(" insert vlan tag in ethernet header.\n");
 
-	printf("      --vlan_pcp ");
+	printf(" --vlan_pcp ");
 	printf(" specify vlan_pcp value for vlan tag, 0~7. 8 means different vlan_pcp for each packet\n");
 
 	if (tst != FS_RATE) {
-		printf("  -P, --client ");
+		printf(" -P, --client ");
 		printf(" choose client side for the current machine (--server/--client must be selected)\n");
 
-		printf("  -v, --mac_fwd ");
+		printf(" -v, --mac_fwd ");
 		printf(" run mac forwarding test \n");
 
 		#ifdef HAVE_SCATTER_FCS
-		printf("      --disable_fcs ");
+		printf(" --disable_fcs ");
 		printf(" Disable Scatter FCS feature. (Scatter FCS is enabled by default when using --use_exp flag). \n");
 		#endif
 
-		printf("      --flows");
+		printf(" --flows");
 		printf(" set number of TCP/UDP flows, starting from <src_port, dst_port>. \n");
 
-		printf("      --flows_burst");
+		printf(" --flows_burst");
 		printf(" set number of burst size per TCP/UDP flow. \n");
 
-		printf("      --promiscuous");
+		printf(" --promiscuous");
 		printf(" run promiscuous mode.\n");
 
-		printf("      --reply_every ");
+		printf(" --reply_every ");
 		printf(" in latency test, receiver pong after number of received pings\n");
 
 		#if defined HAVE_SNIFFER || defined HAVE_SNIFFER_EXP
-		printf("      --sniffer");
+		printf(" --sniffer");
 		printf(" run sniffer mode.\n");
 		#endif
 
-		printf("      --flow_label ");
+		printf(" --flow_label ");
 		printf(" IPv6 flow label\n");
 
 	}
 
-	printf("      --tcp ");
+	printf(" --tcp ");
 	printf(" send TCP Packets. must include IP and Ports information.\n");
 
 	#ifdef HAVE_IPV6
-	printf("      --raw_ipv6 ");
+	printf(" --raw_ipv6 ");
 	printf(" send IPv6 Packets.\n");
 	#endif
 
@@ -588,119 +589,119 @@ void usage_raw_ethernet(TestType tst)
  ******************************************************************************/
 static void init_perftest_params(struct perftest_parameters *user_param)
 {
-	user_param->port		= DEF_PORT;
-	user_param->ib_port		= DEF_IB_PORT;
-	user_param->ib_port2		= DEF_IB_PORT2;
-	user_param->link_type		= LINK_UNSPEC;
-	user_param->link_type2		= LINK_UNSPEC;
-	user_param->size		= (user_param->tst == BW ) ? DEF_SIZE_BW : DEF_SIZE_LAT;
-	user_param->tx_depth		= (user_param->tst == BW || user_param->tst == LAT_BY_BW ) ? DEF_TX_BW : DEF_TX_LAT;
-	user_param->qp_timeout		= DEF_QP_TIME;
-	user_param->test_method		= RUN_REGULAR;
-	user_param->cpu_freq_f		= OFF;
-	user_param->connection_type	= (user_param->connection_type == RawEth) ? RawEth : RC;
-	user_param->use_event		= OFF;
-	user_param->eq_num		= 0;
-	user_param->use_eq_num		= OFF;
-	user_param->num_of_qps		= DEF_NUM_QPS;
-	user_param->gid_index		= DEF_GID_INDEX;
-	user_param->gid_index2		= DEF_GID_INDEX;
-	user_param->use_gid_user	= 0;
-	user_param->inline_size		= DEF_INLINE;
-	user_param->use_mcg		= OFF;
-	user_param->use_rdma_cm		= OFF;
-	user_param->work_rdma_cm	= OFF;
-	user_param->rx_depth		= user_param->verb == SEND ? DEF_RX_SEND : DEF_RX_RDMA;
-	user_param->duplex		= OFF;
-	user_param->noPeak		= OFF;
-	user_param->cq_mod		= DEF_CQ_MOD;
-	user_param->iters		= (user_param->tst == BW && user_param->verb == WRITE) ? DEF_ITERS_WB : DEF_ITERS;
-	user_param->dualport		= OFF;
-	user_param->post_list		= 1;
-	user_param->use_srq		= OFF;
-	user_param->use_xrc		= OFF;
-	user_param->use_rss		= OFF;
-	user_param->srq_exists		= OFF;
-	user_param->duration		= DEF_DURATION;
-	user_param->margin		= DEF_INIT_MARGIN;
-	user_param->test_type		= ITERATIONS;
-	user_param->state		= START_STATE;
-	user_param->tos			= DEF_TOS;
-	user_param->mac_fwd		= OFF;
-	user_param->report_fmt		= MBS;
-	user_param->report_both		= OFF;
-	user_param->is_reversed		= OFF;
-	user_param->is_limit_bw		= OFF;
-	user_param->limit_bw		= 0;
-	user_param->is_limit_msgrate	= OFF;
-	user_param->limit_msgrate	= 0;
-	user_param->pkey_index		= 0;
-	user_param->raw_qos		= 0;
-	user_param->inline_recv_size	= 0;
-	user_param->tcp			= 0;
-	user_param->burst_size		= 0;
-	user_param->rate_limit		= 0;
-	user_param->valid_hw_rate_limit	= 0;
-	user_param->rate_units		= GIGA_BIT_PS;
-	user_param->rate_limit_type	= DISABLE_RATE_LIMIT;
-	user_param->is_rate_limit_type  = 0;
-	user_param->output		= -1;
-	user_param->use_cuda		= 0;
-	user_param->mmap_file		= NULL;
-	user_param->mmap_offset		= 0;
-	user_param->iters_per_port[0]	= 0;
-	user_param->iters_per_port[1]	= 0;
-	user_param->wait_destroy	= 0;
+	user_param->port = DEF_PORT;
+	user_param->ib_port = DEF_IB_PORT;
+	user_param->ib_port2 = DEF_IB_PORT2;
+	user_param->link_type = LINK_UNSPEC;
+	user_param->link_type2 = LINK_UNSPEC;
+	user_param->size = (user_param->tst == BW ) ? DEF_SIZE_BW : DEF_SIZE_LAT;
+	user_param->tx_depth = (user_param->tst == BW || user_param->tst == LAT_BY_BW ) ? DEF_TX_BW : DEF_TX_LAT;
+	user_param->qp_timeout = DEF_QP_TIME;
+	user_param->test_method = RUN_REGULAR;
+	user_param->cpu_freq_f = OFF;
+	user_param->connection_type = (user_param->connection_type == RawEth) ? RawEth : RC;
+	user_param->use_event = OFF;
+	user_param->eq_num = 0;
+	user_param->use_eq_num = OFF;
+	user_param->num_of_qps = DEF_NUM_QPS;
+	user_param->gid_index = DEF_GID_INDEX;
+	user_param->gid_index2 = DEF_GID_INDEX;
+	user_param->use_gid_user = 0;
+	user_param->inline_size = DEF_INLINE;
+	user_param->use_mcg = OFF;
+	user_param->use_rdma_cm = OFF;
+	user_param->work_rdma_cm = OFF;
+	user_param->rx_depth = user_param->verb == SEND ? DEF_RX_SEND : DEF_RX_RDMA;
+	user_param->duplex = OFF;
+	user_param->noPeak = OFF;
+	user_param->cq_mod = DEF_CQ_MOD;
+	user_param->iters = (user_param->tst == BW && user_param->verb == WRITE) ? DEF_ITERS_WB : DEF_ITERS;
+	user_param->dualport = OFF;
+	user_param->post_list = 1;
+	user_param->use_srq = OFF;
+	user_param->use_xrc = OFF;
+	user_param->use_rss = OFF;
+	user_param->srq_exists = OFF;
+	user_param->duration = DEF_DURATION;
+	user_param->margin = DEF_INIT_MARGIN;
+	user_param->test_type = ITERATIONS;
+	user_param->state = START_STATE;
+	user_param->tos = DEF_TOS;
+	user_param->mac_fwd = OFF;
+	user_param->report_fmt = MBS;
+	user_param->report_both = OFF;
+	user_param->is_reversed = OFF;
+	user_param->is_limit_bw = OFF;
+	user_param->limit_bw = 0;
+	user_param->is_limit_msgrate = OFF;
+	user_param->limit_msgrate = 0;
+	user_param->pkey_index = 0;
+	user_param->raw_qos = 0;
+	user_param->inline_recv_size = 0;
+	user_param->tcp = 0;
+	user_param->burst_size = 0;
+	user_param->rate_limit = 0;
+	user_param->valid_hw_rate_limit = 0;
+	user_param->rate_units = GIGA_BIT_PS;
+	user_param->rate_limit_type = DISABLE_RATE_LIMIT;
+	user_param->is_rate_limit_type = 0;
+	user_param->output = -1;
+	user_param->use_cuda = 0;
+	user_param->mmap_file = NULL;
+	user_param->mmap_offset = 0;
+	user_param->iters_per_port[0] = 0;
+	user_param->iters_per_port[1] = 0;
+	user_param->wait_destroy = 0;
 	user_param->is_old_raw_eth_param = 0;
 	user_param->is_new_raw_eth_param = 0;
-	user_param->reply_every		= 1;
-	user_param->vlan_en             = OFF;
-	user_param->vlan_pcp		= 1;
-	/* user_param->print_eth_func 	= &print_ethernet_header; */
+	user_param->reply_every = 1;
+	user_param->vlan_en = OFF;
+	user_param->vlan_pcp = 1;
+	/* user_param->print_eth_func = &print_ethernet_header; */
 
 	if (user_param->tst == LAT) {
-		user_param->r_flag->unsorted	= OFF;
-		user_param->r_flag->histogram	= OFF;
-		user_param->r_flag->cycles	= OFF;
+		user_param->r_flag->unsorted = OFF;
+		user_param->r_flag->histogram = OFF;
+		user_param->r_flag->cycles = OFF;
 	}
 
 	if (user_param->verb == ATOMIC) {
-		user_param->atomicType	= FETCH_AND_ADD;
-		user_param->size	= DEF_SIZE_ATOMIC;
+		user_param->atomicType = FETCH_AND_ADD;
+		user_param->size = DEF_SIZE_ATOMIC;
 	}
 
-	user_param->cpu_util			= 0;
-	user_param->cpu_util_data.enable	= 0;
-	user_param->retry_count			= DEF_RETRY_COUNT;
-	user_param->dont_xchg_versions		= 0;
-	user_param->use_exp			= 0;
-	user_param->ipv6			= 0;
-	user_param->report_per_port		= 0;
-	user_param->use_odp			= 0;
-	user_param->use_hugepages		= 0;
-	user_param->use_promiscuous		= 0;
-	user_param->use_sniffer			= 0;
-	user_param->check_alive_exited		= 0;
-	user_param->raw_mcast			= 0;
-	user_param->masked_atomics		= 0;
-	user_param->cache_line_size		= get_cache_line_size();
-	user_param->cycle_buffer		= sysconf(_SC_PAGESIZE);
+	user_param->cpu_util = 0;
+	user_param->cpu_util_data.enable = 0;
+	user_param->retry_count = DEF_RETRY_COUNT;
+	user_param->dont_xchg_versions = 0;
+	user_param->use_exp = 0;
+	user_param->ipv6 = 0;
+	user_param->report_per_port = 0;
+	user_param->use_odp = 0;
+	user_param->use_hugepages = 0;
+	user_param->use_promiscuous = 0;
+	user_param->use_sniffer = 0;
+	user_param->check_alive_exited = 0;
+	user_param->raw_mcast = 0;
+	user_param->masked_atomics = 0;
+	user_param->cache_line_size = get_cache_line_size();
+	user_param->cycle_buffer = sysconf(_SC_PAGESIZE);
 
 	if (user_param->cycle_buffer <= 0) {
 		user_param->cycle_buffer = DEF_PAGE_SIZE;
 	}
-	user_param->verb_type		= NORMAL_INTF;
-	user_param->is_exp_cq		= 0;
-	user_param->is_exp_qp		= 0;
-	user_param->use_res_domain	= 0;
-	user_param->mr_per_qp		= 0;
-	user_param->dlid		= 0;
-	user_param->traffic_class	= 0;
-	user_param->disable_fcs		= 0;
-	user_param->flows		= DEF_FLOWS;
-	user_param->flows_burst		= 1;
-	user_param->perform_warm_up	= 0;
-	user_param->use_ooo		= 0;
+	user_param->verb_type = NORMAL_INTF;
+	user_param->is_exp_cq = 0;
+	user_param->is_exp_qp = 0;
+	user_param->use_res_domain = 0;
+	user_param->mr_per_qp = 0;
+	user_param->dlid = 0;
+	user_param->traffic_class = 0;
+	user_param->disable_fcs = 0;
+	user_param->flows = DEF_FLOWS;
+	user_param->flows_burst = 1;
+	user_param->perform_warm_up = 0;
+	user_param->use_ooo = 0;
 }
 
 /******************************************************************************
@@ -747,7 +748,7 @@ static void change_conn_type(int *cptr, VerbType verb, const char *optarg)
 			exit(1);
 		}
 
-	} else if (strcmp(connStr[2], optarg)==0)  {
+	} else if (strcmp(connStr[2], optarg)==0) {
 		*cptr = UD;
 		if (verb != SEND) {
 			fprintf(stderr," UD connection only possible in SEND verb\n");
@@ -775,6 +776,7 @@ static void change_conn_type(int *cptr, VerbType verb, const char *optarg)
 		exit(1);
 	}
 }
+
 /******************************************************************************
  *
  ******************************************************************************/
@@ -810,7 +812,7 @@ void print_supported_ibv_rate_values()
 /******************************************************************************
  *
  ******************************************************************************/
-void  get_gbps_str_by_ibv_rate(char *rate_input_value, int *rate)
+void get_gbps_str_by_ibv_rate(char *rate_input_value, int *rate)
 {
 	int i;
 	for (i = 0; i < RATE_VALUES_COUNT; i++) {
@@ -828,7 +830,7 @@ void  get_gbps_str_by_ibv_rate(char *rate_input_value, int *rate)
  ******************************************************************************/
 void flow_rules_force_dependecies(struct perftest_parameters *user_param)
 {
-	int min_iter_req  = 0;
+	int min_iter_req = 0;
 	if (user_param->flows != DEF_FLOWS) {
 		if (user_param->is_server_port == OFF) {
 			fprintf(stderr, " Flows feature works with UDP/TCP packets only for now\n");
@@ -838,7 +840,7 @@ void flow_rules_force_dependecies(struct perftest_parameters *user_param)
 			min_iter_req = user_param->flows * user_param->flows_burst;
 			if (user_param->iters / min_iter_req < 1) {
 				fprintf(stderr, " Current iteration number will not complete full cycle on all flows, it need to be multiple of the product between flows and flows_burst\n");
-				fprintf(stderr, " Set  N*%d Iterations \n", user_param->flows * user_param->flows_burst);
+				fprintf(stderr, " Set N*%d Iterations \n", user_param->flows * user_param->flows_burst);
 				exit(FAILURE);
 			}
 		}
@@ -851,7 +853,7 @@ void flow_rules_force_dependecies(struct perftest_parameters *user_param)
 			exit(FAILURE);
 		}
 	} else {
-		if (user_param->flows_burst  > 1) {
+		if (user_param->flows_burst > 1) {
 			fprintf(stderr, " Flows burst is designed to work with more then single flow\n");
 			exit(FAILURE);
 		}
@@ -1031,7 +1033,7 @@ static void force_dependecies(struct perftest_parameters *user_param)
 		flow_rules_force_dependecies(user_param);
 	}
 
-	if (user_param->use_mcg &&  user_param->gid_index == -1) {
+	if (user_param->use_mcg && user_param->gid_index == -1) {
 		user_param->gid_index = 0;
 	}
 
@@ -1152,7 +1154,7 @@ static void force_dependecies(struct perftest_parameters *user_param)
 				break;
 			case PACKET_PS:
 				printf(RESULT_LINE);
-				fprintf(stderr, " Failed: pps  rate limit units is not supported when setting HW rate limit\n");
+				fprintf(stderr, " Failed: pps rate limit units is not supported when setting HW rate limit\n");
 				exit(1);
 			default:
 				printf(RESULT_LINE);
@@ -1331,6 +1333,7 @@ static void force_dependecies(struct perftest_parameters *user_param)
 
 	return;
 }
+
 /******************************************************************************
  *
  ******************************************************************************/
@@ -1394,10 +1397,10 @@ enum ctx_device ib_dev_name(struct ibv_context *context)
 
 		switch (attr.vendor_part_id >> 12) {
 			case 10 :
-			case 4  : dev_fname = CHELSIO_T4; break;
+			case 4 : dev_fname = CHELSIO_T4; break;
 			case 11 :
-			case 5  : dev_fname = CHELSIO_T5; break;
-			case 6  : dev_fname = CHELSIO_T6; break;
+			case 5 : dev_fname = CHELSIO_T5; break;
+			case 6 : dev_fname = CHELSIO_T6; break;
 			default : dev_fname = UNKNOWN; break;
 		}
 
@@ -1407,21 +1410,21 @@ enum ctx_device ib_dev_name(struct ibv_context *context)
 	} else {
 
 		switch (attr.vendor_part_id) {
-			case 4099  : dev_fname = CONNECTX3; break;
-			case 4100  : dev_fname = CONNECTX3; break;
-			case 4103  : dev_fname = CONNECTX3_PRO; break;
-			case 4104  : dev_fname = CONNECTX3_PRO; break;
-			case 4113  : dev_fname = CONNECTIB; break;
-			case 4115  : dev_fname = CONNECTX4; break;
-			case 4116  : dev_fname = CONNECTX4; break;
-			case 4117  : dev_fname = CONNECTX4LX; break;
-			case 4118  : dev_fname = CONNECTX4LX; break;
-			case 4119  : dev_fname = CONNECTX5; break;
-			case 4120  : dev_fname = CONNECTX5; break;
-			case 4121  : dev_fname = CONNECTX5EX; break;
-			case 4122  : dev_fname = CONNECTX5EX; break;
-			case 4123  : dev_fname = CONNECTX6; break;
-			case 4124  : dev_fname = CONNECTX6; break;
+			case 4099 : dev_fname = CONNECTX3; break;
+			case 4100 : dev_fname = CONNECTX3; break;
+			case 4103 : dev_fname = CONNECTX3_PRO; break;
+			case 4104 : dev_fname = CONNECTX3_PRO; break;
+			case 4113 : dev_fname = CONNECTIB; break;
+			case 4115 : dev_fname = CONNECTX4; break;
+			case 4116 : dev_fname = CONNECTX4; break;
+			case 4117 : dev_fname = CONNECTX4LX; break;
+			case 4118 : dev_fname = CONNECTX4LX; break;
+			case 4119 : dev_fname = CONNECTX5; break;
+			case 4120 : dev_fname = CONNECTX5; break;
+			case 4121 : dev_fname = CONNECTX5EX; break;
+			case 4122 : dev_fname = CONNECTX5EX; break;
+			case 4123 : dev_fname = CONNECTX6; break;
+			case 4124 : dev_fname = CONNECTX6; break;
 			case 41682 : dev_fname = BLUEFIELD; break;
 			case 41683 : dev_fname = BLUEFIELD; break;
 			case 26418 : dev_fname = CONNECTX2; break;
@@ -1431,22 +1434,22 @@ enum ctx_device ib_dev_name(struct ibv_context *context)
 			case 26458 : dev_fname = CONNECTX2; break;
 			case 26468 : dev_fname = CONNECTX2; break;
 			case 26478 : dev_fname = CONNECTX2; break;
-			case 25408 : dev_fname = CONNECTX;  break;
-			case 25418 : dev_fname = CONNECTX;  break;
-			case 25428 : dev_fname = CONNECTX;  break;
-			case 25448 : dev_fname = CONNECTX;  break;
-			case 1824  : dev_fname = SKYHAWK;   break;
-			case 5684  : dev_fname = QLOGIC_E4; break;
-			case 5700  : dev_fname = QLOGIC_E4; break;
-			case 5716  : dev_fname = QLOGIC_E4; break;
-			case 5718  : dev_fname = QLOGIC_E4; break;
-			case 5734  : dev_fname = QLOGIC_E4; break;
+			case 25408 : dev_fname = CONNECTX; break;
+			case 25418 : dev_fname = CONNECTX; break;
+			case 25428 : dev_fname = CONNECTX; break;
+			case 25448 : dev_fname = CONNECTX; break;
+			case 1824 : dev_fname = SKYHAWK; break;
+			case 5684 : dev_fname = QLOGIC_E4; break;
+			case 5700 : dev_fname = QLOGIC_E4; break;
+			case 5716 : dev_fname = QLOGIC_E4; break;
+			case 5718 : dev_fname = QLOGIC_E4; break;
+			case 5734 : dev_fname = QLOGIC_E4; break;
 			case 32880 : dev_fname = QLOGIC_AH; break;
 			case 32881 : dev_fname = QLOGIC_AH; break;
 			case 32882 : dev_fname = QLOGIC_AH; break;
 			case 32883 : dev_fname = QLOGIC_AH; break;
 			case 32912 : dev_fname = QLOGIC_AH; break;
-			default	   : dev_fname = UNKNOWN;
+			default : dev_fname = UNKNOWN;
 		}
 	}
 
@@ -1477,12 +1480,12 @@ enum ibv_mtu set_mtu(struct ibv_context *context,uint8_t ib_port,int user_mtu)
 
 	else {
 		switch (user_mtu) {
-			case 256  :	curr_mtu = IBV_MTU_256;	 break;
-			case 512  : curr_mtu = IBV_MTU_512;	 break;
-			case 1024 :	curr_mtu = IBV_MTU_1024; break;
-			case 2048 :	curr_mtu = IBV_MTU_2048; break;
-			case 4096 :	curr_mtu = IBV_MTU_4096; break;
-			default   :
+			case 256 : curr_mtu = IBV_MTU_256; break;
+			case 512 : curr_mtu = IBV_MTU_512; break;
+			case 1024 : curr_mtu = IBV_MTU_1024; break;
+			case 2048 : curr_mtu = IBV_MTU_2048; break;
+			case 4096 : curr_mtu = IBV_MTU_4096; break;
+			default :
 					fprintf(stderr," Invalid MTU - %d \n",user_mtu);
 					fprintf(stderr," Please choose mtu from {256,512,1024,2048,4096}\n");
 					fprintf(stderr," Will run with the port active mtu - %d\n",port_attr.active_mtu);
@@ -1609,7 +1612,7 @@ static void ctx_set_max_inline(struct ibv_context *context,struct perftest_param
 				case WRITE: user_param->inline_size = (user_param->connection_type == DC)? DEF_INLINE_DC : DEF_INLINE_WRITE; break;
 				case SEND : user_param->inline_size = (user_param->connection_type == DC)? DEF_INLINE_DC : (user_param->connection_type == UD)? DEF_INLINE_SEND_UD :
 					    ((user_param->connection_type == XRC) ? DEF_INLINE_SEND_XRC : DEF_INLINE_SEND_RC_UC) ; break;
-				default   : user_param->inline_size = 0;
+				default : user_param->inline_size = 0;
 			}
 
 		} else {
@@ -1619,6 +1622,7 @@ static void ctx_set_max_inline(struct ibv_context *context,struct perftest_param
 
 	return;
 }
+
 /******************************************************************************
  *
  ******************************************************************************/
@@ -1629,9 +1633,9 @@ void set_raw_eth_parameters(struct perftest_parameters *user_param)
 	if (user_param->is_new_raw_eth_param == 1 && user_param->is_old_raw_eth_param == 1) {
 		printf(RESULT_LINE);
 		fprintf(stderr," Invalid Command line.\nMix of source with local|remote and dest with local|remote is not supported.\n");
-		fprintf(stderr,"For L2 tests you must enter local and remote mac  by this format --local_mac XX:XX:XX:XX:XX:XX --remote_mac XX:XX:XX:XX:XX:XX\n");
-		fprintf(stderr,"For L3 tests You must add also local and remote ip  by this format --local_ip X.X.X.X --remote_ip X.X.X.X\n");
-		fprintf(stderr,"For L4 you need to add also local and remote port  by this format --local_port XXXX  --remote_port XXXX\n");
+		fprintf(stderr,"For L2 tests you must enter local and remote mac by this format --local_mac XX:XX:XX:XX:XX:XX --remote_mac XX:XX:XX:XX:XX:XX\n");
+		fprintf(stderr,"For L3 tests You must add also local and remote ip by this format --local_ip X.X.X.X --remote_ip X.X.X.X\n");
+		fprintf(stderr,"For L4 you need to add also local and remote port by this format --local_port XXXX --remote_port XXXX\n");
 		exit(1);
 	}
 	if (user_param->is_new_raw_eth_param) {
@@ -1654,6 +1658,7 @@ void set_raw_eth_parameters(struct perftest_parameters *user_param)
 		}
 	}
 }
+
 /******************************************************************************
  *
  ******************************************************************************/
@@ -1725,119 +1730,119 @@ int parser(struct perftest_parameters *user_param,char *argv[], int argc)
 
 	while (1) {
 		static const struct option long_options[] = {
-			{ .name = "port",		.has_arg = 1, .val = 'p' },
-			{ .name = "ib-dev",		.has_arg = 1, .val = 'd' },
-			{ .name = "ib-port",		.has_arg = 1, .val = 'i' },
-			{ .name = "mtu",		.has_arg = 1, .val = 'm' },
-			{ .name = "size",		.has_arg = 1, .val = 's' },
-			{ .name = "iters",		.has_arg = 1, .val = 'n' },
-			{ .name = "tx-depth",		.has_arg = 1, .val = 't' },
-			{ .name = "qp-timeout",		.has_arg = 1, .val = 'u' },
-			{ .name = "sl",			.has_arg = 1, .val = 'S' },
-			{ .name = "gid-index",		.has_arg = 1, .val = 'x' },
-			{ .name = "all",		.has_arg = 0, .val = 'a' },
-			{ .name = "CPU-freq",		.has_arg = 0, .val = 'F' },
-			{ .name = "connection",		.has_arg = 1, .val = 'c' },
-			{ .name = "qp",			.has_arg = 1, .val = 'q' },
-			{ .name = "events",		.has_arg = 0, .val = 'e' },
-			{ .name = "vector",		.has_arg = 1, .val = 'X' },
-			{ .name = "inline_size",	.has_arg = 1, .val = 'I' },
-			{ .name = "outs",		.has_arg = 1, .val = 'o' },
-			{ .name = "mcg",		.has_arg = 0, .val = 'g' },
-			{ .name = "comm_rdma_cm",	.has_arg = 0, .val = 'z' },
-			{ .name = "rdma_cm",		.has_arg = 0, .val = 'R' },
-			{ .name = "tos",		.has_arg = 1, .val = 'T' },
-			{ .name = "help",		.has_arg = 0, .val = 'h' },
-			{ .name = "MGID",		.has_arg = 1, .val = 'M' },
-			{ .name = "rx-depth",		.has_arg = 1, .val = 'r' },
-			{ .name = "bidirectional",	.has_arg = 0, .val = 'b' },
-			{ .name = "cq-mod",		.has_arg = 1, .val = 'Q' },
-			{ .name = "noPeak",		.has_arg = 0, .val = 'N' },
-			{ .name = "version",		.has_arg = 0, .val = 'V' },
-			{ .name = "report-cycles",	.has_arg = 0, .val = 'C' },
-			{ .name = "report-histogrm",	.has_arg = 0, .val = 'H' },
-			{ .name = "report-unsorted",	.has_arg = 0, .val = 'U' },
-			{ .name = "atomic_type",	.has_arg = 1, .val = 'A' },
-			{ .name = "dualport",		.has_arg = 0, .val = 'O' },
-			{ .name = "post_list",		.has_arg = 1, .val = 'l' },
-			{ .name = "duration",		.has_arg = 1, .val = 'D' },
-			{ .name = "margin",		.has_arg = 1, .val = 'f' },
-			{ .name = "source_mac",		.has_arg = 1, .val = 'B' },
-			{ .name = "dest_mac",		.has_arg = 1, .val = 'E' },
-			{ .name = "dest_ip",		.has_arg = 1, .val = 'J' },
-			{ .name = "source_ip",		.has_arg = 1, .val = 'j' },
-			{ .name = "dest_port",		.has_arg = 1, .val = 'K' },
-			{ .name = "source_port",	.has_arg = 1, .val = 'k' },
-			{ .name = "ethertype",		.has_arg = 1, .val = 'Y' },
-			{ .name = "limit_bw",		.has_arg = 1, .val = 'w' },
-			{ .name = "limit_msgrate",	.has_arg = 1, .val = 'y' },
-			{ .name = "server",		.has_arg = 0, .val = 'Z' },
-			{ .name = "client",		.has_arg = 0, .val = 'P' },
-			{ .name = "mac_fwd",		.has_arg = 0, .val = 'v' },
-			{ .name = "use_rss",		.has_arg = 0, .val = 'G' },
-			{ .name = "force-link",		.has_arg = 1, .flag = &force_link_flag, .val = 1},
-			{ .name = "remote_mac",		.has_arg = 1, .flag = &remote_mac_flag, .val = 1 },
-			{ .name = "local_mac",		.has_arg = 1, .flag = &local_mac_flag, .val = 1 },
-			{ .name = "remote_ip",		.has_arg = 1, .flag = &remote_ip_flag, .val = 1 },
-			{ .name = "local_ip",		.has_arg = 1, .flag = &local_ip_flag, .val = 1 },
-			{ .name = "remote_port",	.has_arg = 1, .flag = &remote_port_flag, .val = 1 },
-			{ .name = "local_port",		.has_arg = 1, .flag = &local_port_flag, .val = 1 },
-			{ .name = "run_infinitely",	.has_arg = 0, .flag = &run_inf_flag, .val = 1 },
-			{ .name = "report_gbits",	.has_arg = 0, .flag = &report_fmt_flag, .val = 1},
-			{ .name = "use-srq",		.has_arg = 0, .flag = &srq_flag, .val = 1},
-			{ .name = "report-both",	.has_arg = 0, .flag = &report_both_flag, .val = 1},
-			{ .name = "reversed",		.has_arg = 0, .flag = &is_reversed_flag, .val = 1},
-			{ .name = "pkey_index",		.has_arg = 1, .flag = &pkey_flag, .val = 1},
-			{ .name = "inline_recv",	.has_arg = 1, .flag = &inline_recv_flag, .val = 1},
-			{ .name = "tcp",		.has_arg = 0, .flag = &tcp_flag, .val = 1},
-			{ .name = "burst_size",		.has_arg = 1, .flag = &burst_size_flag, .val = 1},
-			{ .name = "rate_limit",		.has_arg = 1, .flag = &rate_limit_flag, .val = 1},
-			{ .name = "rate_limit_type",	.has_arg = 1, .flag = &rate_limit_type_flag, .val = 1},
-			{ .name = "rate_units",		.has_arg = 1, .flag = &rate_units_flag, .val = 1},
-			{ .name = "output",		.has_arg = 1, .flag = &verbosity_output_flag, .val = 1},
-			{ .name = "cpu_util",		.has_arg = 0, .flag = &cpu_util_flag, .val = 1},
-			{ .name = "latency_gap",	.has_arg = 1, .flag = &latency_gap_flag, .val = 1},
-			{ .name = "flow_label",		.has_arg = 1, .flag = &flow_label_flag, .val = 1},
-			{ .name = "retry_count",	.has_arg = 1, .flag = &retry_count_flag, .val = 1},
-			{ .name = "dont_xchg_versions",	.has_arg = 0, .flag = &dont_xchg_versions_flag, .val = 1},
-			{ .name = "use_cuda",		.has_arg = 0, .flag = &use_cuda_flag, .val = 1},
-			{ .name = "mmap",		.has_arg = 1, .flag = &mmap_file_flag, .val = 1},
-			{ .name = "mmap-offset",	.has_arg = 1, .flag = &mmap_offset_flag, .val = 1},
-			{ .name = "ipv6",		.has_arg = 0, .flag = &ipv6_flag, .val = 1},
+			{ .name = "port", .has_arg = 1, .val = 'p' },
+			{ .name = "ib-dev", .has_arg = 1, .val = 'd' },
+			{ .name = "ib-port", .has_arg = 1, .val = 'i' },
+			{ .name = "mtu", .has_arg = 1, .val = 'm' },
+			{ .name = "size", .has_arg = 1, .val = 's' },
+			{ .name = "iters", .has_arg = 1, .val = 'n' },
+			{ .name = "tx-depth", .has_arg = 1, .val = 't' },
+			{ .name = "qp-timeout", .has_arg = 1, .val = 'u' },
+			{ .name = "sl", .has_arg = 1, .val = 'S' },
+			{ .name = "gid-index", .has_arg = 1, .val = 'x' },
+			{ .name = "all", .has_arg = 0, .val = 'a' },
+			{ .name = "CPU-freq", .has_arg = 0, .val = 'F' },
+			{ .name = "connection", .has_arg = 1, .val = 'c' },
+			{ .name = "qp", .has_arg = 1, .val = 'q' },
+			{ .name = "events", .has_arg = 0, .val = 'e' },
+			{ .name = "vector", .has_arg = 1, .val = 'X' },
+			{ .name = "inline_size", .has_arg = 1, .val = 'I' },
+			{ .name = "outs", .has_arg = 1, .val = 'o' },
+			{ .name = "mcg", .has_arg = 0, .val = 'g' },
+			{ .name = "comm_rdma_cm", .has_arg = 0, .val = 'z' },
+			{ .name = "rdma_cm", .has_arg = 0, .val = 'R' },
+			{ .name = "tos", .has_arg = 1, .val = 'T' },
+			{ .name = "help", .has_arg = 0, .val = 'h' },
+			{ .name = "MGID", .has_arg = 1, .val = 'M' },
+			{ .name = "rx-depth", .has_arg = 1, .val = 'r' },
+			{ .name = "bidirectional", .has_arg = 0, .val = 'b' },
+			{ .name = "cq-mod", .has_arg = 1, .val = 'Q' },
+			{ .name = "noPeak", .has_arg = 0, .val = 'N' },
+			{ .name = "version", .has_arg = 0, .val = 'V' },
+			{ .name = "report-cycles", .has_arg = 0, .val = 'C' },
+			{ .name = "report-histogrm", .has_arg = 0, .val = 'H' },
+			{ .name = "report-unsorted", .has_arg = 0, .val = 'U' },
+			{ .name = "atomic_type", .has_arg = 1, .val = 'A' },
+			{ .name = "dualport", .has_arg = 0, .val = 'O' },
+			{ .name = "post_list", .has_arg = 1, .val = 'l' },
+			{ .name = "duration", .has_arg = 1, .val = 'D' },
+			{ .name = "margin", .has_arg = 1, .val = 'f' },
+			{ .name = "source_mac", .has_arg = 1, .val = 'B' },
+			{ .name = "dest_mac", .has_arg = 1, .val = 'E' },
+			{ .name = "dest_ip", .has_arg = 1, .val = 'J' },
+			{ .name = "source_ip", .has_arg = 1, .val = 'j' },
+			{ .name = "dest_port", .has_arg = 1, .val = 'K' },
+			{ .name = "source_port", .has_arg = 1, .val = 'k' },
+			{ .name = "ethertype", .has_arg = 1, .val = 'Y' },
+			{ .name = "limit_bw", .has_arg = 1, .val = 'w' },
+			{ .name = "limit_msgrate", .has_arg = 1, .val = 'y' },
+			{ .name = "server", .has_arg = 0, .val = 'Z' },
+			{ .name = "client", .has_arg = 0, .val = 'P' },
+			{ .name = "mac_fwd", .has_arg = 0, .val = 'v' },
+			{ .name = "use_rss", .has_arg = 0, .val = 'G' },
+			{ .name = "force-link", .has_arg = 1, .flag = &force_link_flag, .val = 1},
+			{ .name = "remote_mac", .has_arg = 1, .flag = &remote_mac_flag, .val = 1 },
+			{ .name = "local_mac", .has_arg = 1, .flag = &local_mac_flag, .val = 1 },
+			{ .name = "remote_ip", .has_arg = 1, .flag = &remote_ip_flag, .val = 1 },
+			{ .name = "local_ip", .has_arg = 1, .flag = &local_ip_flag, .val = 1 },
+			{ .name = "remote_port", .has_arg = 1, .flag = &remote_port_flag, .val = 1 },
+			{ .name = "local_port", .has_arg = 1, .flag = &local_port_flag, .val = 1 },
+			{ .name = "run_infinitely", .has_arg = 0, .flag = &run_inf_flag, .val = 1 },
+			{ .name = "report_gbits", .has_arg = 0, .flag = &report_fmt_flag, .val = 1},
+			{ .name = "use-srq", .has_arg = 0, .flag = &srq_flag, .val = 1},
+			{ .name = "report-both", .has_arg = 0, .flag = &report_both_flag, .val = 1},
+			{ .name = "reversed", .has_arg = 0, .flag = &is_reversed_flag, .val = 1},
+			{ .name = "pkey_index", .has_arg = 1, .flag = &pkey_flag, .val = 1},
+			{ .name = "inline_recv", .has_arg = 1, .flag = &inline_recv_flag, .val = 1},
+			{ .name = "tcp", .has_arg = 0, .flag = &tcp_flag, .val = 1},
+			{ .name = "burst_size", .has_arg = 1, .flag = &burst_size_flag, .val = 1},
+			{ .name = "rate_limit", .has_arg = 1, .flag = &rate_limit_flag, .val = 1},
+			{ .name = "rate_limit_type", .has_arg = 1, .flag = &rate_limit_type_flag, .val = 1},
+			{ .name = "rate_units", .has_arg = 1, .flag = &rate_units_flag, .val = 1},
+			{ .name = "output", .has_arg = 1, .flag = &verbosity_output_flag, .val = 1},
+			{ .name = "cpu_util", .has_arg = 0, .flag = &cpu_util_flag, .val = 1},
+			{ .name = "latency_gap", .has_arg = 1, .flag = &latency_gap_flag, .val = 1},
+			{ .name = "flow_label", .has_arg = 1, .flag = &flow_label_flag, .val = 1},
+			{ .name = "retry_count", .has_arg = 1, .flag = &retry_count_flag, .val = 1},
+			{ .name = "dont_xchg_versions", .has_arg = 0, .flag = &dont_xchg_versions_flag, .val = 1},
+			{ .name = "use_cuda", .has_arg = 0, .flag = &use_cuda_flag, .val = 1},
+			{ .name = "mmap", .has_arg = 1, .flag = &mmap_file_flag, .val = 1},
+			{ .name = "mmap-offset", .has_arg = 1, .flag = &mmap_offset_flag, .val = 1},
+			{ .name = "ipv6", .has_arg = 0, .flag = &ipv6_flag, .val = 1},
 			#ifdef HAVE_IPV6
-			{ .name = "raw_ipv6",		.has_arg = 0, .flag = &raw_ipv6_flag, .val = 1},
+			{ .name = "raw_ipv6", .has_arg = 0, .flag = &raw_ipv6_flag, .val = 1},
 			#endif
-			{ .name = "report-per-port",	.has_arg = 0, .flag = &report_per_port_flag, .val = 1},
-			{ .name = "odp",		.has_arg = 0, .flag = &odp_flag, .val = 1},
-			{ .name = "use_hugepages",		.has_arg = 0, .flag = &hugepages_flag, .val = 1},
-			{ .name = "promiscuous",	.has_arg = 0, .flag = &use_promiscuous_flag, .val = 1},
+			{ .name = "report-per-port", .has_arg = 0, .flag = &report_per_port_flag, .val = 1},
+			{ .name = "odp", .has_arg = 0, .flag = &odp_flag, .val = 1},
+			{ .name = "use_hugepages", .has_arg = 0, .flag = &hugepages_flag, .val = 1},
+			{ .name = "promiscuous", .has_arg = 0, .flag = &use_promiscuous_flag, .val = 1},
 			#if defined HAVE_SNIFFER || defined HAVE_SNIFFER_EXP
-			{ .name = "sniffer",		.has_arg = 0, .flag = &use_sniffer_flag, .val = 1},
+			{ .name = "sniffer", .has_arg = 0, .flag = &use_sniffer_flag, .val = 1},
 			#endif
-			{ .name = "raw_mcast",		.has_arg = 0, .flag = &raw_mcast_flag, .val = 1},
+			{ .name = "raw_mcast", .has_arg = 0, .flag = &raw_mcast_flag, .val = 1},
 			#ifdef HAVE_VERBS_EXP
-			{ .name = "use_exp",		.has_arg = 0, .flag = &use_exp_flag, .val = 1},
+			{ .name = "use_exp", .has_arg = 0, .flag = &use_exp_flag, .val = 1},
 			#endif
 			#ifdef HAVE_ACCL_VERBS
-			{ .name = "verb_type",		.has_arg = 1, .flag = &verb_type_flag, .val = 1},
-			{ .name = "use_res_domain",	.has_arg = 0, .flag = &use_res_domain_flag, .val = 1},
+			{ .name = "verb_type", .has_arg = 1, .flag = &verb_type_flag, .val = 1},
+			{ .name = "use_res_domain", .has_arg = 0, .flag = &use_res_domain_flag, .val = 1},
 			#endif
-			{ .name = "mr_per_qp",		.has_arg = 0, .flag = &mr_per_qp_flag, .val = 1},
-			{ .name = "dlid",		.has_arg = 1, .flag = &dlid_flag, .val = 1},
-			{ .name = "tclass",		.has_arg = 1, .flag = &tclass_flag, .val = 1},
-			{ .name = "wait_destroy",	.has_arg = 1, .flag = &wait_destroy_flag, .val = 1},
+			{ .name = "mr_per_qp", .has_arg = 0, .flag = &mr_per_qp_flag, .val = 1},
+			{ .name = "dlid", .has_arg = 1, .flag = &dlid_flag, .val = 1},
+			{ .name = "tclass", .has_arg = 1, .flag = &tclass_flag, .val = 1},
+			{ .name = "wait_destroy", .has_arg = 1, .flag = &wait_destroy_flag, .val = 1},
 			#ifdef HAVE_SCATTER_FCS
-			{ .name = "disable_fcs",	.has_arg = 0, .flag = &disable_fcs_flag, .val = 1},
+			{ .name = "disable_fcs", .has_arg = 0, .flag = &disable_fcs_flag, .val = 1},
 			#endif
-			{ .name = "flows",		.has_arg = 1, .flag = &flows_flag, .val = 1},
-			{ .name = "flows_burst",	.has_arg = 1, .flag = &flows_burst_flag, .val = 1},
-			{ .name = "reply_every",	.has_arg = 1, .flag = &reply_every_flag, .val = 1},
-			{ .name = "perform_warm_up",	.has_arg = 0, .flag = &perform_warm_up_flag, .val = 1},
-			{ .name = "vlan_en",            .has_arg = 0, .flag = &vlan_en, .val = 1 },
-			{ .name = "vlan_pcp",		.has_arg = 1, .flag = &vlan_pcp_flag, .val = 1 },
+			{ .name = "flows", .has_arg = 1, .flag = &flows_flag, .val = 1},
+			{ .name = "flows_burst", .has_arg = 1, .flag = &flows_burst_flag, .val = 1},
+			{ .name = "reply_every", .has_arg = 1, .flag = &reply_every_flag, .val = 1},
+			{ .name = "perform_warm_up", .has_arg = 0, .flag = &perform_warm_up_flag, .val = 1},
+			{ .name = "vlan_en", .has_arg = 0, .flag = &vlan_en, .val = 1 },
+			{ .name = "vlan_pcp", .has_arg = 1, .flag = &vlan_pcp_flag, .val = 1 },
 
 			#if defined HAVE_OOO_ATTR || defined HAVE_EXP_OOO_ATTR
-			{ .name = "use_ooo",		.has_arg = 0, .flag = &use_ooo_flag, .val = 1},
+			{ .name = "use_ooo", .has_arg = 0, .flag = &use_ooo_flag, .val = 1},
 			#endif
 			{ 0 }
 		};
@@ -1851,7 +1856,7 @@ int parser(struct perftest_parameters *user_param,char *argv[], int argc)
 			case 'p': user_param->port = strtol(optarg, NULL, 0); break;
 			case 'd': GET_STRING(user_param->ib_devname,strdupa(optarg)); break;
 			case 'i': CHECK_VALUE(user_param->ib_port,uint8_t,MIN_IB_PORT,MAX_IB_PORT,"IB Port"); break;
-			case 'm': user_param->mtu  = strtol(optarg, NULL, 0); break;
+			case 'm': user_param->mtu = strtol(optarg, NULL, 0); break;
 			case 'n': CHECK_VALUE(user_param->iters,int,MIN_ITER,MAX_ITER,"Iteration num"); break;
 			case 't': CHECK_VALUE(user_param->tx_depth,int,MIN_TX,MAX_TX,"Tx depth"); break;
 			case 'T': CHECK_VALUE(user_param->tos,int,MIN_TOS,MAX_TOS,"TOS"); break;
@@ -1922,7 +1927,7 @@ int parser(struct perftest_parameters *user_param,char *argv[], int argc)
 					  return 1;
 				  } break;
 			case 'O':
-				  user_param->ib_port  = DEF_IB_PORT;
+				  user_param->ib_port = DEF_IB_PORT;
 				  user_param->ib_port2 = DEF_IB_PORT2;
 				  user_param->dualport = ON;
 				  break;
@@ -2479,7 +2484,7 @@ int check_link_and_mtu(struct ibv_context *context,struct perftest_parameters *u
 		return FAILURE;
 	}
 
-	if (user_param->link_type == IBV_LINK_LAYER_ETHERNET &&  user_param->gid_index == -1) {
+	if (user_param->link_type == IBV_LINK_LAYER_ETHERNET && user_param->gid_index == -1) {
 		user_param->gid_index = 0;
 	}
 
@@ -2500,7 +2505,7 @@ int check_link_and_mtu(struct ibv_context *context,struct perftest_parameters *u
 
 	if (user_param->dualport==ON) {
 
-		if (user_param->link_type2 == IBV_LINK_LAYER_ETHERNET &&  user_param->gid_index2 == -1) {
+		if (user_param->link_type2 == IBV_LINK_LAYER_ETHERNET && user_param->gid_index2 == -1) {
 			user_param->gid_index2 = 1;
 		}
 	}
@@ -2555,7 +2560,7 @@ int check_link(struct ibv_context *context,struct perftest_parameters *user_para
 		return FAILURE;
 	}
 
-	if (user_param->link_type == IBV_LINK_LAYER_ETHERNET &&  user_param->gid_index == -1) {
+	if (user_param->link_type == IBV_LINK_LAYER_ETHERNET && user_param->gid_index == -1) {
 		user_param->gid_index = 0;
 	}
 
@@ -2569,7 +2574,7 @@ int check_link(struct ibv_context *context,struct perftest_parameters *user_para
 
 	/* in case of dual-port mode */
 	if (user_param->dualport==ON) {
-		if (user_param->link_type2 == IBV_LINK_LAYER_ETHERNET &&  user_param->gid_index2 == -1) {
+		if (user_param->link_type2 == IBV_LINK_LAYER_ETHERNET && user_param->gid_index2 == -1) {
 			user_param->gid_index2 = 1;
 		}
 	}
@@ -2604,7 +2609,7 @@ void ctx_print_test_info(struct perftest_parameters *user_param)
 		return;
 
 	printf(RESULT_LINE);
-	printf("                    ");
+	printf(" ");
 	printf("%s ",testsStr[user_param->verb]);
 
 	if (user_param->verb == ATOMIC) {
@@ -2643,44 +2648,44 @@ void ctx_print_test_info(struct perftest_parameters *user_param)
 	if (user_param->use_mcg)
 		printf(" MultiCast runs on UD!\n");
 
-	printf(" Dual-port       : %s\t\tDevice         : %s\n", user_param->dualport ? "ON" : "OFF",user_param->ib_devname);
-	printf(" Number of qps   : %d\t\tTransport type : %s\n", user_param->num_of_qps, transport_str(user_param->transport_type));
-	printf(" Connection type : %s\t\tUsing SRQ      : %s\n", connStr[user_param->connection_type], user_param->use_srq ? "ON"  : "OFF");
+	printf(" Dual-port : %s\t\tDevice : %s\n", user_param->dualport ? "ON" : "OFF",user_param->ib_devname);
+	printf(" Number of qps : %d\t\tTransport type : %s\n", user_param->num_of_qps, transport_str(user_param->transport_type));
+	printf(" Connection type : %s\t\tUsing SRQ : %s\n", connStr[user_param->connection_type], user_param->use_srq ? "ON" : "OFF");
 
 	if (user_param->machine == CLIENT || user_param->duplex) {
-		printf(" TX depth        : %d\n",user_param->tx_depth);
+		printf(" TX depth : %d\n",user_param->tx_depth);
 	}
 
 	if (user_param->post_list > 1)
-		printf(" Post List       : %d\n",user_param->post_list);
+		printf(" Post List : %d\n",user_param->post_list);
 
 	if (user_param->verb == SEND && (user_param->machine == SERVER || user_param->duplex)) {
-		printf(" RX depth        : %d\n",user_param->rx_depth);
+		printf(" RX depth : %d\n",user_param->rx_depth);
 	}
 
 	if (user_param->tst == BW) {
-		printf(" CQ Moderation   : %d\n",user_param->cq_mod);
+		printf(" CQ Moderation : %d\n",user_param->cq_mod);
 	}
 
-	printf(" Mtu             : %lu[B]\n",user_param->connection_type == RawEth ? user_param->curr_mtu : MTU_SIZE(user_param->curr_mtu));
-	printf(" Link type       : %s\n" ,link_layer_str(user_param->link_type));
+	printf(" Mtu : %lu[B]\n",user_param->connection_type == RawEth ? user_param->curr_mtu : MTU_SIZE(user_param->curr_mtu));
+	printf(" Link type : %s\n" ,link_layer_str(user_param->link_type));
 
 	/* we use the receive buffer only for mac forwarding. */
 	if (user_param->mac_fwd == ON)
-		printf(" Buffer size     : %d[B]\n" ,user_param->buff_size/2);
+		printf(" Buffer size : %d[B]\n" ,user_param->buff_size/2);
 
 	if (user_param->gid_index != DEF_GID_INDEX)
-		printf(" GID index       : %d\n", user_param->gid_index);
+		printf(" GID index : %d\n", user_param->gid_index);
 	if ((user_param->dualport == ON) && (user_param->gid_index2 != DEF_GID_INDEX))
-		printf(" GID index2      : %d\n", user_param->gid_index2);
+		printf(" GID index2 : %d\n", user_param->gid_index2);
 
 	if (user_param->verb != READ && user_param->verb != ATOMIC)
 		printf(" Max inline data : %d[B]\n",user_param->inline_size);
 
 	else
-		printf(" Outstand reads  : %d\n",user_param->out_reads);
+		printf(" Outstand reads : %d\n",user_param->out_reads);
 
-	printf(" rdma_cm QPs	 : %s\n",qp_state[user_param->work_rdma_cm]);
+	printf(" rdma_cm QPs : %s\n",qp_state[user_param->work_rdma_cm]);
 	printf(" Data ex. method : %s",exchange_state[temp]);
 	putchar('\n');
 
@@ -2732,7 +2737,7 @@ void print_report_bw (struct perftest_parameters *user_param, struct bw_report_d
 			for (j = i; j < num_of_calculated_iters * num_of_qps; ++j) {
 				t = (user_param->tcompleted[j] - user_param->tposted[i]) / (j - i + 1);
 				if (t < opt_delta) {
-					opt_delta  = t;
+					opt_delta = t;
 					opt_posted = i;
 					opt_completed = j;
 				}
@@ -2799,27 +2804,26 @@ void print_report_bw (struct perftest_parameters *user_param, struct bw_report_d
 
 void print_full_bw_report (struct perftest_parameters *user_param, struct bw_report_data *my_bw_rep, struct bw_report_data *rem_bw_rep)
 {
-
-	double bw_peak     = my_bw_rep->bw_peak;
-	double bw_avg      = my_bw_rep->bw_avg;
-	double bw_avg_p1      = my_bw_rep->bw_avg_p1;
-	double bw_avg_p2      = my_bw_rep->bw_avg_p2;
+	double bw_peak = my_bw_rep->bw_peak;
+	double bw_avg = my_bw_rep->bw_avg;
+	double bw_avg_p1 = my_bw_rep->bw_avg_p1;
+	double bw_avg_p2 = my_bw_rep->bw_avg_p2;
 	double msgRate_avg = my_bw_rep->msgRate_avg;
 	double msgRate_avg_p1 = my_bw_rep->msgRate_avg_p1;
 	double msgRate_avg_p2 = my_bw_rep->msgRate_avg_p2;
 	int inc_accuracy = ((bw_avg < 0.1) && (user_param->report_fmt == GBS));
 
 	if (rem_bw_rep != NULL) {
-		bw_peak     += rem_bw_rep->bw_peak;
-		bw_avg      += rem_bw_rep->bw_avg;
-		bw_avg_p1      += rem_bw_rep->bw_avg_p1;
-		bw_avg_p2      += rem_bw_rep->bw_avg_p2;
+		bw_peak += rem_bw_rep->bw_peak;
+		bw_avg += rem_bw_rep->bw_avg;
+		bw_avg_p1 += rem_bw_rep->bw_avg_p1;
+		bw_avg_p2 += rem_bw_rep->bw_avg_p2;
 		msgRate_avg += rem_bw_rep->msgRate_avg;
 		msgRate_avg_p1 += rem_bw_rep->msgRate_avg_p1;
 		msgRate_avg_p2 += rem_bw_rep->msgRate_avg_p2;
 	}
 
-	if ( (user_param->duplex && rem_bw_rep != NULL) ||  (!user_param->duplex && rem_bw_rep == NULL)) {
+	if ( (user_param->duplex && rem_bw_rep != NULL) || (!user_param->duplex && rem_bw_rep == NULL)) {
 		/* Verify Limits */
 		if ( ((user_param->is_limit_bw == ON )&& (user_param->limit_bw > bw_avg)) )
 			user_param->is_bw_limit_passed |= 0;
@@ -3020,7 +3024,7 @@ void print_report_fs_rate (struct perftest_parameters *user_param)
 	if (user_param->r_flag->cycles) {
 		cycles_to_units = 1;
 		units = CYCLES;
-		units_to_sec =  get_cpu_mhz(user_param->cpu_freq_f);
+		units_to_sec = get_cpu_mhz(user_param->cpu_freq_f);
 	} else {
 		cycles_to_units = get_cpu_mhz(user_param->cpu_freq_f);
 		units = USEC;
@@ -3060,7 +3064,7 @@ void print_report_fs_rate (struct perftest_parameters *user_param)
 	}
 	else {
 		test_sample_time = (user_param->tcompleted[0] - user_param->tposted[0]);
-		latency = test_sample_time  / user_param->iters / cycles_to_units;
+		latency = test_sample_time / user_param->iters / cycles_to_units;
 		average = latency;
 		fps = user_param->iters / (test_sample_time / (cycles_to_units * units_to_sec));
 	}

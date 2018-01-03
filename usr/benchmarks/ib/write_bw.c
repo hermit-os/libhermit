@@ -1,26 +1,26 @@
 /*
- * Copyright (c) 2005 Topspin Communications.  All rights reserved.
- * Copyright (c) 2005 Mellanox Technologies Ltd.  All rights reserved.
- * Copyright (c) 2009 HNR Consulting.  All rights reserved.
+ * Copyright (c) 2005 Topspin Communications. All rights reserved.
+ * Copyright (c) 2005 Mellanox Technologies Ltd. All rights reserved.
+ * Copyright (c) 2009 HNR Consulting. All rights reserved.
  *
  * This software is available to you under a choice of one of two
- * licenses.  You may choose to be licensed under the terms of the GNU
+ * licenses. You may choose to be licensed under the terms of the GNU
  * General Public License (GPL) Version 2, available from the file
  * COPYING in the main directory of this source tree, or the
  * OpenIB.org BSD license below:
  *
- *     Redistribution and use in source and binary forms, with or
- *     without modification, are permitted provided that the following
- *     conditions are met:
+ * Redistribution and use in source and binary forms, with or
+ * without modification, are permitted provided that the following
+ * conditions are met:
  *
- *      - Redistributions of source code must retain the above
- *        copyright notice, this list of conditions and the following
- *        disclaimer.
+ * - Redistributions of source code must retain the above
+ * copyright notice, this list of conditions and the following
+ * disclaimer.
  *
- *      - Redistributions in binary form must reproduce the above
- *        copyright notice, this list of conditions and the following
- *        disclaimer in the documentation and/or other materials
- *        provided with the distribution.
+ * - Redistributions in binary form must reproduce the above
+ * copyright notice, this list of conditions and the following
+ * disclaimer in the documentation and/or other materials
+ * provided with the distribution.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
@@ -39,29 +39,29 @@
 #include <string.h>
 #include <time.h>
 
-#include "perftest_parameters.h"
-#include "perftest_resources.h"
-#include "perftest_communication.h"
+#include "perftest_parameters_write_bw.h"
+#include "perftest_resources_write_bw.h"
+#include "perftest_communication_write_bw.h"
 
 
 int main(int argc, char *argv[])
 {
-	int    ret_parser,i = 0;
-	struct ibv_device		*ib_dev = NULL;
+	int ret_parser,i = 0;
+	struct ibv_device *ib_dev = NULL;
 
-	struct pingpong_context		ctx;
-	struct pingpong_dest		*my_dest,*rem_dest;
-	struct perftest_parameters	user_param;
-	struct perftest_comm		user_comm;
-	struct bw_report_data		my_bw_rep, rem_bw_rep;
+	struct pingpong_context    ctx;
+	struct pingpong_dest       *my_dest,*rem_dest;
+	struct perftest_parameters user_param;
+	struct perftest_comm       user_comm;
+	struct bw_report_data      my_bw_rep, rem_bw_rep;
 
 	/* init default values to user's parameters */
 	memset(&user_param,0,sizeof(struct perftest_parameters));
 	memset(&user_comm,0,sizeof(struct perftest_comm));
 	memset(&ctx,0,sizeof(struct pingpong_context));
 
-	user_param.verb    = WRITE;
-	user_param.tst     = BW;
+	user_param.verb = WRITE;
+	user_param.tst = BW;
 	strncpy(user_param.version, VERSION, sizeof(user_param.version));
 
 	/* Configure the parameters values according to user arguments or default values. */
@@ -110,7 +110,15 @@ int main(int argc, char *argv[])
 		fprintf(stderr," Unable to init the socket connection\n");
 		return FAILURE;
 	}
-	sleep(1);
+
+	/* sleep(1); // TODO: linker */
+
+	// sleep replacement:
+	struct timeval tv;
+	tv.tv_sec  = 1;
+	tv.tv_usec = 0;
+	select(0, NULL, NULL, NULL, &tv);
+
 	exchange_versions(&user_comm, &user_param);
 
 	check_sys_data(&user_comm, &user_param);
@@ -161,7 +169,7 @@ int main(int argc, char *argv[])
 		ctx_print_pingpong_data(&rem_dest[i],&user_comm);
 	}
 
-	if (user_param.work_rdma_cm == OFF) {
+	if (user_param.work_rdma_cm == OFF) { // TODO: 
 		if (ctx_check_gid_compatibility(&my_dest[0], &rem_dest[0])) {
 			fprintf(stderr,"\n Found Incompatibility issue with GID types.\n");
 			fprintf(stderr," Please Try to use a different IP version.\n\n");
@@ -218,14 +226,14 @@ int main(int argc, char *argv[])
 				printf(RESULT_LINE);
 		}
 
-		if (user_param.work_rdma_cm == ON) {
-			if (destroy_ctx(&ctx,&user_param)) {
-				fprintf(stderr, "Failed to destroy resources\n");
-				return FAILURE;
-			}
-			user_comm.rdma_params->work_rdma_cm = ON;
-			return destroy_ctx(user_comm.rdma_ctx,user_comm.rdma_params);
-		}
+		/* if (user_param.work_rdma_cm == ON) { */
+			/* if (destroy_ctx(&ctx,&user_param)) { */
+				/* fprintf(stderr, "Failed to destroy resources\n"); */
+				/* return FAILURE; */
+			/* } */
+			/* user_comm.rdma_params->work_rdma_cm = ON; */
+			/* return destroy_ctx(user_comm.rdma_ctx,user_comm.rdma_params); */
+		/* } */
 
 		return destroy_ctx(&ctx,&user_param);
 	}
@@ -359,21 +367,21 @@ int main(int argc, char *argv[])
 	}
 
 	if (!user_param.is_msgrate_limit_passed && (user_param.is_limit_bw == ON )) {
-		fprintf(stderr,"Error: Msg rate  is below msg_rate limit\n");
+		fprintf(stderr,"Error: Msg rate is below msg_rate limit\n");
 		return FAILURE;
 	}
 
 	free(my_dest);
 	free(rem_dest);
 
-	if (user_param.work_rdma_cm == ON) {
-		if (destroy_ctx(&ctx,&user_param)) {
-			fprintf(stderr, "Failed to destroy resources\n");
-			return FAILURE;
-		}
-		user_comm.rdma_params->work_rdma_cm = ON;
-		return destroy_ctx(user_comm.rdma_ctx,user_comm.rdma_params);
-	}
+	/* if (user_param.work_rdma_cm == ON) { */
+		/* if (destroy_ctx(&ctx,&user_param)) { */
+			/* fprintf(stderr, "Failed to destroy resources\n"); */
+			/* return FAILURE; */
+		/* } */
+		/* user_comm.rdma_params->work_rdma_cm = ON; */
+		/* return destroy_ctx(user_comm.rdma_ctx,user_comm.rdma_params); */
+	/* } */
 
 	return destroy_ctx(&ctx,&user_param);
 }
