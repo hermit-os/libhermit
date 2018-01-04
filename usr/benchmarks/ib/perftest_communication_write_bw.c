@@ -40,7 +40,7 @@ enum ctx_device ib_dev_name(struct ibv_context *context)
 	enum ctx_device dev_fname = UNKNOWN;
 	struct ibv_device_attr attr;
 
-	if (ibv_query_device(context,&attr)) {
+	if (ibv_query_device(context, &attr)) {
 		dev_fname = DEVICE_ERROR;
 	}
 
@@ -128,16 +128,16 @@ int ethernet_read_data(struct perftest_comm *comm, char *recv_msg, size_t size)
 
 int ctx_xchg_data_ethernet( struct perftest_comm *comm,
 		void *my_data,
-		void *rem_data,int size)
+		void *rem_data, int size)
 {
 	if (comm->rdma_params->servername) {
 		if (ethernet_write_data(comm, (char *) my_data, size)) {
-			fprintf(stderr," Unable to write to socket/rdam_cm\n");
+			fprintf(stderr, " Unable to write to socket/rdam_cm\n");
 			return 1;
 		}
 
 		if (ethernet_read_data(comm, (char *) rem_data, size)) {
-			fprintf(stderr," Unable to read from socket/rdam_cm\n");
+			fprintf(stderr, " Unable to read from socket/rdam_cm\n");
 			return 1;
 		}
 
@@ -145,12 +145,12 @@ int ctx_xchg_data_ethernet( struct perftest_comm *comm,
 	} else {
 
 		if (ethernet_read_data(comm, (char *) rem_data, size)) {
-			fprintf(stderr," Unable to read to socket/rdam_cm\n");
+			fprintf(stderr, " Unable to read to socket/rdam_cm\n");
 			return 1;
 		}
 
 		if (ethernet_write_data(comm, (char *) my_data, size)) {
-			fprintf(stderr," Unable to write from socket/rdam_cm\n");
+			fprintf(stderr, " Unable to write from socket/rdam_cm\n");
 			return 1;
 		}
 	}
@@ -468,7 +468,7 @@ static int ethernet_client_connect(struct perftest_comm *comm)
 	freeaddrinfo(res);
 
 	if (sockfd < 0) {
-		fprintf(stderr, "Couldn't connect to %s:%d\n",comm->rdma_params->servername,comm->rdma_params->port);
+		fprintf(stderr, "Couldn't connect to %s:%d\n", comm->rdma_params->servername, comm->rdma_params->port);
 		return 1;
 	}
 

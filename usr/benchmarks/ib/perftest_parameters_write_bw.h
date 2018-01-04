@@ -577,7 +577,7 @@ static const struct rate_gbps_string RATE_VALUES[RATE_VALUES_COUNT] = {
 	{IBV_RATE_MAX,      "MAX"}
 };
 
-
+char * duplicate_str(const char * given_str);
 
 /* link_layer_str
  *

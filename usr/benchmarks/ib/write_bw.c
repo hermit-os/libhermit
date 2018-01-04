@@ -46,29 +46,29 @@
 
 int main(int argc, char *argv[])
 {
-	int ret_parser,i = 0;
+	int ret_parser, i = 0;
 	struct ibv_device *ib_dev = NULL;
 
 	struct pingpong_context    ctx;
-	struct pingpong_dest       *my_dest,*rem_dest;
+	struct pingpong_dest       *my_dest, *rem_dest;
 	struct perftest_parameters user_param;
 	struct perftest_comm       user_comm;
 	struct bw_report_data      my_bw_rep, rem_bw_rep;
 
 	/* init default values to user's parameters */
-	memset(&user_param,0,sizeof(struct perftest_parameters));
-	memset(&user_comm,0,sizeof(struct perftest_comm));
-	memset(&ctx,0,sizeof(struct pingpong_context));
+	memset(&user_param, 0, sizeof(struct perftest_parameters));
+	memset(&user_comm, 0, sizeof(struct perftest_comm));
+	memset(&ctx, 0, sizeof(struct pingpong_context));
 
 	user_param.verb = WRITE;
 	user_param.tst = BW;
 	strncpy(user_param.version, VERSION, sizeof(user_param.version));
 
 	/* Configure the parameters values according to user arguments or default values. */
-	ret_parser = parser(&user_param,argv,argc);
+	ret_parser = parser(&user_param, argv, argc);
 	if (ret_parser) {
 		if (ret_parser != VERSION_EXIT && ret_parser != HELP_EXIT)
-			fprintf(stderr," Parser function exited with Error\n");
+			fprintf(stderr, " Parser function exited with Error\n");
 		return FAILURE;
 	}
 
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 	/* Finding the IB device selected (or default if none is selected). */
 	ib_dev = ctx_find_dev(user_param.ib_devname);
 	if (!ib_dev) {
-		fprintf(stderr," Unable to find the Infiniband/RoCE device\n");
+		fprintf(stderr, " Unable to find the Infiniband/RoCE device\n");
 		return FAILURE;
 	}
 
@@ -91,13 +91,13 @@ int main(int argc, char *argv[])
 	}
 
 	/* See if MTU and link type are valid and supported. */
-	if (check_link(ctx.context,&user_param)) {
+	if (check_link(ctx.context, &user_param)) {
 		fprintf(stderr, " Couldn't get context for the device\n");
 		return FAILURE;
 	}
 
 	/* copy the relevant user parameters to the comm struct */
-	create_comm_struct(&user_comm,&user_param);
+	create_comm_struct(&user_comm, &user_param);
 
 	if (user_param.output == FULL_VERBOSITY && user_param.machine == SERVER) {
 		printf("\n************************************\n");
@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
 
 	/* Initialize the connection and print the local data. */
 	if (establish_connection(&user_comm)) {
-		fprintf(stderr," Unable to init the socket connection\n");
+		fprintf(stderr, " Unable to init the socket connection\n");
 		return FAILURE;
 	}
 
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 	check_sys_data(&user_comm, &user_param);
 
 	/* See if MTU and link type are valid and supported. */
-	if (check_mtu(ctx.context,&user_param, &user_comm)) {
+	if (check_mtu(ctx.context, &user_param, &user_comm)) {
 		fprintf(stderr, " Couldn't get context for the device\n");
 		return FAILURE;
 	}
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
 	memset(rem_dest, 0, sizeof(struct pingpong_dest)*user_param.num_of_qps);
 
 	/* Allocating arrays needed for the test. */
-	alloc_ctx(&ctx,&user_param);
+	alloc_ctx(&ctx, &user_param);
 
 	/* create all the basic IB resources (data buffer, PD, MR, CQ and events channel) */
 	if (ctx_init(&ctx, &user_param)) {
@@ -144,8 +144,8 @@ int main(int argc, char *argv[])
 	}
 
 	/* Set up the Connection. */
-	if (set_up_connection(&ctx,&user_param,my_dest)) {
-		fprintf(stderr," Unable to set up socket connection\n");
+	if (set_up_connection(&ctx, &user_param, my_dest)) {
+		fprintf(stderr, " Unable to set up socket connection\n");
 		return FAILURE;
 	}
 
@@ -155,38 +155,38 @@ int main(int argc, char *argv[])
 
 	/* Print this machine QP information */
 	for (i=0; i < user_param.num_of_qps; i++)
-		ctx_print_pingpong_data(&my_dest[i],&user_comm);
+		ctx_print_pingpong_data(&my_dest[i], &user_comm);
 
 
 	user_comm.rdma_params->side = REMOTE;
 	for (i=0; i < user_param.num_of_qps; i++) {
 
-		if (ctx_hand_shake(&user_comm,&my_dest[i],&rem_dest[i])) {
-			fprintf(stderr," Failed to exchange data between server and clients\n");
+		if (ctx_hand_shake(&user_comm, &my_dest[i], &rem_dest[i])) {
+			fprintf(stderr, " Failed to exchange data between server and clients\n");
 			return FAILURE;
 		}
 
-		ctx_print_pingpong_data(&rem_dest[i],&user_comm);
+		ctx_print_pingpong_data(&rem_dest[i], &user_comm);
 	}
 
 	if (user_param.work_rdma_cm == OFF) { // TODO: 
 		if (ctx_check_gid_compatibility(&my_dest[0], &rem_dest[0])) {
-			fprintf(stderr,"\n Found Incompatibility issue with GID types.\n");
-			fprintf(stderr," Please Try to use a different IP version.\n\n");
+			fprintf(stderr, "\n Found Incompatibility issue with GID types.\n");
+			fprintf(stderr, " Please Try to use a different IP version.\n\n");
 			return FAILURE;
 		}
 	}
 
 	if (user_param.work_rdma_cm == OFF) {
-		if (ctx_connect(&ctx,rem_dest,&user_param,my_dest)) {
-			fprintf(stderr," Unable to Connect the HCA's through the link\n");
+		if (ctx_connect(&ctx, rem_dest, &user_param, my_dest)) {
+			fprintf(stderr, " Unable to Connect the HCA's through the link\n");
 			return FAILURE;
 		}
 	}
 
 	/* An additional handshake is required after moving qp to RTR. */
-	if (ctx_hand_shake(&user_comm,&my_dest[0],&rem_dest[0])) {
-		fprintf(stderr," Failed to exchange data between server and clients\n");
+	if (ctx_hand_shake(&user_comm, &my_dest[0], &rem_dest[0])) {
+		fprintf(stderr, " Failed to exchange data between server and clients\n");
 		return FAILURE;
 	}
 
@@ -206,16 +206,16 @@ int main(int argc, char *argv[])
 	/* For half duplex tests, server just waits for client to exit */
 	if (user_param.machine == SERVER && !user_param.duplex) {
 
-		if (ctx_hand_shake(&user_comm,&my_dest[0],&rem_dest[0])) {
-			fprintf(stderr," Failed to exchange data between server and clients\n");
+		if (ctx_hand_shake(&user_comm, &my_dest[0], &rem_dest[0])) {
+			fprintf(stderr, " Failed to exchange data between server and clients\n");
 			return FAILURE;
 		}
 
-		xchg_bw_reports(&user_comm, &my_bw_rep,&rem_bw_rep,atof(user_param.rem_version));
+		xchg_bw_reports(&user_comm, &my_bw_rep, &rem_bw_rep, atof(user_param.rem_version));
 		print_full_bw_report(&user_param, &rem_bw_rep, NULL);
 
-		if (ctx_close_connection(&user_comm,&my_dest[0],&rem_dest[0])) {
-			fprintf(stderr,"Failed to close connection between server and client\n");
+		if (ctx_close_connection(&user_comm, &my_dest[0], &rem_dest[0])) {
+			fprintf(stderr, "Failed to close connection between server and client\n");
 			return FAILURE;
 		}
 
@@ -227,15 +227,15 @@ int main(int argc, char *argv[])
 		}
 
 		/* if (user_param.work_rdma_cm == ON) { */
-			/* if (destroy_ctx(&ctx,&user_param)) { */
+			/* if (destroy_ctx(&ctx, &user_param)) { */
 				/* fprintf(stderr, "Failed to destroy resources\n"); */
 				/* return FAILURE; */
 			/* } */
 			/* user_comm.rdma_params->work_rdma_cm = ON; */
-			/* return destroy_ctx(user_comm.rdma_ctx,user_comm.rdma_params); */
+			/* return destroy_ctx(user_comm.rdma_ctx, user_comm.rdma_params); */
 		/* } */
 
-		return destroy_ctx(&ctx,&user_param);
+		return destroy_ctx(&ctx, &user_param);
 	}
 
 	if (user_param.test_method == RUN_ALL) {
@@ -243,7 +243,7 @@ int main(int argc, char *argv[])
 		for (i = 1; i < 24 ; ++i) {
 
 			user_param.size = (uint64_t)1 << i;
-			ctx_set_send_wqes(&ctx,&user_param,rem_dest);
+			ctx_set_send_wqes(&ctx, &user_param, rem_dest);
 
 			if (user_param.perform_warm_up) {
 				if(perform_warm_up(&ctx, &user_param)) {
@@ -253,35 +253,35 @@ int main(int argc, char *argv[])
 			}
 
 			if(user_param.duplex) {
-				if (ctx_hand_shake(&user_comm,&my_dest[0],&rem_dest[0])) {
-					fprintf(stderr,"Failed to sync between server and client between different msg sizes\n");
+				if (ctx_hand_shake(&user_comm, &my_dest[0], &rem_dest[0])) {
+					fprintf(stderr, "Failed to sync between server and client between different msg sizes\n");
 					return FAILURE;
 				}
 			}
 
-			if(run_iter_bw(&ctx,&user_param)) {
-				fprintf(stderr," Failed to complete run_iter_bw function successfully\n");
+			if(run_iter_bw(&ctx, &user_param)) {
+				fprintf(stderr, " Failed to complete run_iter_bw function successfully\n");
 				return FAILURE;
 			}
 
 			if (user_param.duplex && (atof(user_param.version) >= 4.6)) {
-				if (ctx_hand_shake(&user_comm,&my_dest[0],&rem_dest[0])) {
-					fprintf(stderr,"Failed to sync between server and client between different msg sizes\n");
+				if (ctx_hand_shake(&user_comm, &my_dest[0], &rem_dest[0])) {
+					fprintf(stderr, "Failed to sync between server and client between different msg sizes\n");
 					return FAILURE;
 				}
 			}
 
-			print_report_bw(&user_param,&my_bw_rep);
+			print_report_bw(&user_param, &my_bw_rep);
 
 			if (user_param.duplex) {
-				xchg_bw_reports(&user_comm, &my_bw_rep,&rem_bw_rep,atof(user_param.rem_version));
+				xchg_bw_reports(&user_comm, &my_bw_rep, &rem_bw_rep, atof(user_param.rem_version));
 				print_full_bw_report(&user_param, &my_bw_rep, &rem_bw_rep);
 			}
 		}
 
 	} else if (user_param.test_method == RUN_REGULAR) {
 
-		ctx_set_send_wqes(&ctx,&user_param,rem_dest);
+		ctx_set_send_wqes(&ctx, &user_param, rem_dest);
 
 		if (user_param.verb != SEND) {
 
@@ -294,21 +294,21 @@ int main(int argc, char *argv[])
 		}
 
 		if(user_param.duplex) {
-			if (ctx_hand_shake(&user_comm,&my_dest[0],&rem_dest[0])) {
-				fprintf(stderr,"Failed to sync between server and client between different msg sizes\n");
+			if (ctx_hand_shake(&user_comm, &my_dest[0], &rem_dest[0])) {
+				fprintf(stderr, "Failed to sync between server and client between different msg sizes\n");
 				return FAILURE;
 			}
 		}
 
-		if(run_iter_bw(&ctx,&user_param)) {
-			fprintf(stderr," Failed to complete run_iter_bw function successfully\n");
+		if(run_iter_bw(&ctx, &user_param)) {
+			fprintf(stderr, " Failed to complete run_iter_bw function successfully\n");
 			return FAILURE;
 		}
 
-		print_report_bw(&user_param,&my_bw_rep);
+		print_report_bw(&user_param, &my_bw_rep);
 
 		if (user_param.duplex) {
-			xchg_bw_reports(&user_comm, &my_bw_rep,&rem_bw_rep,atof(user_param.rem_version));
+			xchg_bw_reports(&user_comm, &my_bw_rep, &rem_bw_rep, atof(user_param.rem_version));
 			print_full_bw_report(&user_param, &my_bw_rep, &rem_bw_rep);
 		}
 
@@ -329,10 +329,10 @@ int main(int argc, char *argv[])
 		}
 	/* } else if (user_param.test_method == RUN_INFINITELY) { */
 
-		/* ctx_set_send_wqes(&ctx,&user_param,rem_dest); */
+		/* ctx_set_send_wqes(&ctx, &user_param, rem_dest); */
 
-		/* if(run_iter_bw_infinitely(&ctx,&user_param)) { */
-			/* fprintf(stderr," Error occurred while running infinitely! aborting ...\n"); */
+		/* if(run_iter_bw_infinitely(&ctx, &user_param)) { */
+			/* fprintf(stderr, " Error occurred while running infinitely! aborting ...\n"); */
 			/* return FAILURE; */
 		/* } */
 	}
@@ -347,27 +347,27 @@ int main(int argc, char *argv[])
 	/* For half duplex tests, server just waits for client to exit */
 	if (user_param.machine == CLIENT && !user_param.duplex) {
 
-		if (ctx_hand_shake(&user_comm,&my_dest[0],&rem_dest[0])) {
-			fprintf(stderr," Failed to exchange data between server and clients\n");
+		if (ctx_hand_shake(&user_comm, &my_dest[0], &rem_dest[0])) {
+			fprintf(stderr, " Failed to exchange data between server and clients\n");
 			return FAILURE;
 		}
 
-		xchg_bw_reports(&user_comm, &my_bw_rep,&rem_bw_rep,atof(user_param.rem_version));
+		xchg_bw_reports(&user_comm, &my_bw_rep, &rem_bw_rep, atof(user_param.rem_version));
 	}
 
 	/* Closing connection. */
-	if (ctx_close_connection(&user_comm,&my_dest[0],&rem_dest[0])) {
-		fprintf(stderr,"Failed to close connection between server and client\n");
+	if (ctx_close_connection(&user_comm, &my_dest[0], &rem_dest[0])) {
+		fprintf(stderr, "Failed to close connection between server and client\n");
 		return FAILURE;
 	}
 
 	if (!user_param.is_bw_limit_passed && (user_param.is_limit_bw == ON ) ) {
-		fprintf(stderr,"Error: BW result is below bw limit\n");
+		fprintf(stderr, "Error: BW result is below bw limit\n");
 		return FAILURE;
 	}
 
 	if (!user_param.is_msgrate_limit_passed && (user_param.is_limit_bw == ON )) {
-		fprintf(stderr,"Error: Msg rate is below msg_rate limit\n");
+		fprintf(stderr, "Error: Msg rate is below msg_rate limit\n");
 		return FAILURE;
 	}
 
@@ -375,13 +375,13 @@ int main(int argc, char *argv[])
 	free(rem_dest);
 
 	/* if (user_param.work_rdma_cm == ON) { */
-		/* if (destroy_ctx(&ctx,&user_param)) { */
+		/* if (destroy_ctx(&ctx, &user_param)) { */
 			/* fprintf(stderr, "Failed to destroy resources\n"); */
 			/* return FAILURE; */
 		/* } */
 		/* user_comm.rdma_params->work_rdma_cm = ON; */
-		/* return destroy_ctx(user_comm.rdma_ctx,user_comm.rdma_params); */
+		/* return destroy_ctx(user_comm.rdma_ctx, user_comm.rdma_params); */
 	/* } */
 
-	return destroy_ctx(&ctx,&user_param);
+	return destroy_ctx(&ctx, &user_param);
 }
