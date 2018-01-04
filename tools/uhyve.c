@@ -63,6 +63,7 @@
 #include <asm/msr-index.h>
 #include <asm/mman.h>
 #include <malloc.h>
+#include <dlfcn.h>
 
 #include <infiniband/verbs.h>		// Linux include
 
@@ -168,7 +169,7 @@
 #define IOAPIC_DEFAULT_BASE	0xfec00000
 #define APIC_DEFAULT_BASE	0xfee00000
 
-#define IB_MEM_DEBUG 1
+/* #define IB_MEM_DEBUG  */
 
 static bool restart = false;
 static bool cap_tsc_deadline = false;
@@ -199,49 +200,54 @@ static __thread uint32_t cpuid = 0;
 
 
 
+
 static uint8_t * ib_mem = NULL;
 bool ib_malloc = false;
 static const size_t std_alignment = 16; // TODO: Use sizeof(maxint_t) (?) or similar
-static pthread_mutex_t ib_hooks_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-// Definition of malloc hooks for IBV library
-static void   init_ib_hooks(void);
 
-static void * ib_malloc_hook(size_t, const void *);
-static void * ib_realloc_hook(void *, size_t, const void *);
-static void * ib_memalign_hook(size_t, size_t, const void *);
-static void   ib_free_hook(void *, const void *);
+/* Redefining malloc */
 
-static void * (* default_malloc_hook)  (size_t, const void *);
-static void * (* default_realloc_hook) (void *, size_t, const void *);
-static void * (* default_memalign_hook)(size_t, size_t, const void *);
-static void   (* default_free_hook)    (void *, const void *);
+static void * (* real_malloc) (size_t)         = NULL;
+static void * (* real_realloc)(void *, size_t) = NULL;
+static void   (* real_free)   (void *)         = NULL;
+/* static void   (* real_free_alt)  (void *) = NULL; */
 
-/* void (* __malloc_initialize_hook) (void) = init_ib_hooks; */
-/* __malloc_initialize_hook = init_ib_hooks; */
+/*
+ * init_ib_memalloc
+ */
 
-static void init_ib_hooks(void) {
-	default_malloc_hook   = __malloc_hook;
-	default_realloc_hook  = __realloc_hook;
-	default_memalign_hook = __memalign_hook;
-	default_free_hook     = __free_hook;
+static void init_ib_memalloc(void)
+{
+#ifdef IB_MEM_DEBUG
+	printf("Entered init_ib_memalloc.\n");
+#endif
+	real_malloc  = dlsym(RTLD_NEXT, "malloc");
+	real_realloc = dlsym(RTLD_NEXT, "realloc");
+	real_free    = dlsym(RTLD_NEXT, "free");
+	/* real_free_alt = dlsym(RTLD_DEFAULT, "free"); */
 
-	__malloc_hook   = ib_malloc_hook;
-	__realloc_hook  = ib_realloc_hook;
-	__memalign_hook = ib_memalign_hook;
-	__free_hook     = ib_free_hook;
+	if (!real_malloc || !real_free || !real_realloc /* || !real_free_alt */ ) {
+		fprintf(stderr, "Error in `dlsym`: %s\n", dlerror());
+	}
 }
 
-void init_default_hooks() {
-	__malloc_hook   = default_malloc_hook;
-	__realloc_hook  = default_realloc_hook;
-	__memalign_hook = default_memalign_hook;
-	__free_hook     = default_free_hook;
-}
 
-void * new_ib_malloc_region(size_t size) {
+/*
+ * new_ib_malloc_region
+ */
+
+void * new_ib_malloc_region(size_t size)
+{
+#ifdef IB_MEM_DEBUG
+	printf("Entered init_ib_memalloc.\n");
+#endif
+
 	void * result = NULL;
 
+	if (NULL == ib_mem) {
+		fprintf(stderr, "Error: ib_malloc called before ib_mem has been set.\n");
+	}
 	if (size > 0) {
 		ib_mem -= size;
 		ib_mem -= (size_t) ((uintptr_t) ib_mem % std_alignment);
@@ -264,16 +270,20 @@ void * new_ib_malloc_region(size_t size) {
 	return result;
 }
 
-// Malloc Hook
-static void * ib_malloc_hook(size_t size, const void * caller) {
-#ifdef IB_MEM_DEBUG
-	/* printf("Before Mutex Lock."); */
-#endif
-	pthread_mutex_lock(&ib_hooks_mutex);
-	init_default_hooks();
+
+/*
+ * malloc
+ */
+
+void * malloc(size_t size)
+{
+	if (real_malloc == NULL) {
+		init_ib_memalloc();
+	}
 
 #ifdef IB_MEM_DEBUG
-	printf(" ib_malloc_hook\tib_malloc %s\t Args:\tsize = %lu\t", ib_malloc ? "true " : "false", size);
+	printf(" ib_malloc_hook\tib_malloc %s\t Args:\tsize = %lu\n",
+			ib_malloc ? "true " : "false", size);
 #endif
 
 	void * result;
@@ -283,22 +293,22 @@ static void * ib_malloc_hook(size_t size, const void * caller) {
 #ifdef IB_MEM_DEBUG
 		printf("\n");
 #endif
-		result = malloc(size);
+		result = real_malloc(size);
 	}
 
-	init_ib_hooks();
-	pthread_mutex_unlock(&ib_hooks_mutex);
 	return result;
 }
 
-// Realloc Hook
-static void * ib_realloc_hook(void * ptr, size_t new_size, const void * caller) {
-	pthread_mutex_lock(&ib_hooks_mutex);
-	init_default_hooks();
 
+/*
+ * realloc
+ */
+
+void * realloc(void * ptr, size_t new_size) {
 #ifdef IB_MEM_DEBUG
-	printf("ib_realloc_hook\tib_malloc %s\t Args:\tptr = %p, size = %lu\t", ib_malloc ? "true " : "false", ptr, new_size);
+	printf("ib_realloc_hook\tib_malloc %s\t Args:\tptr = %p, size = %lu\n", ib_malloc ? "true " : "false", ptr, new_size);
 #endif
+
 	void * result;
 
 	if (ib_malloc) {
@@ -310,6 +320,7 @@ static void * ib_realloc_hook(void * ptr, size_t new_size, const void * caller) 
 			printf("new_size <= 0 || ptr == NULL\n");
 #endif
 			result = NULL;
+
 		} else if (new_size <= orig_size) {
 #ifdef IB_MEM_DEBUG
 			printf("new_size <= orig_size = %lu\n", orig_size);
@@ -325,50 +336,31 @@ static void * ib_realloc_hook(void * ptr, size_t new_size, const void * caller) 
 #ifdef IB_MEM_DEBUG
 		printf("\n");
 #endif
-		result = realloc(ptr, new_size);
+		result = real_realloc(ptr, new_size);
 	}
 
-	init_ib_hooks();
-	pthread_mutex_unlock(&ib_hooks_mutex);
 	return result;
 }
 
-// Memalign Hook - just a dummy for now
-static void * ib_memalign_hook(size_t alignment, size_t size, const void * caller) {
-	pthread_mutex_lock(&ib_hooks_mutex);
-	init_default_hooks();
+
+/*
+ * free
+ */
+
+void free(void * ptr) {
+	/* if (real_free == NULL) { */
+		/* init_ib_memalloc(); */
+	/* } */
 
 #ifdef IB_MEM_DEBUG
-	printf("\tCALLED! ib_memalign_hook\tib_malloc %s\t Args:\talignment = %lu\tsize = %lu\t",
-			ib_malloc ? "true " : "false", alignment, size);
-#endif
-
-	void * result;
-	if (ib_malloc) {
-		/* result = new_ib_malloc_region(size); */
-	} else { // !ib_malloc
-#ifdef IB_MEM_DEBUG
-		printf("\n");
-#endif
-		result = memalign(alignment, size);
-	}
-
-	init_ib_hooks();
-	pthread_mutex_unlock(&ib_hooks_mutex);
-	return result;
-}
-
-// Free Hook
-static void ib_free_hook(void * ptr, const void * caller) {
-	pthread_mutex_lock(&ib_hooks_mutex);
-	init_default_hooks();
-
-#ifdef IB_MEM_DEBUG
-	printf("   ib_free_hook\tib_malloc %s\t Args:\tptr = %p", ib_malloc ? "true " : "false", ptr);
+	printf(" ib_free_hook\tib_malloc %s\t Args:\tptr = %p\n", ib_malloc ? "true " : "false", ptr);
+	printf(" real_free:     %p\n", real_free);
+	printf(" my own free:   %p\n", free);
+	/* printf(" real_free_alt: %p\n", real_free_alt); */
 #endif
 
 	if (!ib_malloc) {
-		free(ptr);
+		real_free(ptr);
 	} else if (ptr != NULL && (ptr <= ib_mem || ptr > guest_mem + guest_size)) {
 #ifdef IB_MEM_DEBUG
 		printf("\t!!! ptr out of ib bounds !!!");
@@ -377,11 +369,7 @@ static void ib_free_hook(void * ptr, const void * caller) {
 #ifdef IB_MEM_DEBUG
 	printf("\n");
 #endif
-
-	init_ib_hooks();
-	pthread_mutex_unlock(&ib_hooks_mutex);
 }
-
 
 
 
@@ -1628,7 +1616,7 @@ int uhyve_init(char *path)
 	ib_mem = guest_mem + guest_size;
 	printf("guest_mem: %p, guest_size: %p\n", guest_mem, guest_size);
 	printf("ib_mem = guest_mem + guest_size: %p\n", ib_mem);
-	init_ib_hooks();
+	/* init_ib_memalloc(); */
 
 	return ret;
 }

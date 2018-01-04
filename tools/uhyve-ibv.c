@@ -44,7 +44,7 @@ void call_ibv_get_device_list(struct kvm_run * run, uint8_t * guest_mem) {
 	int * temp = malloc(sizeof(int));
 	*temp = 42;
 	free(temp);
-	
+
 	ib_malloc = true;
 	unsigned data = *((unsigned *)((size_t)run+run->io.data_offset));
 	uhyve_ibv_get_device_list_t * args = (uhyve_ibv_get_device_list_t *) (guest_mem + data);

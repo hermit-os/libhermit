@@ -7,7 +7,7 @@ add_compile_options(-std=c99)
 
 add_executable(proxy proxy.c uhyve.c uhyve-ibv.c uhyve-net.c)
 target_compile_options(proxy PUBLIC -pthread)
-target_link_libraries(proxy pthread ibverbs)
+target_link_libraries(proxy pthread dl ibverbs)
 
 install(TARGETS proxy
 	DESTINATION bin)
