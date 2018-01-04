@@ -65,8 +65,6 @@
 #include <asm/mman.h>
 #include <malloc.h>
 
-#include <dlfcn.h>
-
 #include <infiniband/verbs.h>		// Linux include
 
 #include "uhyve-cpu.h"
@@ -219,32 +217,6 @@ typedef struct {
 	char **argv;
 	char **envp;
 } __attribute__ ((packed)) uhyve_cmdval_t;
-
-/* Redefining malloc */
-
-static void * (* real_malloc)(size_t) = NULL;
-
-static void ib_malloc_init(void)
-{
-	real_malloc = dlsym(RTLD_NEXT, "malloc");
-	if (NULL == real_malloc) {
-		fprintf(stderr, "Error in `dlsym`: %s\n", dlerror());
-	}
-}
-
-void * malloc(size_t size)
-{
-	if(real_malloc == NULL) {
-		ib_malloc_init();
-	}
-
-	void * p = NULL;
-	/* fprintf(stderr, "malloc(%d) = ", size); */
-	p = real_malloc(size);
-	/* fprintf(stderr, "%p\n", p); */
-	return p;
-}
-
 
 static uint64_t memparse(const char *ptr)
 {
