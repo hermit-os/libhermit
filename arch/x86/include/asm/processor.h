@@ -117,9 +117,11 @@ extern "C" {
 #define CPU_FEATURE_AVX512VL		(1 <<31)
 
 // feature list 0x00000006
-#define CPU_FEATURE_IDA				(1 << 0)
+#define CPU_FEATURE_IDA				(1 << 1)
+#define CPU_FEATURE_ARAT				(1 << 2)
 #define CPU_FEATURE_EPB				(1 << 3)
-#define CPU_FEATURE_HWP				(1 << 10)
+#define CPU_FEATURE_HWP				(1 << 7)
+#define CPU_FEATURE_HWP_EPP				(1 << 10)
 
 /*
  * EFLAGS bits
@@ -298,6 +300,9 @@ typedef struct {
 } cpu_info_t;
 
 extern cpu_info_t cpu_info;
+
+// reset FS & GS registers to the default values
+int reset_fsgs(int32_t core_id);
 
 // determine the cpu features
 int cpu_detection(void);

@@ -361,12 +361,17 @@ static void check_est(uint8_t out)
 			LOG_INFO("P-State HWP enabled\n");
 	}
 
-	if (c & CPU_FEATURE_EPB) {
+	if (c & CPU_FEATURE_HWP_EPP) {
 		// for maximum performance we have to clear BIAS
 		wrmsr(MSR_IA32_ENERGY_PERF_BIAS, 0);
 		if (out)
 			LOG_INFO("Found Performance and Energy Bias Hint support: 0x%llx\n", rdmsr(MSR_IA32_ENERGY_PERF_BIAS));
 	}
+
+	if (c & CPU_FEATURE_ARAT)
+		LOG_INFO("Timer runs with a constant rate!");
+	else
+		LOG_INFO("Timer doesn't run with a constant rate!");
 
 #if 0
 	if (out) {
@@ -389,6 +394,19 @@ static void check_est(uint8_t out)
 		dump_pstate();
 
 	return;
+}
+
+int reset_fsgs(int32_t core_id)
+{
+	writefs(0);
+#if MAX_CORES > 1
+	writegs(core_id * ((size_t) &percore_end0 - (size_t) &percore_start));
+#else
+	writegs(0);
+#endif
+	wrmsr(MSR_KERNEL_GS_BASE, 0);
+
+	return 0;
 }
 
 int cpu_detection(void) {
@@ -531,13 +549,7 @@ int cpu_detection(void) {
 	//if (has_vmx())
 	//	wrmsr(MSR_IA32_FEATURE_CONTROL, rdmsr(MSR_IA32_FEATURE_CONTROL) | 0x5);
 
-	writefs(0);
-#if MAX_CORES > 1
-	writegs(atomic_int32_read(&current_boot_id) * ((size_t) &percore_end0 - (size_t) &percore_start));
-#else
-	writegs(0);
-#endif
-	wrmsr(MSR_KERNEL_GS_BASE, 0);
+	reset_fsgs(atomic_int32_read(&current_boot_id));
 
 	LOG_INFO("Core %d set per_core offset to 0x%x\n", atomic_int32_read(&current_boot_id), rdmsr(MSR_GS_BASE));
 

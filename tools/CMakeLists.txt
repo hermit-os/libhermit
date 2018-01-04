@@ -7,7 +7,10 @@ add_compile_options(-std=c99)
 
 add_executable(proxy proxy.c uhyve-ibv.c utils.c uhyve.c uhyve-net.c)
 target_compile_options(proxy PUBLIC -pthread)
+
+target_compile_options(proxy PUBLIC -DMAX_ARGC_ENVC=${MAX_ARGC_ENVC})
 target_link_libraries(proxy pthread ibverbs)
+# target_link_libraries(proxy -pthread)
 
 install(TARGETS proxy
 	DESTINATION bin)

@@ -110,13 +110,6 @@ typedef struct {
 	size_t base;
 } __attribute__ ((packed)) gdt_ptr_t;
 
-// a TSS descriptor is twice larger than a code/data descriptor
-#define GDT_ENTRIES	(7+MAX_CORES*2)
-
-#if GDT_ENTRIES > 8192
-#error Too many GDT entries!
-#endif
-
 /** @brief Installs the global descriptor table
  *
  * The installation involves the following steps:
@@ -145,7 +138,7 @@ void configure_gdt_entry(gdt_entry_t *dest_entry, unsigned long base, unsigned l
 
 /** @brief Initialize the task state segments
  */
-void tss_init(void);
+void tss_init(tid_t id);
 
 #ifdef __cplusplus
 }

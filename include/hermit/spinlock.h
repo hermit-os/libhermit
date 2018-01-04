@@ -186,7 +186,9 @@ inline static int spinlock_irqsave_lock(spinlock_irqsave_t* s) {
 
 	ticket = atomic_int64_inc(&s->queue);
 	while (atomic_int64_read(&s->dequeue) != ticket) {
+		irq_nested_enable(flags);
 		PAUSE;
+		irq_nested_disable();
 	}
 
 	s->coreid = CORE_ID;

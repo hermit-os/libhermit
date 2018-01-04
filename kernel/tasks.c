@@ -72,10 +72,6 @@ DEFINE_PER_CORE(task_t*, current_task, task_table+0);
 DEFINE_PER_CORE(uint32_t, __core_id, 0);
 #endif
 
-extern const void boot_stack;
-extern const void boot_ist;
-
-
 static void update_timer(task_t* first)
 {
 	if(first) {
@@ -269,38 +265,46 @@ int multitasking_init(void)
 	}
 
 	task_table[0].prio = IDLE_PRIO;
-	task_table[0].stack = (char*) ((size_t)&boot_stack + core_id * KERNEL_STACK_SIZE);
-	task_table[0].ist_addr = (char*)&boot_ist;
+	task_table[0].stack = NULL; // will be initialized later
+	task_table[0].ist_addr = NULL; // will be initialized later
 	set_per_core(current_task, task_table+0);
-	arch_init_task(task_table+0);
 
 	readyqueues[core_id].idle = task_table+0;
 
 	return 0;
 }
 
-
-int set_idle_task(void)
+int set_boot_stack(tid_t id, size_t stack, size_t ist_addr)
 {
-	uint32_t i, core_id = CORE_ID;
-	int ret = -ENOMEM;
+	if (id < MAX_CORES) {
+		task_table[id].stack = (void*) stack;
+		task_table[id].ist_addr = (void*) ist_addr;
+
+		return 0;
+	}
+
+	return -EINVAL;
+}
+
+tid_t set_idle_task(void)
+{
+	uint32_t core_id = CORE_ID;
+	tid_t id = ~0;
 
 	spinlock_irqsave_lock(&table_lock);
 
-	for(i=0; i<MAX_TASKS; i++) {
+	for(uint32_t i=0; i<MAX_TASKS; i++) {
 		if (task_table[i].status == TASK_INVALID) {
-			task_table[i].id = i;
+			task_table[i].id = id = i;
 			task_table[i].status = TASK_IDLE;
 			task_table[i].last_core = core_id;
 			task_table[i].last_stack_pointer = NULL;
-			task_table[i].stack = (char*) ((size_t)&boot_stack + core_id * KERNEL_STACK_SIZE);
-			task_table[i].ist_addr = create_stack(KERNEL_STACK_SIZE);
+			task_table[i].stack = NULL;
+			task_table[i].ist_addr = NULL;
 			task_table[i].prio = IDLE_PRIO;
 			task_table[i].heap = NULL;
 			readyqueues[core_id].idle = task_table+i;
 			set_per_core(current_task, readyqueues[core_id].idle);
-			arch_init_task(task_table+i);
-			ret = 0;
 
 			break;
 		}
@@ -308,7 +312,7 @@ int set_idle_task(void)
 
 	spinlock_irqsave_unlock(&table_lock);
 
-	return ret;
+	return id;
 }
 
 void finish_task_switch(void)

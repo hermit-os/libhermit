@@ -46,7 +46,7 @@
 #define __HERMIT_lseek	5
 
 int uhyve_init(char *path);
-int uhyve_loop(void);
+int uhyve_loop(int argc, char **argv);
 
 // define some helper functions
 uint32_t get_cpufreq(void);

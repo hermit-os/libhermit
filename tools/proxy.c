@@ -296,7 +296,12 @@ static int qemu_init(char *path)
 	char port_str[MAX_PATH];
 	pid_t qemu_pid;
 	char* qemu_str = "qemu-system-x86_64";
-	char* qemu_argv[] = {qemu_str, "-daemonize", "-display", "none", "-smp", "1", "-m", "2G", "-pidfile", pidname, "-net", "nic,model=rtl8139", "-net", hostfwd, "-chardev", chardev_file, "-device", "pci-serial,chardev=gnc0", "-kernel", loader_path, "-initrd", path, "-append", get_append_string(), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+	char* qemu_argv[] = {qemu_str, "-daemonize", "-display", "none", "-smp", "1",
+		"-m", "2G", "-pidfile", pidname, "-net", "nic,model=rtl8139", "-net",
+		hostfwd, "-chardev", chardev_file, "-device", "pci-serial,chardev=gnc0",
+		"-kernel", loader_path, "-initrd", path, "-append", get_append_string(),
+		"-no-acpi", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+		NULL, NULL, NULL, NULL};
 
 	str = getenv("HERMIT_CPUS");
 	if (str)
@@ -1028,7 +1033,7 @@ int main(int argc, char **argv)
 
 	switch(monitor) {
 	case UHYVE:
-		return uhyve_loop();
+		return uhyve_loop(argc, argv);
 
 	case BAREMETAL:
 	case QEMU:
