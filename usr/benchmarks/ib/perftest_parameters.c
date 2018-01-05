@@ -2851,6 +2851,7 @@ void print_full_bw_report (struct perftest_parameters *user_param, struct bw_rep
 		fprintf(stdout, user_param->cpu_util_data.enable ? REPORT_EXT_CPU_UTIL : REPORT_EXT , calc_cpu_util(user_param));
 	}
 }
+
 /******************************************************************************
  *
  ******************************************************************************/
@@ -2881,7 +2882,6 @@ static int cycles_compare(const void *aptr, const void *bptr)
 #define LAT_MEASURE_TAIL (2)
 void print_report_lat (struct perftest_parameters *user_param)
 {
-
 	int i;
 	int rtt_factor;
 	double cycles_to_units, cycles_rtt_quotient, temp_var, pow_var;
@@ -2980,9 +2980,6 @@ void print_report_lat (struct perftest_parameters *user_param)
 	free(delta);
 }
 
-/******************************************************************************
- *
- ******************************************************************************/
 void print_report_lat_duration (struct perftest_parameters *user_param)
 {
 	int rtt_factor;

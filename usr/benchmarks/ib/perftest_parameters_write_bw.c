@@ -27,16 +27,6 @@ static const char *atomicTypesStr[] = {"CMP_AND_SWAP", "FETCH_AND_ADD"};
 // -----------------------------------------------------------------------------
 
 
-/* char * duplicate_str(const char * given_str) */
-/* { */
-	/* char * new_str = malloc(strlen(given_str) + 1); */
-	/* if (new_str == NULL) */
-		/* return NULL; */
-	/* strcpy(new_str, given_str); */
-
-	/* return new_str; */
-/* } */
-
 const int str_link_layer(const char *str)
 {
 	if (strncasecmp("IB", str, 2) == 0)
@@ -1430,7 +1420,27 @@ int parse_ip6_from_str(char *ip6, struct in6_addr *addr)
 	return inet_pton(AF_INET6, ip6, addr);
 }
 
+static int cycles_compare(const void *aptr, const void *bptr)
+{
+	const cycles_t *a = aptr;
+	const cycles_t *b = bptr;
+	if (*a < *b) return -1;
+	if (*a > *b) return 1;
+
+	return 0;
+}
+
+static inline cycles_t get_median(int n, cycles_t delta[])
+{
+	if ((n - 1) % 2)
+		return(delta[n / 2] + delta[n / 2 - 1]) / 2;
+	else
+		return delta[n / 2];
+}
+
+
 // -----------------------------------------------------------------------------
+
 
 int parser(struct perftest_parameters *user_param, char *argv[], int argc)
 {
@@ -2451,6 +2461,107 @@ void print_report_bw(struct perftest_parameters *user_param, struct bw_report_da
 	if (free_my_bw_rep == 1) {
 		free(my_bw_rep);
 	}
+}
+
+#define LAT_MEASURE_TAIL (2)
+void print_report_lat (struct perftest_parameters *user_param)
+{
+	int i;
+	int rtt_factor;
+	double cycles_to_units, cycles_rtt_quotient, temp_var, pow_var;
+	cycles_t median ;
+	cycles_t *delta = NULL;
+	const char* units;
+	double latency, stdev, average_sum = 0 , average, stdev_sum = 0;
+	int iters_99, iters_99_9;
+	int measure_cnt;
+
+	measure_cnt = (user_param->tst == LAT) ? user_param->iters - 1 : (user_param->iters) / user_param->reply_every;
+	rtt_factor = (user_param->verb == READ || user_param->verb == ATOMIC) ? 1 : 2;
+	ALLOCATE(delta, cycles_t, measure_cnt);
+
+	if (user_param->r_flag->cycles) {
+		cycles_to_units = 1;
+		units = "cycles";
+	} else {
+		cycles_to_units = get_cpu_mhz(user_param->cpu_freq_f);
+		units = "usec";
+	}
+
+	if (user_param->tst == LAT) {
+		for (i = 0; i < measure_cnt; ++i) {
+			delta[i] = user_param->tposted[i + 1] - user_param->tposted[i];
+		}
+	} else if (user_param->tst == LAT_BY_BW) {
+		for (i = 0; i < measure_cnt; ++i) {
+			delta[i] = user_param->tcompleted[i] - user_param->tposted[i];
+		}
+	}
+	else {
+		fprintf(stderr,"print report LAT is support in LAT and LAT_BY_BW tests only\n");
+		exit(1);
+	}
+
+	cycles_rtt_quotient = cycles_to_units * rtt_factor;
+	if (user_param->r_flag->unsorted) {
+		printf("#, %s\n", units);
+		for (i = 0; i < measure_cnt; ++i)
+			printf("%d, %g\n", i + 1, delta[i] / cycles_rtt_quotient);
+	}
+
+	qsort(delta, measure_cnt, sizeof *delta, cycles_compare);
+	measure_cnt = measure_cnt - LAT_MEASURE_TAIL;
+	median = get_median(measure_cnt, delta);
+
+	/* calcualte average sum on sorted array*/
+	for (i = 0; i < measure_cnt; ++i)
+		average_sum += (delta[i] / cycles_rtt_quotient);
+
+	average = average_sum / measure_cnt;
+
+	/* Calculate stdev by variance*/
+	for (i = 0; i < measure_cnt; ++i) {
+		temp_var = average - (delta[i] / cycles_rtt_quotient);
+		pow_var = pow(temp_var, 2 );
+		stdev_sum += pow_var;
+	}
+
+	if (user_param->r_flag->histogram) {
+		printf("#, %s\n", units);
+		for (i = 0; i < measure_cnt; ++i)
+			printf("%d, %g\n", i + 1, delta[i] / cycles_rtt_quotient);
+	}
+
+	if (user_param->r_flag->unsorted || user_param->r_flag->histogram) {
+		if (user_param->output == FULL_VERBOSITY) {
+			printf(RESULT_LINE);
+			printf("%s",(user_param->test_type == ITERATIONS) ? RESULT_FMT_LAT : RESULT_FMT_LAT_DUR);
+			printf((user_param->cpu_util_data.enable ? RESULT_EXT_CPU_UTIL : RESULT_EXT));
+		}
+	}
+
+	latency = median / cycles_rtt_quotient;
+	stdev = sqrt(stdev_sum / measure_cnt);
+	iters_99 = ceil((measure_cnt) * 0.99);
+	iters_99_9 = ceil((measure_cnt) * 0.999);
+
+	if (user_param->output == OUTPUT_LAT)
+		printf("%lf\n",average);
+	else {
+		printf(REPORT_FMT_LAT,
+				(unsigned long)user_param->size,
+				user_param->iters,
+				delta[0] / cycles_rtt_quotient,
+				delta[measure_cnt] / cycles_rtt_quotient,
+				latency,
+				average,
+				stdev,
+				delta[iters_99] / cycles_rtt_quotient,
+				delta[iters_99_9] / cycles_rtt_quotient);
+		printf( user_param->cpu_util_data.enable ? REPORT_EXT_CPU_UTIL : REPORT_EXT , calc_cpu_util(user_param));
+	}
+
+	free(delta);
 }
 
 void print_full_bw_report (struct perftest_parameters *user_param, struct bw_report_data *my_bw_rep, struct bw_report_data *rem_bw_rep)
