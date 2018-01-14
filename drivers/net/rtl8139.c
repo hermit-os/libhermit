@@ -50,6 +50,9 @@
 #define TX_BUF_LEN	4096
 #define MIN(a, b)	(a) < (b) ? (a) : (b)
 
+static uint8_t rx_buffer[RX_BUF_LEN+16 /* header size */] __attribute__ ((aligned (PAGE_SIZE)));
+static uint8_t tx_buffer[4][TX_BUF_LEN] __attribute__ ((aligned (PAGE_SIZE)));
+
 /*
  * To set the RTL8139 to accept only the Transmit OK (TOK) and Receive OK (ROK)
  * interrupts, we would have the TOK and ROK bits of the IMR high and leave the
@@ -328,26 +331,15 @@ err_t rtl8139if_init(struct netif* netif)
 	rtl8139if->irq = pci_info.irq;
 
 	/* allocate the receive buffer */
-	rtl8139if->rx_buffer = page_alloc(RX_BUF_LEN + 16 /* header size */, VMA_READ|VMA_WRITE);
-	if (!(rtl8139if->rx_buffer)) {
-		LOG_ERROR("rtl8139if_init: out of memory\n");
-		kfree(rtl8139if);
-		return ERR_MEM;
-	}
-	memset(rtl8139if->rx_buffer, 0x00, RX_BUF_LEN + 16);
+	rtl8139if->rx_buffer = rx_buffer;
+	//memset(rtl8139if->rx_buffer, 0x00, RX_BUF_LEN + 16);
 
 	/* allocate the send buffers */
-	rtl8139if->tx_buffer[0] = page_alloc(4*TX_BUF_LEN, VMA_READ|VMA_WRITE);
-	if (!(rtl8139if->tx_buffer[0])) {
-		LOG_ERROR("rtl8139if_init: out of memory\n");
-		page_free(rtl8139if->rx_buffer, RX_BUF_LEN + 16);
-		kfree(rtl8139if);
-		return ERR_MEM;
-	}
-	memset(rtl8139if->tx_buffer[0], 0x00, 4*TX_BUF_LEN);
-	rtl8139if->tx_buffer[1] = rtl8139if->tx_buffer[0] + 1*TX_BUF_LEN;
-	rtl8139if->tx_buffer[2] = rtl8139if->tx_buffer[0] + 2*TX_BUF_LEN;
-	rtl8139if->tx_buffer[3] = rtl8139if->tx_buffer[0] + 3*TX_BUF_LEN;
+	rtl8139if->tx_buffer[0] = tx_buffer[0];
+	//memset(rtl8139if->tx_buffer[0], 0x00, 4*TX_BUF_LEN);
+	rtl8139if->tx_buffer[1] = tx_buffer[1];
+	rtl8139if->tx_buffer[2] = tx_buffer[2];
+	rtl8139if->tx_buffer[3] = tx_buffer[3];
 
 	netif->state = rtl8139if;
 	mynetif = netif;
@@ -355,8 +347,6 @@ err_t rtl8139if_init(struct netif* netif)
 	tmp32 = inportl(rtl8139if->iobase + TCR);
 	if (tmp32 == 0xFFFFFF) {
 		LOG_ERROR("rtl8139if_init: ERROR\n");
-		page_free(rtl8139if->rx_buffer, RX_BUF_LEN + 16);
-		page_free(rtl8139if->tx_buffer[0], 4*TX_BUF_LEN);
 		kfree(rtl8139if);
 		memset(netif, 0x00, sizeof(struct netif));
 		mynetif = NULL;
@@ -400,8 +390,6 @@ err_t rtl8139if_init(struct netif* netif)
 	if (!tmp16) {
 		// it seems not to work
 		LOG_ERROR("RTL8139 reset failed\n");
-		page_free(rtl8139if->rx_buffer, RX_BUF_LEN + 16);
-		page_free(rtl8139if->tx_buffer[0], 4*TX_BUF_LEN);
 		kfree(rtl8139if);
 		memset(netif, 0x00, sizeof(struct netif));
 		mynetif = NULL;

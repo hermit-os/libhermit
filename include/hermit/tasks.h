@@ -254,7 +254,6 @@ void check_ticks(void);
  */
 void shutdown_system(void);
 
-
 extern volatile uint32_t go_down;
 static inline void check_workqueues_in_irqhandler(int irq)
 {
@@ -265,11 +264,10 @@ static inline void check_workqueues_in_irqhandler(int irq)
 
 	check_timers();
 
-	if (irq < 0) {
-		if (go_down)
-			shutdown_system();
+	if (go_down)
+		shutdown_system();
+	if (irq < 0)
 		check_scheduling();
-	}
 }
 
 static inline void check_workqueues(void)
@@ -281,6 +279,10 @@ static inline void check_workqueues(void)
 /** @brief check if a proxy is available
  */
 int is_proxy(void);
+
+/** @brief initialized the stacks of the idle tasks
+ */
+int set_boot_stack(tid_t id, size_t stack, size_t ist_addr);
 
 #ifdef __cplusplus
 }

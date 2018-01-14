@@ -50,8 +50,6 @@
  */
 extern const void kernel_start;
 
-#define IOAPIC_ADDR	((size_t) &kernel_start - 2*PAGE_SIZE)
-#define LAPIC_ADDR	((size_t) &kernel_start - 1*PAGE_SIZE)
 #define MAX_APIC_CORES	MAX_CORES
 #define SMP_SETUP_ADDR	0x8000ULL
 
@@ -247,8 +245,8 @@ void apic_eoi(size_t int_no)
 	 * If the IDT entry that was invoked was greater-than-or-equal to 48,
 	 * then we use the APIC
 	 */
-	if (apic_is_enabled() || int_no >= 123) {
-		lapic_write(APIC_EOI, 0);
+	if (apic_is_enabled() || int_no >= 48) {
+		lapic_write(APIC_EOI, APIC_EOI_ACK);
 	} else {
 		/*
 		 * If the IDT entry that was invoked was greater-than-or-equal to 40
@@ -364,7 +362,7 @@ int apic_enable_timer(void)
 }
 
 static apic_mp_t* search_mptable(size_t base, size_t limit) {
-	size_t ptr=PAGE_FLOOR(base), vptr=0;
+	size_t ptr=PAGE_FLOOR(base), old_ptr = 0;
 	size_t flags = PG_GLOBAL | PG_RW | PG_PCD;
 	apic_mp_t* tmp;
 	uint32_t i;
@@ -373,15 +371,17 @@ static apic_mp_t* search_mptable(size_t base, size_t limit) {
 	if (has_nx())
 		flags |= PG_XD;
 
+	size_t vptr = vma_alloc(PAGE_SIZE, VMA_READ|VMA_WRITE);
+
 	while(ptr<=limit-sizeof(apic_mp_t)) {
-		if (vptr) {
+		if (old_ptr) {
 			// unmap page via mapping a zero page
-			page_unmap(vptr, 1);
-			vptr = 0;
+			page_unmap(old_ptr, 1);
+			old_ptr = 0;
 		}
 
-		if (BUILTIN_EXPECT(!page_map(ptr & PAGE_MASK, ptr & PAGE_MASK, 1, flags), 1)) {
-			vptr = ptr & PAGE_MASK;
+		if (BUILTIN_EXPECT(!page_map(vptr, ptr & PAGE_MASK, 1, flags), 1)) {
+			old_ptr = vptr;
 		} else {
 			kprintf("Failed to map 0x%zx, which is required to search for the MP tables\n", ptr);
 			return NULL;
@@ -390,10 +390,8 @@ static apic_mp_t* search_mptable(size_t base, size_t limit) {
 		for(i=0; (vptr) && (i<PAGE_SIZE); i+=4) {
 			tmp = (apic_mp_t*) (vptr+i);
 			if (tmp->signature == MP_FLT_SIGNATURE) {
-				if (!((tmp->version > 4) || (tmp->features[0]))) {
-					vma_add(ptr & PAGE_MASK, (ptr & PAGE_MASK) + PAGE_SIZE, VMA_READ|VMA_WRITE);
+				if (!((tmp->version > 4) || (tmp->features[0])))
 					return tmp;
-				}
 			}
 		}
 
@@ -402,7 +400,9 @@ static apic_mp_t* search_mptable(size_t base, size_t limit) {
 
 	if (vptr) {
 		// unmap page via mapping a zero page
-		page_unmap(vptr, 1);
+		if (old_ptr)
+			page_unmap(old_ptr, 1);
+		vma_free(vptr, vptr + PAGE_SIZE);
 	}
 
 	return NULL;
@@ -479,7 +479,7 @@ static int wakeup_ap(uint32_t start_eip, uint32_t id)
 
 	if (!reset_vector) {
 		reset_vector = (char*) vma_alloc(PAGE_SIZE, VMA_READ|VMA_WRITE);
-		page_map((size_t)reset_vector, 0x00, 1, PG_RW|PG_GLOBAL|PG_PCD);
+		page_map((size_t)reset_vector, 0x00, 1, PG_RW|PG_GLOBAL|PG_PCD|PG_NX);
 		reset_vector += 0x467; // add base address of the reset vector
 		LOG_DEBUG("Map reset vector to %p\n", reset_vector);
 	}
@@ -581,8 +581,11 @@ int smp_init(void)
 	 * in real mode, switch to protected and finally they jump to smp_main.
 	 */
 	page_map(SMP_SETUP_ADDR, SMP_SETUP_ADDR, PAGE_CEIL(sizeof(boot_code)) >> PAGE_BITS, PG_RW|PG_GLOBAL);
-	vma_add(SMP_SETUP_ADDR, SMP_SETUP_ADDR + PAGE_CEIL(sizeof(boot_code)), VMA_READ|VMA_WRITE|VMA_CACHEABLE);
+	vma_add(SMP_SETUP_ADDR, SMP_SETUP_ADDR + PAGE_CEIL(sizeof(boot_code)),
+		VMA_EXECUTE|VMA_READ|VMA_WRITE|VMA_CACHEABLE);
 	memcpy((void*)SMP_SETUP_ADDR, boot_code, sizeof(boot_code));
+	LOG_DEBUG("Map trampoline code at 0x%zx (size 0x%zx)\n",
+		SMP_SETUP_ADDR, sizeof(boot_code));
 
 	for(i=0; i<sizeof(boot_code); i++)
 	{
@@ -591,8 +594,6 @@ int smp_init(void)
 			break;
 		}
 	}
-
-	LOG_DEBUG("size of the boot_code %d\n", sizeof(boot_code));
 
 	for(i=1; (i<ncores) && (i<MAX_CORES); i++)
 	{
@@ -619,7 +620,7 @@ int smp_init(void)
 
 
 // How many ticks are used to calibrate the APIC timer
-#define APIC_TIMER_CALIBRATION_TICKS	(3)
+#define APIC_TIMER_CALIBRATION_TICKS	(1)
 
 /*
  * detects the timer frequency of the APIC and restarts
@@ -634,8 +635,8 @@ int apic_calibration(void)
 		return -ENXIO;
 
 	const uint64_t cpu_freq_hz = (uint64_t) get_cpu_frequency() * 1000000ULL;
-	const uint64_t cycles_per_tick = cpu_freq_hz / (uint64_t) TIMER_FREQ;
-	const uint64_t wait_cycles = cycles_per_tick * APIC_TIMER_CALIBRATION_TICKS;
+	const uint64_t cycles_per_ms = cpu_freq_hz / 1000ULL;
+	const uint64_t wait_cycles = cycles_per_ms * APIC_TIMER_CALIBRATION_TICKS;
 
 	// disable interrupts to increase calibration accuracy
 	flags = irq_nested_disable();
@@ -656,7 +657,7 @@ int apic_calibration(void)
 	} while(diff < wait_cycles);
 
 	// Calculate timer increments for desired tick frequency
-	icr = (initial_counter - lapic_read(APIC_CCR)) / APIC_TIMER_CALIBRATION_TICKS;
+	icr = ((initial_counter - lapic_read(APIC_CCR)) * 1000ULL) / (TIMER_FREQ * APIC_TIMER_CALIBRATION_TICKS);
 	irq_nested_enable(flags);
 
 	lapic_reset();
@@ -723,7 +724,7 @@ static int apic_probe(void)
 
 found_mp:
 	if (!apic_mp) {
-		LOG_INFO("Didn't find MP config table\n");
+		LOG_INFO("Didn't find MP table\n");
 		goto no_mp;
 	}
 
@@ -732,7 +733,7 @@ found_mp:
 		isle = 0;
 	}
 
-	LOG_INFO("Found MP config table at 0x%x\n", apic_mp->mp_config);
+	LOG_INFO("Found MP config at 0x%x\n", apic_mp->mp_config);
 	LOG_INFO("System uses Multiprocessing Specification 1.%u\n", apic_mp->version);
 	LOG_INFO("MP features 1: %u\n", apic_mp->features[0]);
 
@@ -748,8 +749,12 @@ found_mp:
 
 	apic_config = (apic_config_table_t*) ((size_t) apic_mp->mp_config);
 	if (((size_t) apic_config & PAGE_MASK) != ((size_t) apic_mp & PAGE_MASK)) {
-		page_map((size_t) apic_config & PAGE_MASK,  (size_t) apic_config & PAGE_MASK, 1, flags);
-		vma_add( (size_t) apic_config & PAGE_MASK, ((size_t) apic_config & PAGE_MASK) + PAGE_SIZE, VMA_READ|VMA_WRITE);
+		size_t vconfig = vma_alloc(PAGE_SIZE, VMA_READ|VMA_WRITE);
+
+		if (BUILTIN_EXPECT(vconfig && !page_map(vconfig & PAGE_MASK,  (size_t) apic_config & PAGE_MASK, 1, flags), 1)) {
+			apic_config = (apic_config_table_t*) (vconfig | ((size_t) apic_config & ~PAGE_MASK));
+			LOG_INFO("Map MP config at %p\n", apic_config);
+		} else apic_config = 0;
 	}
 
 	if (!apic_config || strncmp((void*) &apic_config->signature, "PCMP", 4) !=0) {
@@ -760,11 +765,11 @@ found_mp:
 	addr = (size_t) apic_config;
 	addr += sizeof(apic_config_table_t);
 
-	// does the apic table raise the page boundary? => map additional page
+	// TODO: does the apic table raise the page boundary? => map additional page
 	if (apic_config->entry_count * 20 + addr > ((size_t) apic_config & PAGE_MASK) + PAGE_SIZE)
 	{
-		page_map(((size_t) apic_config & PAGE_MASK) + PAGE_SIZE, ((size_t) apic_config & PAGE_MASK) + PAGE_SIZE, 1, flags);
-		vma_add( ((size_t) apic_config & PAGE_MASK) + PAGE_SIZE, ((size_t) apic_config & PAGE_MASK) + 2*PAGE_SIZE, VMA_READ|VMA_WRITE);
+		LOG_ERROR("APIC table raise limit\n");
+		while(1) { HALT; }
 	}
 
 	// search the ISA bus => required to redirect the IRQs
@@ -812,12 +817,16 @@ found_mp:
 			ioapic = (ioapic_t*) ((size_t) io_entry->addr);
 			LOG_INFO("Found IOAPIC at 0x%x\n", ioapic);
 			if (is_single_kernel() && ioapic) {
-				page_map(IOAPIC_ADDR, (size_t)ioapic & PAGE_MASK, 1, flags);
-				vma_add(IOAPIC_ADDR, IOAPIC_ADDR + PAGE_SIZE, VMA_READ|VMA_WRITE);
-				ioapic = (ioapic_t*) IOAPIC_ADDR;
-				LOG_INFO("Map IOAPIC to 0x%x\n", ioapic);
-				LOG_INFO("IOAPIC version: 0x%x\n", ioapic_version());
-				LOG_INFO("Max Redirection Entry: %u\n", ioapic_max_redirection_entry());
+				size_t vaddr = vma_alloc(PAGE_SIZE, VMA_READ|VMA_WRITE);
+				if (BUILTIN_EXPECT(vaddr && !page_map(vaddr, (size_t)ioapic & PAGE_MASK, 1, flags), 1)) {
+					ioapic = (ioapic_t*) (vaddr | ((size_t) ioapic & ~PAGE_MASK));
+					LOG_INFO("Map IOAPIC to 0x%x\n", ioapic);
+					LOG_INFO("IOAPIC version: 0x%x\n", ioapic_version());
+					LOG_INFO("Max Redirection Entry: %u\n", ioapic_max_redirection_entry());
+				} else {
+					LOG_ERROR("Unable to map IOAPIC\n");
+					ioapic = 0;
+				}
 			}
 			addr += 8;
 		} else if (*((uint8_t*) addr) == 3) { // IO_INT
@@ -853,13 +862,13 @@ check_lapic:
 		LOG_INFO("Found and enable X2APIC\n");
 		x2apic_enable();
 	} else {
-		if (page_map(LAPIC_ADDR, (size_t)lapic & PAGE_MASK, 1, flags)) {
-			LOG_ERROR("Failed to map APIC to 0x%x\n", LAPIC_ADDR);
-			goto out;
+		size_t vaddr = vma_alloc(PAGE_SIZE, VMA_READ | VMA_WRITE);
+		if (BUILTIN_EXPECT(vaddr && !page_map(vaddr, lapic & PAGE_MASK, 1, flags), 1)) {
+			LOG_INFO("Mapped APIC 0x%x to 0x%x\n", lapic, vaddr);
+			lapic = vaddr | (lapic & ~PAGE_MASK);
 		} else {
-			LOG_INFO("Mapped APIC 0x%x to 0x%x\n", lapic, LAPIC_ADDR);
-			vma_add(LAPIC_ADDR, LAPIC_ADDR + PAGE_SIZE, VMA_READ | VMA_WRITE);
-			lapic = LAPIC_ADDR;
+			LOG_ERROR("Failed to map APIC to 0x%x\n", vaddr);
+			goto out;
 		}
 	}
 
@@ -900,15 +909,17 @@ no_mp:
 
 extern int smp_main(void);
 extern void gdt_flush(void);
-extern int set_idle_task(void);
+extern tid_t set_idle_task(void);
 
 #if MAX_CORES > 1
 int smp_start(void)
 {
-	LOG_DEBUG("Try to initialize processor (local id %d)\n", atomic_int32_read(&current_boot_id));
+	int32_t core_id = atomic_int32_read(&current_boot_id);
+
+	LOG_DEBUG("Try to initialize processor (local id %d)\n", core_id);
 
 	// use the same gdt like the boot processors
-	gdt_flush();
+	//gdt_flush();
 
 	// install IDT
 	idt_install();
@@ -921,17 +932,20 @@ int smp_start(void)
 	// reset APIC
 	lapic_reset();
 
-	LOG_DEBUG("Processor %d (local id %d) is entering its idle task\n", apic_cpu_id(), atomic_int32_read(&current_boot_id));
-	LOG_DEBUG("CR0 of core %u: 0x%x\n", atomic_int32_read(&current_boot_id), read_cr0());
-	online[atomic_int32_read(&current_boot_id)] = 1;
+	LOG_DEBUG("Processor %d (local id %d) is entering its idle task\n", apic_cpu_id(), core_id);
+	LOG_DEBUG("CR0 of core %u: 0x%x\n", core_id, read_cr0());
+	online[core_id] = 1;
+
+	tid_t id = set_idle_task();
+
+	// initialize task state segment
+	tss_init(id);
 
 	// set task switched flag for the first FPU access
 	// => initialize the FPU
 	size_t cr0 = read_cr0();
 	cr0 |= CR0_TS;
 	write_cr0(cr0);
-
-	set_idle_task();
 
 	/*
 	 * TSS is set, pagining is enabled
@@ -963,6 +977,11 @@ int ipi_tlb_flush(void)
 				continue;
 
 			LOG_DEBUG("Send IPI to %zd\n", i);
+			/*
+			 * Make previous memory operations globally visible before
+			 * sending the IPI through x2apic wrmsr. => serializing
+			 */
+			mb();
 			wrmsr(0x830, (i << 32)|APIC_INT_ASSERT|APIC_DM_FIXED|112);
 		}
 		irq_nested_enable(flags);
@@ -1009,6 +1028,11 @@ int apic_send_ipi(uint64_t dest, uint8_t irq)
 	if (has_x2apic()) {
 		flags = irq_nested_disable();
 		LOG_DEBUG("send IPI %d to %lld\n", (int)irq, dest);
+		/*
+		 * Make previous memory operations globally visible before
+		 * sending the IPI through x2apic wrmsr. => serializing
+		 */
+		mb();
 		wrmsr(0x830, (dest << 32)|APIC_INT_ASSERT|APIC_DM_FIXED|irq);
 		irq_nested_enable(flags);
 	} else {

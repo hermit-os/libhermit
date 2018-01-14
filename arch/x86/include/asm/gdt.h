@@ -51,26 +51,26 @@ extern "C" {
 #define GDT_FLAG_TSS_BUSY	0x02
 
 #define GDT_FLAG_SEGMENT	0x10
-/// Privilege level: Ring 0 
+/// Privilege level: Ring 0
 #define GDT_FLAG_RING0		0x00
 /// Privilege level: Ring 1
 #define GDT_FLAG_RING1		0x20
-/// Privilege level: Ring 2 
+/// Privilege level: Ring 2
 #define GDT_FLAG_RING2		0x40
-/// Privilege level: Ring 3 
+/// Privilege level: Ring 3
 #define GDT_FLAG_RING3		0x60
 /// Segment is present
 #define GDT_FLAG_PRESENT        0x80
 /// Segment was accessed
 #define GDT_FLAG_ACCESSED       0x01
-/** 
- * @brief Granularity of segment limit 
+/**
+ * @brief Granularity of segment limit
  * - set: segment limit unit is 4 KB (page size)
  * - not set: unit is bytes
  */
 #define GDT_FLAG_4K_GRAN	0x80
 /**
- * @brief Default operand size 
+ * @brief Default operand size
  * - set: 32 bit
  * - not set: 16 bit
  */
@@ -78,7 +78,7 @@ extern "C" {
 #define GDT_FLAG_32_BIT		0x40
 #define GDT_FLAG_64_BIT		0x20
 
-/** @brief Defines a GDT entry 
+/** @brief Defines a GDT entry
  *
  * A global descriptor table entry consists of:
  * - 32 bit base address (chunkwise embedded into this structure)
@@ -110,21 +110,14 @@ typedef struct {
 	size_t base;
 } __attribute__ ((packed)) gdt_ptr_t;
 
-// a TSS descriptor is twice larger than a code/data descriptor
-#define GDT_ENTRIES	(6+MAX_CORES*2)
-
-#if GDT_ENTRIES > 8192
-#error Too many GDT entries!
-#endif 
-
 /** @brief Installs the global descriptor table
  *
  * The installation involves the following steps:
- * - set up the special GDT pointer 
+ * - set up the special GDT pointer
  * - set up the entries in our GDT
- * - finally call gdt_flush() in our assembler file 
+ * - finally call gdt_flush() in our assembler file
  *   in order to tell the processor where the new GDT is
- * - update the new segment registers 
+ * - update the new segment registers
  */
 void gdt_install(void);
 
@@ -142,6 +135,10 @@ void gdt_set_gate(int num, unsigned long base, unsigned long limit,
  */
 void configure_gdt_entry(gdt_entry_t *dest_entry, unsigned long base, unsigned long limit,
 		unsigned char access, unsigned char gran);
+
+/** @brief Initialize the task state segments
+ */
+void tss_init(tid_t id);
 
 #ifdef __cplusplus
 }

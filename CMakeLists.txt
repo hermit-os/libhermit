@@ -38,6 +38,9 @@ foreach(MODULE ${KERNEL_MODULES})
 	target_compile_definitions(${MODULE}
 		PRIVATE -D__KERNEL__)
 
+	target_compile_definitions(${MODULE}
+		PRIVATE -DMAX_ARGC_ENVC=${MAX_ARGC_ENVC})
+
 	target_compile_options(${MODULE}
 		PRIVATE ${HERMIT_KERNEL_FLAGS})
 
@@ -219,7 +222,7 @@ set(CPACK_SYSTEM_NAME all)
 
 set(CPACK_PACKAGE_VERSION_MAJOR 0)
 set(CPACK_PACKAGE_VERSION_MINOR 2)
-set(CPACK_PACKAGE_VERSION_PATCH 2)
+set(CPACK_PACKAGE_VERSION_PATCH 6)
 
 set(CPACK_PACKAGE_CONTACT "Stefan Lankes <slankes@eonerc.rwth-aachen.de>")
 

@@ -46,8 +46,10 @@ typedef struct sem {
 	unsigned int value;
 	/// Queue of waiting tasks
 	tid_t queue[MAX_TASKS];
-	/// Position in queue
-	unsigned int pos;
+	/// Position in queue to add a task
+	unsigned int wpos;
+	/// Position in queue to get a task
+	unsigned int rpos;
 	/// Access lock
 	spinlock_irqsave_t lock;
 } sem_t;

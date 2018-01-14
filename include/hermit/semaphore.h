@@ -56,14 +56,15 @@ extern "C" {
  * - 0 on success
  * - -EINVAL on invalid argument
  */
-inline static int sem_init(sem_t* s, unsigned int v) {
+inline static int sem_init(sem_t* s, unsigned int v)
+{
 	unsigned int i;
 
 	if (BUILTIN_EXPECT(!s, 0))
 		return -EINVAL;
 
 	s->value = v;
-	s->pos = 0;
+	s->rpos = s->wpos = 0;
 	for(i=0; i<MAX_TASKS; i++)
 		s->queue[i] = MAX_TASKS;
 	spinlock_irqsave_init(&s->lock);
@@ -76,7 +77,8 @@ inline static int sem_init(sem_t* s, unsigned int v) {
  * - 0 on success
  * - -EINVAL on invalid argument
  */
-inline static int sem_destroy(sem_t* s) {
+inline static int sem_destroy(sem_t* s)
+{
 	if (BUILTIN_EXPECT(!s, 0))
 		return -EINVAL;
 
@@ -94,7 +96,8 @@ inline static int sem_destroy(sem_t* s) {
  * - -EINVAL on invalid argument
  * - -ECANCELED on failure (You still have to wait)
  */
-inline static int sem_trywait(sem_t* s) {
+inline static int sem_trywait(sem_t* s)
+{
 	int ret = -ECANCELED;
 
 	if (BUILTIN_EXPECT(!s, 0))
@@ -114,12 +117,13 @@ inline static int sem_trywait(sem_t* s) {
  *
  * @param s Address of the according sem_t structure
  * @param ms Timeout in milliseconds
- * @return 
+ * @return
  * - 0 on success
  * - -EINVAL on invalid argument
  * - -ETIME on timer expired
  */
-inline static int sem_wait(sem_t* s, uint32_t ms) {
+inline static int sem_wait(sem_t* s, uint32_t ms)
+{
 	task_t* curr_task = per_core(current_task);
 
 	if (BUILTIN_EXPECT(!s, 0))
@@ -132,8 +136,8 @@ next_try1:
 			s->value--;
 			spinlock_irqsave_unlock(&s->lock);
 		} else {
-			s->queue[s->pos] = curr_task->id;
-			s->pos = (s->pos + 1) % MAX_TASKS;
+			s->queue[s->wpos] = curr_task->id;
+			s->wpos = (s->wpos + 1) % MAX_TASKS;
 			block_current_task();
 			spinlock_irqsave_unlock(&s->lock);
 			reschedule();
@@ -157,8 +161,8 @@ next_try2:
 					spinlock_irqsave_unlock(&s->lock);
 					goto timeout;
 				}
-				s->queue[s->pos] = curr_task->id;
-				s->pos = (s->pos + 1) % MAX_TASKS;
+				s->queue[s->wpos] = curr_task->id;
+				s->wpos = (s->wpos + 1) % MAX_TASKS;
 				set_timer(deadline);
 				spinlock_irqsave_unlock(&s->lock);
 				reschedule();
@@ -181,28 +185,23 @@ timeout:
 	return 0;
 }
 
-/** @brief Give back resource 
+/** @brief Give back resource
  * @return
  * - 0 on success
  * - -EINVAL on invalid argument
  */
-inline static int sem_post(sem_t* s) {
-	unsigned int k, i;
-
+inline static int sem_post(sem_t* s)
+{
 	if (BUILTIN_EXPECT(!s, 0))
 		return -EINVAL;
 
 	spinlock_irqsave_lock(&s->lock);
 
 	s->value++;
-	i = s->pos;
-	for(k=0; k<MAX_TASKS; k++) {
-		if (s->queue[i] < MAX_TASKS) {
-			wakeup_task(s->queue[i]);
-			s->queue[i] = MAX_TASKS;
-			break;
-		}
-		i = (i + 1) % MAX_TASKS;
+	if (s->queue[s->rpos] < MAX_TASKS) {
+		wakeup_task(s->queue[s->rpos]);
+		s->queue[s->rpos] = MAX_TASKS;
+		s->rpos = (s->rpos + 1) % MAX_TASKS;
 	}
 
 	spinlock_irqsave_unlock(&s->lock);

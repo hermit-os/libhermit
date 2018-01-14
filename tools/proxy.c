@@ -27,25 +27,24 @@
 
 #define _GNU_SOURCE
 
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/tcp.h>
+#include <net/if.h>
 #include <netinet/in.h>
 #include <sched.h>
 #include <signal.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/inotify.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <sys/types.h>
 #include <sys/wait.h>
-#include <sys/ioctl.h>
-#include <net/if.h>
+#include <unistd.h>
 
 #include "proxy.h"
 
@@ -130,33 +129,13 @@ static void exit_handler(int sig)
 
 static char* get_append_string(void)
 {
-	char line[2048];
-	char* match;
-	char* point;
+	uint32_t freq = get_cpufreq();
+	if (freq == 0)
+		return "-freq0 -proxy";
 
-	FILE* fp = fopen("/proc/cpuinfo", "r");
-	if (!fp)
-		return "-freq0";
+	snprintf(cmdline, MAX_PATH, "\"-freq%u -proxy\"", freq);
 
-	while(fgets(line, 2048, fp)) {
-		if ((match = strstr(line, "cpu MHz")) == NULL)
-			continue;
-
-		// scan strinf for the next number
-		for(; (*match < 0x30) || (*match > 0x39); match++)
-			;
-
-		for(point = match; ((*point != '.') && (*point != '\0')); point++)
-			;
-		*point = '\0';
-
-		snprintf(cmdline, MAX_PATH, "\"-freq%s -proxy\"", match);
-		fclose(fp);
-
-		return cmdline;
-	}
-
-	return "-freq0";
+	return cmdline;
 }
 
 static int env_init(char *path)
@@ -242,7 +221,7 @@ static int is_hermit_available(void)
 	}
 
 	if (!file)
-		return 0;
+		goto err;
 
 	//PROXY_DEBUG("Open log file\n");
 
@@ -255,9 +234,10 @@ static int is_hermit_available(void)
 	}
 
 	fclose(file);
-	free(line);
 
-	return ret;
+    err:
+	   free(line);
+	   return ret;
 }
 
 // wait until HermitCore is sucessfully booted
@@ -316,7 +296,12 @@ static int qemu_init(char *path)
 	char port_str[MAX_PATH];
 	pid_t qemu_pid;
 	char* qemu_str = "qemu-system-x86_64";
-	char* qemu_argv[] = {qemu_str, "-daemonize", "-display", "none", "-smp", "1", "-m", "2G", "-pidfile", pidname, "-net", "nic,model=rtl8139", "-net", hostfwd, "-chardev", chardev_file, "-device", "pci-serial,chardev=gnc0", "-kernel", loader_path, "-initrd", path, "-append", get_append_string(), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+	char* qemu_argv[] = {qemu_str, "-daemonize", "-display", "none", "-smp", "1",
+		"-m", "2G", "-pidfile", pidname, "-net", "nic,model=rtl8139", "-net",
+		hostfwd, "-chardev", chardev_file, "-device", "pci-serial,chardev=gnc0",
+		"-kernel", loader_path, "-initrd", path, "-append", get_append_string(),
+		"-no-acpi", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+		NULL, NULL, NULL, NULL};
 
 	str = getenv("HERMIT_CPUS");
 	if (str)
@@ -1048,7 +1033,7 @@ int main(int argc, char **argv)
 
 	switch(monitor) {
 	case UHYVE:
-		return uhyve_loop();
+		return uhyve_loop(argc, argv);
 
 	case BAREMETAL:
 	case QEMU:
