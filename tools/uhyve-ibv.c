@@ -45,20 +45,21 @@ void call_ibv_get_device_list(struct kvm_run * run, uint8_t * guest_mem) {
 	*temp = 42;
 	free(temp);
 
-	ib_malloc = true;
 	unsigned data = *((unsigned *)((size_t)run+run->io.data_offset));
 	uhyve_ibv_get_device_list_t * args = (uhyve_ibv_get_device_list_t *) (guest_mem + data);
 
 	printf("temp check 2\n");
+	ib_malloc = true;
 	temp = malloc(sizeof(int));
 	*temp = 42;
 	free(temp);
 
-	printf("LOG: UHYVE - call_ibv_get_device_list -- before ibv call\n");
-	args->ret = ibv_get_device_list(args->num_devices);
-	printf("LOG: UHYVE - call_ibv_get_device_list -- after ibv call\n");
-
 	ib_malloc = false;
+	printf("LOG: UHYVE - call_ibv_get_device_list -- before ibv call\n");
+	ib_malloc = true;
+	args->ret = ibv_get_device_list(args->num_devices);
+	ib_malloc = false;
+	printf("LOG: UHYVE - call_ibv_get_device_list -- after ibv call\n");
 }
 
 

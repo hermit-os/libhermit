@@ -33,15 +33,15 @@
 
 #include <hermit/verbs.h>
 
-extern uint8_t * kernel_start_host;
+extern uint8_t * host_logical_addr;
 typedef enum {GUEST, HOST} addr_type;
 
 inline size_t guest_to_host(size_t address) {
-	return address ? virt_to_phys(address) + (size_t) kernel_start_host : address;
+	return address ? virt_to_phys(address) + (size_t) host_logical_addr : address;
 }
 
 inline size_t host_to_guest(size_t address) {
-	return address ? phys_to_virt(address - (size_t) kernel_start_host) : address;
+	return address ? phys_to_virt(address - (size_t) host_logical_addr) : address;
 }
 
 

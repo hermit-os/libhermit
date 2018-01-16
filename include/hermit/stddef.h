@@ -67,6 +67,7 @@ extern const size_t image_size;
 #define UHYVE_PORT_LSEEK	0x504
 
 // InfiniBand uhyve port IDs
+#define UHYVE_PORT_SET_IB_POOL_ADDR        0x609
 #define UHYVE_PORT_IBV_OPEN_DEVICE         0x610
 #define UHYVE_PORT_IBV_GET_DEVICE_LIST     0x611
 #define UHYVE_PORT_IBV_GET_DEVICE_NAME     0x612

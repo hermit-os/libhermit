@@ -28,14 +28,16 @@
 extern bool ib_malloc;
 
 typedef enum {
+	UHYVE_PORT_SET_IB_POOL_ADDR        = 0x609,
+
 	UHYVE_PORT_IBV_OPEN_DEVICE         = 0x610,
 	UHYVE_PORT_IBV_GET_DEVICE_LIST     = 0x611,
 	UHYVE_PORT_IBV_GET_DEVICE_NAME     = 0x612,
 	UHYVE_PORT_IBV_QUERY_PORT          = 0x613,
 	UHYVE_PORT_IBV_CREATE_COMP_CHANNEL = 0x614,
 	UHYVE_PORT_KERNEL_IBV_LOG          = 0x615,
-} uhyve_ibv_t;
 
+} uhyve_ibv_t;
 
 typedef struct {
 	// Parameters:

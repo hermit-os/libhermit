@@ -36,12 +36,13 @@
 #include <asm/atomic.h>
 #include <asm/page.h>
 #include <asm/multiboot.h>
+#include <asm/uhyve.h>
 
 #define GAP_BELOW	0x100000ULL
 #define IB_POOL_SIZE 0x400000ULL
 
-#define IB_MEMORY_SIZE (1UL << 20)
-#define IB_MEMORY_NPAGES (IB_MEMORY_SIZE / PAGE_SIZE)
+/* #define IB_MEMORY_SIZE (1UL << 20) */
+/* #define IB_MEMORY_NPAGES (IB_MEMORY_SIZE / PAGE_SIZE) */
 
 extern uint64_t base;
 extern uint64_t limit;
@@ -382,6 +383,7 @@ int memory_init(void)
 			vma_add((size_t)host_logical_addr+phyaddr, (size_t)host_logical_addr+phyaddr+IB_POOL_SIZE, VMA_READ|VMA_WRITE|VMA_CACHEABLE);
 			ib_pool_addr = (size_t)host_logical_addr+phyaddr;
 			LOG_INFO("Map IB pool at 0x%zx\n", ib_pool_addr);
+			uhyve_send(UHYVE_PORT_SET_IB_POOL_ADDR, (unsigned) virt_to_phys((size_t) &ib_pool_addr));
 		}
 	}
 
@@ -392,31 +394,31 @@ oom:
 	while(1) {HALT; }
 }
 
-void * ib_memory_init(void)
-{
-	size_t phyaddr, viraddr, bits;
-	int err;
+/* void * ib_memory_init(void) */
+/* { */
+	/* size_t phyaddr, viraddr, bits; */
+	/* int err; */
 
-	phyaddr = (size_t) &kernel_end - IB_MEMORY_SIZE;
-	bits = PG_RW|PG_GLOBAL|PG_NX;
-	viraddr = vma_alloc(IB_MEMORY_NPAGES * PAGE_SIZE, VMA_READ|VMA_WRITE|VMA_CACHEABLE);
-	if (BUILTIN_EXPECT(!viraddr, 0)) {
-		LOG_INFO("BUILTIN_EXPECT failed: ib_memory_init 1\n");
-		return NULL;
-	}
+	/* phyaddr = (size_t) &kernel_end - IB_MEMORY_SIZE; */
+	/* bits = PG_RW|PG_GLOBAL|PG_NX; */
+	/* viraddr = vma_alloc(IB_MEMORY_NPAGES * PAGE_SIZE, VMA_READ|VMA_WRITE|VMA_CACHEABLE); */
+	/* if (BUILTIN_EXPECT(!viraddr, 0)) { */
+		/* LOG_INFO("BUILTIN_EXPECT failed: ib_memory_init 1\n"); */
+		/* return NULL; */
+	/* } */
 
-	LOG_INFO("ib_memory_init, size: %lu\n", IB_MEMORY_SIZE);
-	LOG_INFO("\tGuest Phys Start: %p\tEnd: %p\n", (uint8_t *) phyaddr, (uint8_t *) &kernel_end);
-	/* LOG_INFO("\tHost  Virt Start: %p\tEnd: %p\n", */
-			/* phyaddr + host_kernel_start, (size_t) &kernel_end + host_kernel_start); */
+	/* LOG_INFO("ib_memory_init, size: %lu\n", IB_MEMORY_SIZE); */
+	/* LOG_INFO("\tGuest Phys Start: %p\tEnd: %p\n", (uint8_t *) phyaddr, (uint8_t *) &kernel_end); */
+	/* [> LOG_INFO("\tHost  Virt Start: %p\tEnd: %p\n", <] */
+			/* [> phyaddr + host_kernel_start, (size_t) &kernel_end + host_kernel_start); <] */
 
-	err = page_map(viraddr, phyaddr, IB_MEMORY_NPAGES, bits);
-	if (BUILTIN_EXPECT(err, 0)) {
-		LOG_INFO("BUILTIN_EXPECT failed: ib_memory_init 2\n");
-		vma_free(viraddr, viraddr + IB_MEMORY_NPAGES*PAGE_SIZE);
-		return NULL;
-	}
+	/* err = page_map(viraddr, phyaddr, IB_MEMORY_NPAGES, bits); */
+	/* if (BUILTIN_EXPECT(err, 0)) { */
+		/* LOG_INFO("BUILTIN_EXPECT failed: ib_memory_init 2\n"); */
+		/* vma_free(viraddr, viraddr + IB_MEMORY_NPAGES*PAGE_SIZE); */
+		/* return NULL; */
+	/* } */
 
-	LOG_INFO("ib_memory_init finished\n");
-	return (void *) viraddr;
-}
+	/* LOG_INFO("ib_memory_init finished\n"); */
+	/* return (void *) viraddr; */
+/* } */

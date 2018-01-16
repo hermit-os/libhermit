@@ -202,6 +202,6 @@ struct ibv_comp_channel * ibv_create_comp_channel(struct ibv_context * context) 
 
 void kernel_ibv_log() {
 	char log_message[128];
-	ksprintf(log_message, "%p", kernel_start_host);
+	ksprintf(log_message, "%p", host_logical_addr);
 	uhyve_send(UHYVE_PORT_KERNEL_IBV_LOG, (unsigned) virt_to_phys((size_t) log_message));
 }

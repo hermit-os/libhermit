@@ -170,7 +170,8 @@
 #define IOAPIC_DEFAULT_BASE	0xfec00000
 #define APIC_DEFAULT_BASE	0xfee00000
 
-/* #define IB_MEM_DEBUG  */
+#define IB_POOL_SIZE 0x400000ULL
+#define IB_MEM_DEBUG 
 
 static bool restart = false;
 static bool cap_tsc_deadline = false;
@@ -222,30 +223,31 @@ typedef struct {
 } __attribute__ ((packed)) uhyve_cmdval_t;
 
 
+// DLSYM
 
-
-
-
-static uint8_t * ib_mem = NULL;
+/* static uint8_t * ib_pool_top = NULL; */
+/* uint64_t ib_pool_addr = 0; // TODO: static? */
+static uint8_t* ib_pool_addr = 0;
+static uint8_t* ib_pool_top  = 0;
 bool ib_malloc = false;
 static const size_t std_alignment = 16; // TODO: Use sizeof(maxint_t) (?) or similar
 
 
 /* Redefining malloc */
 
-static void * (* real_malloc) (size_t)         = NULL;
-static void * (* real_realloc)(void *, size_t) = NULL;
-static void   (* real_free)   (void *)         = NULL;
-/* static void   (* real_free_alt)  (void *) = NULL; */
+static void * (*real_malloc) (size_t)         = NULL;
+static void * (*real_realloc)(void *, size_t) = NULL;
+static void   (*real_free)   (void *)         = NULL;
+/* static void   (*real_free_alt)  (void *) = NULL; */
 
 /*
- * init_ib_memalloc
+ * init_ib_mem_functions
  */
 
-static void init_ib_memalloc(void)
+static void init_ib_mem_functions(void)
 {
 #ifdef IB_MEM_DEBUG
-	printf("Entered init_ib_memalloc.\n");
+	printf("Entered init_ib_mem_functions.\n");
 #endif
 	real_malloc  = dlsym(RTLD_NEXT, "malloc");
 	real_realloc = dlsym(RTLD_NEXT, "realloc");
@@ -265,30 +267,30 @@ static void init_ib_memalloc(void)
 void * new_ib_malloc_region(size_t size)
 {
 #ifdef IB_MEM_DEBUG
-	printf("Entered init_ib_memalloc.\n");
+	printf("Entered new_ib_malloc_region.\n");
 #endif
 
 	void * result = NULL;
 
-	if (NULL == ib_mem) {
+	if (0 == ib_pool_top || 0 == ib_pool_addr) {
 		fprintf(stderr, "Error: ib_malloc called before ib_mem has been set.\n");
 	}
 	if (size > 0) {
-		ib_mem -= size;
-		ib_mem -= (size_t) ((uintptr_t) ib_mem % std_alignment);
-#ifdef IB_MEM_DEBUG
-		printf("ib_mem aligned: %p\n", ib_mem);
-#endif
-		result = ib_mem;
-
-		ib_mem -= std_alignment;
-		size_t * block_size = (size_t *) ib_mem;
+		size_t * block_size = (size_t *) ib_pool_top;
 		*block_size = size;
+		ib_pool_top += std_alignment;
+
+		result = ib_pool_top;
+		ib_pool_top += size;
+		ib_pool_top += (size_t) ((uintptr_t) ib_pool_top % std_alignment);
+#ifdef IB_MEM_DEBUG
+		printf("ib_pool_top aligned: %p\n", ib_pool_top);
+#endif
 	}
 
-	if ((uint8_t *) result < guest_mem + guest_size - (size_t) (1UL << 20)) { // TODO: remove this
+	if (ib_pool_top > ib_pool_addr + IB_POOL_SIZE) { // TODO: make ib addr a uint8* as well?
 #ifdef IB_MEM_DEBUG
-		printf("WARNING, IB MEM OUT OF BOUNDS\n\n");
+		fprintf(stderr, "Error: IB Memory Pool overflow.\n");
 #endif
 	}
 
@@ -303,7 +305,7 @@ void * new_ib_malloc_region(size_t size)
 void * malloc(size_t size)
 {
 	if (real_malloc == NULL) {
-		init_ib_memalloc();
+		init_ib_mem_functions();
 	}
 
 #ifdef IB_MEM_DEBUG
@@ -337,7 +339,7 @@ void * realloc(void * ptr, size_t new_size) {
 	void * result;
 
 	if (ib_malloc) {
-		size_t * mem_block_size_ptr = (size_t *) (ptr - std_alignment);
+		size_t* mem_block_size_ptr = (size_t*) (ptr - std_alignment);
 		size_t orig_size = *mem_block_size_ptr;
 
 		if (new_size <= 0 || ptr == NULL) {
@@ -374,19 +376,20 @@ void * realloc(void * ptr, size_t new_size) {
 
 void free(void * ptr) {
 	/* if (real_free == NULL) { */
-		/* init_ib_memalloc(); */
+		/* init_ib_mem_functions(); */
 	/* } */
 
 #ifdef IB_MEM_DEBUG
-	printf(" ib_free_hook\tib_malloc %s\t Args:\tptr = %p\n", ib_malloc ? "true " : "false", ptr);
-	printf(" real_free:     %p\n", real_free);
-	printf(" my own free:   %p\n", free);
+	/* printf(" ib_free_hook\tib_malloc %s\t Args:\tptr = %p\n", ib_malloc ? "true " : "false", ptr); */
+	/* printf(" real_free:     %p\n", real_free); */
+	/* printf(" my own free:   %p\n", free); */
+
 	/* printf(" real_free_alt: %p\n", real_free_alt); */
 #endif
 
 	if (!ib_malloc) {
 		real_free(ptr);
-	} else if (ptr != NULL && (ptr <= ib_mem || ptr > guest_mem + guest_size)) {
+	} else if (ptr != NULL && (ptr <= ib_pool_addr || ptr >= ib_pool_addr + IB_POOL_SIZE)) {
 #ifdef IB_MEM_DEBUG
 		printf("\t!!! ptr out of ib bounds !!!");
 #endif
@@ -1161,6 +1164,12 @@ static int vcpu_loop(void)
 				}
 
 			// InfiniBand
+			case UHYVE_PORT_SET_IB_POOL_ADDR:
+				printf("LOG: UHYVE CASE\n");
+				unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
+				ib_pool_addr = (uint8_t*) *((uint64_t*) (guest_mem + data));
+				ib_pool_top = ib_pool_addr;
+				break;
 			case UHYVE_PORT_IBV_GET_DEVICE_LIST:
 				printf("LOG: UHYVE CASE\n");
 				call_ibv_get_device_list(run, guest_mem);
@@ -1626,11 +1635,11 @@ int uhyve_init(char *path)
 			err(1, "unable to initialized network");
 	}
 
-	printf("UHYVE: Initialize malloc hooks (init_ib_hooks())\n");
-	ib_mem = guest_mem + guest_size;
-	printf("guest_mem: %p, guest_size: %p\n", guest_mem, guest_size);
-	printf("ib_mem = guest_mem + guest_size: %p\n", ib_mem);
-	/* init_ib_memalloc(); */
+	/* printf("UHYVE: Initialize malloc hooks (init_ib_hooks())\n"); */
+	/* ib_mem = guest_mem + guest_size; */
+	/* printf("guest_mem: %p, guest_size: %p\n", guest_mem, guest_size); */
+	/* printf("ib_mem = guest_mem + guest_size: %p\n", ib_mem); */
+	/* init_ib_mem_functions(); */
 
 	return ret;
 }
