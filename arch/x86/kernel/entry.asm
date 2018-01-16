@@ -75,6 +75,7 @@ align 4
     global hcip
     global hcgateway
     global hcmask
+    global host_logical_addr
     base dq 0
     limit dq 0
     cpu_freq dd 0
@@ -105,6 +106,7 @@ align 4
     hcip db  10,0,5,2
     hcgateway db 10,0,5,1
     hcmask db 255,255,255,0
+    host_logical_addr dq 0
 
 ; Bootstrap page tables are used during the initialization.
 align 4096

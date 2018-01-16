@@ -431,6 +431,7 @@ static int load_kernel(uint8_t* mem, char* path)
 				*((uint8_t*) (mem+paddr-GUEST_OFFSET + 0xBB)) = (uint8_t) ip[3];
 			}
 
+			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0xbc)) = guest_mem;
 		}
 		*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x38)) += memsz; // total kernel size
 	}
