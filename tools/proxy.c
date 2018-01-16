@@ -129,33 +129,13 @@ static void exit_handler(int sig)
 
 static char* get_append_string(void)
 {
-	char line[2048];
-	char* match;
-	char* point;
+	uint32_t freq = get_cpufreq();
+	if (freq == 0)
+		return "-freq0 -proxy";
 
-	FILE* fp = fopen("/proc/cpuinfo", "r");
-	if (!fp)
-		return "-freq0";
+	snprintf(cmdline, MAX_PATH, "\"-freq%u -proxy\"", freq);
 
-	while(fgets(line, 2048, fp)) {
-		if ((match = strstr(line, "cpu MHz")) == NULL)
-			continue;
-
-		// scan strinf for the next number
-		for(; (*match < 0x30) || (*match > 0x39); match++)
-			;
-
-		for(point = match; ((*point != '.') && (*point != '\0')); point++)
-			;
-		*point = '\0';
-
-		snprintf(cmdline, MAX_PATH, "\"-freq%s -proxy\"", match);
-		fclose(fp);
-
-		return cmdline;
-	}
-
-	return "-freq0";
+	return cmdline;
 }
 
 static int env_init(char *path)
@@ -316,7 +296,12 @@ static int qemu_init(char *path)
 	char port_str[MAX_PATH];
 	pid_t qemu_pid;
 	char* qemu_str = "qemu-system-x86_64";
-	char* qemu_argv[] = {qemu_str, "-daemonize", "-display", "none", "-smp", "1", "-m", "2G", "-pidfile", pidname, "-net", "nic,model=rtl8139", "-net", hostfwd, "-chardev", chardev_file, "-device", "pci-serial,chardev=gnc0", "-kernel", loader_path, "-initrd", path, "-append", get_append_string(), NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+	char* qemu_argv[] = {qemu_str, "-daemonize", "-display", "none", "-smp", "1",
+		"-m", "2G", "-pidfile", pidname, "-net", "nic,model=rtl8139", "-net",
+		hostfwd, "-chardev", chardev_file, "-device", "pci-serial,chardev=gnc0",
+		"-kernel", loader_path, "-initrd", path, "-append", get_append_string(),
+		"-no-acpi", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+		NULL, NULL, NULL, NULL};
 
 	str = getenv("HERMIT_CPUS");
 	if (str)
@@ -1048,7 +1033,7 @@ int main(int argc, char **argv)
 
 	switch(monitor) {
 	case UHYVE:
-		return uhyve_loop();
+		return uhyve_loop(argc, argv);
 
 	case BAREMETAL:
 	case QEMU:

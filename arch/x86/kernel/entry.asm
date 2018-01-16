@@ -75,7 +75,7 @@ align 4
     global hcip
     global hcgateway
     global hcmask
-		global kernel_start_host
+    global host_logical_addr
     base dq 0
     limit dq 0
     cpu_freq dd 0
@@ -106,7 +106,8 @@ align 4
     hcip db  10,0,5,2
     hcgateway db 10,0,5,1
     hcmask db 255,255,255,0
-		kernel_start_host dq 0 
+    host_logical_addr dq 0
+
 ; Bootstrap page tables are used during the initialization.
 align 4096
 boot_pml4:
@@ -229,15 +230,7 @@ Lno_pml4_init:
 %endif
 
     ; set default stack pointer
-    mov rsp, boot_stack
-    add rsp, KERNEL_STACK_SIZE-16
-    xor rax, rax
-    mov eax, [boot_processor]
-    cmp eax, -1
-    je L1
-    imul eax, KERNEL_STACK_SIZE
-    add rsp, rax
-L1:
+    mov rsp, stack_top-0x10
     mov rbp, rsp
 
     ; jump to the boot processors's C code
@@ -248,14 +241,8 @@ L1:
 %if MAX_CORES > 1
 ALIGN 64
 Lsmp_main:
-    xor rax, rax
-    mov eax, DWORD [current_boot_id]
-
     ; set default stack pointer
-    imul rax, KERNEL_STACK_SIZE
-    add rax, boot_stack
-    add rax, KERNEL_STACK_SIZE-16
-    mov rsp, rax
+    mov rsp, stack_top-0x10
     mov rbp, rsp
 
     extern smp_start
@@ -726,15 +713,33 @@ sighandler_epilog:
 
     jmp [rsp - 5 * 8]	; jump to rip from saved state
 
+
+global replace_boot_stack
+replace_boot_stack:
+    ; rdi = 1st argument = desination address
+
+    ; set rsp to the new stack
+    sub rsp, stack_bottom
+    add rsp, rdi
+
+    ; currently we omit the frame point => no recalculation
+    ;sub rbp, stack_bottom
+    ;add rbp, rdi
+
+    ; copy boot stack to the new one
+    cld
+    mov rcx, KERNEL_STACK_SIZE
+    mov rsi, stack_bottom
+    rep movsb
+
+    ret
+
 SECTION .data
 
 align 4096
-global boot_stack
-boot_stack:
-    TIMES (MAX_CORES*KERNEL_STACK_SIZE) DB 0xcd
-global boot_ist
-boot_ist:
+stack_bottom:
     TIMES KERNEL_STACK_SIZE DB 0xcd
+stack_top:
 
 ; add some hints to the ELF file
 SECTION .note.GNU-stack noalloc noexec nowrite progbits

@@ -32,7 +32,7 @@
  *            remove memory limit
  */
 
-#define _GNU_SOURCE
+ #define _GNU_SOURCE
 
 #include <unistd.h>
 #include <stdio.h>
@@ -46,6 +46,7 @@
 #include <signal.h>
 #include <limits.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <elf.h>
 #include <err.h>
 #include <poll.h>
@@ -195,6 +196,30 @@ static pthread_barrier_t barrier;
 static __thread struct kvm_run *run = NULL;
 static __thread int vcpufd = -1;
 static __thread uint32_t cpuid = 0;
+static sem_t net_sem;
+
+int uhyve_argc = -1;
+int uhyve_envc = -1;
+char **uhyve_argv = NULL;
+extern char **environ;
+char **uhyve_envp = NULL;
+
+/* Ports and data structures for uhyve command line arguments and envp
+ * forwarding */
+#define UHYVE_PORT_CMDSIZE	0x509
+#define UHYVE_PORT_CMDVAL	0x510
+
+typedef struct {
+	int argc;
+	int argsz[MAX_ARGC_ENVC];
+	int envc;
+	int envsz[MAX_ARGC_ENVC];
+} __attribute__ ((packed)) uhyve_cmdsize_t;
+
+typedef struct {
+	char **argv;
+	char **envp;
+} __attribute__ ((packed)) uhyve_cmdval_t;
 
 
 
@@ -445,6 +470,16 @@ static void uhyve_exit(void* arg)
 	close_fd(&vcpufd);
 }
 
+static void dump_log(void)
+{
+	if (klog && verbose)
+	{
+		fputs("\nDump kernel log:\n", stderr);
+		fputs("================\n", stderr);
+		fprintf(stderr, "%s\n", klog);
+	}
+}
+
 static void uhyve_atexit(void)
 {
 	uhyve_exit(NULL);
@@ -462,85 +497,11 @@ static void uhyve_atexit(void)
 	if (vcpu_fds)
 		free(vcpu_fds);
 
-	if (klog && verbose)
-	{
-		fputs("\nDump kernel log:\n", stderr);
-		fputs("================\n", stderr);
-		fprintf(stderr, "%s\n", klog);
-	}
+	dump_log();
 
 	// clean up and close KVM
 	close_fd(&vmfd);
 	close_fd(&kvm);
-}
-
-static uint32_t get_cpufreq(void)
-{
-	char line[128];
-	uint32_t freq = 0;
-	char* match;
-
-	FILE* fp = fopen("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq", "r");
-	if (fp != NULL) {
-		if (fgets(line, sizeof(line), fp) != NULL) {
-			// cpuinfo_max_freq is in kHz
-			freq = (uint32_t) atoi(line) / 1000;
-		}
-
-		fclose(fp);
-	} else if( (fp = fopen("/proc/cpuinfo", "r")) ) {
-		// Resorting to /proc/cpuinfo, however on most systems this will only
-		// return the current frequency that might change over time.
-		// Currently only needed when running inside a VM
-
-		// read until we find the line indicating cpu frequency
-		while(fgets(line, sizeof(line), fp) != NULL) {
-			match = strstr(line, "cpu MHz");
-
-			if(match != NULL) {
-				// advance pointer to beginning of number
-				while( ((*match < '0') || (*match > '9')) && (*match != '\0') )
-					match++;
-
-				freq = (uint32_t) atoi(match);
-				break;
-			}
-		}
-
-		fclose(fp);
-	}
-
-	return freq;
-}
-
-static ssize_t pread_in_full(int fd, void *buf, size_t count, off_t offset)
-{
-	ssize_t total = 0;
-	char *p = buf;
-
-	if (count > SSIZE_MAX) {
-		errno = E2BIG;
-		return -1;
-	}
-
-	while (count > 0) {
-		ssize_t nr;
-
-		nr = pread(fd, p, count, offset);
-		if (nr == 0)
-			return total;
-		else if (nr == -1 && errno == EINTR)
-			continue;
-		else if (nr == -1)
-			return -1;
-
-		count -= nr;
-		total += nr;
-		p += nr;
-		offset += nr;
-	}
-
-	return total;
 }
 
 static int load_kernel(uint8_t* mem, char* path)
@@ -656,9 +617,7 @@ static int load_kernel(uint8_t* mem, char* path)
 				*((uint8_t*) (mem+paddr-GUEST_OFFSET + 0xBB)) = (uint8_t) ip[3];
 			}
 
-			// TODO: Compiler Warning
-			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0xBC)) = guest_mem; // host-virtual start address (kernel_start_host)
-
+			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0xbc)) = guest_mem; // host-virtual start address (kernel_start_host)
 		}
 		*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x38)) += memsz; // total kernel size
 	}
@@ -989,6 +948,7 @@ static void* wait_for_packet(void* arg)
 		else if (ret) {
 			uint64_t event_counter = 1;
 			write(efd, &event_counter, sizeof(event_counter));
+			sem_wait(&net_sem);
 		}
 	}
 
@@ -1005,6 +965,8 @@ static inline void check_network(void)
 		irqfd.fd = efd;
 		irqfd.gsi = UHYVE_IRQ;
 		kvm_ioctl(vmfd, KVM_IRQFD, &irqfd);
+
+		sem_init(&net_sem, 0, 0);
 
 		if (pthread_create(&net_thread, NULL, wait_for_packet, NULL))
 			err(1, "unable to create thread");
@@ -1130,7 +1092,10 @@ static int vcpu_loop(void)
 					if (ret > 0) {
 						uhyve_netread->len = ret;
 						uhyve_netread->ret = 0;
-					} else uhyve_netread->ret = -1;
+					} else {
+						uhyve_netread->ret = -1;
+						sem_post(&net_sem);
+					}
 					break;
 				}
 
@@ -1150,6 +1115,41 @@ static int vcpu_loop(void)
 					uhyve_lseek_t* uhyve_lseek = (uhyve_lseek_t*) (guest_mem+data);
 
 					uhyve_lseek->offset = lseek(uhyve_lseek->fd, uhyve_lseek->offset, uhyve_lseek->whence);
+					break;
+				}
+
+			case UHYVE_PORT_CMDSIZE: {
+					int i;
+					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
+					uhyve_cmdsize_t *val = (uhyve_cmdsize_t *) (guest_mem+data);
+
+					val->argc = uhyve_argc;
+					for(i=0; i<uhyve_argc; i++)
+						val->argsz[i] = strlen(uhyve_argv[i]) + 1;
+
+					val->envc = uhyve_envc;
+					for(i=0; i<uhyve_envc; i++)
+						val->envsz[i] = strlen(uhyve_envp[i]) + 1;
+
+					break;
+				}
+
+			case UHYVE_PORT_CMDVAL: {
+					int i;
+					char **argv_ptr, **env_ptr;
+					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
+					uhyve_cmdval_t *val = (uhyve_cmdval_t *) (guest_mem+data);
+
+					/* argv */
+					argv_ptr = (char **)(guest_mem + (size_t)val->argv);
+					for(i=0; i<uhyve_argc; i++)
+						strcpy(guest_mem + (size_t)argv_ptr[i], uhyve_argv[i]);
+
+					/* env */
+					env_ptr = (char **)(guest_mem + (size_t)val->envp);
+					for(i=0; i<uhyve_envc; i++)
+						strcpy(guest_mem + (size_t)env_ptr[i], uhyve_envp[i]);
+
 					break;
 				}
 
@@ -1198,11 +1198,13 @@ static int vcpu_loop(void)
 			break;
 
 		case KVM_EXIT_SHUTDOWN:
-			err(1, "KVM: receive shutdown command\n");
-			break;
+			fprintf(stderr, "KVM: receive shutdown command\n");
 
 		case KVM_EXIT_DEBUG:
 			print_registers();
+			dump_log();
+			exit(EXIT_FAILURE);
+
 		default:
 			fprintf(stderr, "KVM: unhandled exit: exit_reason = 0x%x\n", run->exit_reason);
 			exit(EXIT_FAILURE);
@@ -1288,8 +1290,20 @@ static int vcpu_init(void)
 		kvm_ioctl(vcpufd, KVM_SET_XSAVE, &xsave);
 		kvm_ioctl(vcpufd, KVM_SET_VCPU_EVENTS, &events);
 	} else {
+		struct {
+			struct kvm_msrs info;
+			struct kvm_msr_entry entries[MAX_MSR_ENTRIES];
+		} msr_data;
+		struct kvm_msr_entry *msrs = msr_data.entries;
+
 		// be sure that the multiprocessor is runable
 		kvm_ioctl(vcpufd, KVM_SET_MP_STATE, &mp_state);
+
+		// enable fast string operations
+		msrs[0].index = MSR_IA32_MISC_ENABLE;
+		msrs[0].data = 1;
+		msr_data.info.nmsrs = 1;
+		kvm_ioctl(vcpufd, KVM_SET_MSRS, &msr_data);
 
 		/* Setup registers and memory. */
 		setup_system(vcpufd, guest_mem, cpuid);
@@ -1792,10 +1806,35 @@ nextslot:
 	no_checkpoint++;
 }
 
-int uhyve_loop(void)
+int uhyve_loop(int argc, char **argv)
 {
 	const char* hermit_check = getenv("HERMIT_CHECKPOINT");
-	int ts = 0;
+	int ts = 0, i = 0;
+
+	/* argv[0] is 'proxy', do not count it */
+	uhyve_argc = argc-1;
+	uhyve_argv = &argv[1];
+	uhyve_envp = environ;
+	while(uhyve_envp[i] != NULL)
+		i++;
+	uhyve_envc = i;
+
+	if (uhyve_argc > MAX_ARGC_ENVC) {
+		fprintf(stderr, "uhyve downsiize envc from %d to %d\n", uhyve_argc, MAX_ARGC_ENVC);
+		uhyve_argc = MAX_ARGC_ENVC;
+	}
+
+	if (uhyve_envc > MAX_ARGC_ENVC-1) {
+		fprintf(stderr, "uhyve downsiize envc from %d to %d\n", uhyve_envc, MAX_ARGC_ENVC-1);
+		uhyve_envc = MAX_ARGC_ENVC-1;
+	}
+
+	if(uhyve_argc > MAX_ARGC_ENVC || uhyve_envc > MAX_ARGC_ENVC) {
+		fprintf(stderr, "uhyve cannot forward more than %d command line "
+			"arguments or environment variables, please consider increasing "
+				"the MAX_ARGC_ENVP cmake argument\n", MAX_ARGC_ENVC);
+		return -1;
+	}
 
 	if (hermit_check)
 		ts = atoi(hermit_check);

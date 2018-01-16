@@ -96,7 +96,7 @@ static uint8_t expect_zeroed_pages = 0;
 size_t virt_to_phys(size_t addr)
 {
 	if ((addr > (size_t) &kernel_start) &&
-	    (addr <= PAGE_2M_FLOOR((size_t) &kernel_start + image_size)))
+	    (addr <= PAGE_2M_CEIL((size_t) &kernel_start + image_size)))
 	{
 		size_t vpn   = addr >> (PAGE_2M_BITS);	// virtual page number
 		size_t entry = self[1][vpn];		// page table entry
@@ -354,6 +354,9 @@ void page_fault_handler(struct state *s)
 
 		spinlock_irqsave_unlock(&page_lock);
 
+		// clear cr2 to signalize that the pagefault is solved by the pagefault handler
+		write_cr2(0);
+
 		return;
 	}
 
@@ -371,6 +374,9 @@ default_handler:
 		s->rax, s->rbx, s->rcx, s->rdx, s->rbp, s->rsp, s->rdi, s->rsi, s->r8, s->r9, s->r10, s->r11, s->r12, s->r13, s->r14, s->r15);
 	if (task->heap)
 		LOG_ERROR("Heap 0x%llx - 0x%llx\n", task->heap->start, task->heap->end);
+
+	// clear cr2 to signalize that the pagefault is solved by the pagefault handler
+	write_cr2(0);
 
 	apic_eoi(s->int_no);
 	//do_abort();
@@ -395,7 +401,8 @@ int page_init(void)
 
 		while(((size_t) cmdline + i) <= ((size_t) cmdline + cmdsize))
 		{
-			page_map(((size_t) cmdline + i) & PAGE_MASK, ((size_t) cmdline + i) & PAGE_MASK, 1, PG_GLOBAL|PG_RW|PG_PRESENT);
+			page_map(((size_t) cmdline + i) & PAGE_MASK, ((size_t) cmdline + i) & PAGE_MASK,
+				1, PG_NX|PG_GLOBAL|PG_RW|PG_PRESENT);
 			i += PAGE_SIZE;
 		}
 	} else cmdline = 0;
