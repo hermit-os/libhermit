@@ -98,7 +98,6 @@ static int thread_entry(void* arg, size_t ep)
 
 size_t* get_current_stack(void)
 {
-	kputs("Hello from the beginning of get_current_stack\n");
 	task_t* curr_task = per_core(current_task);
 	size_t stptr = (size_t) curr_task->stack;
 
@@ -124,8 +123,8 @@ int create_default_frame(task_t* task, entry_point_t ep, void* arg, uint32_t cor
 	if (BUILTIN_EXPECT(!task->stack, 0))
 		return -EINVAL;
 
-	//LOG_INFO("Task %d uses memory region [%p - %p] as stack\n", task->id, task->stack, (char*) task->stack + DEFAULT_STACK_SIZE - 1);
-	//LOG_INFO("Task %d uses memory region [%p - %p] as IST1\n", task->id, task->ist_addr, (char*) task->ist_addr + KERNEL_STACK_SIZE - 1);
+	LOG_INFO("Task %d uses memory region [%p - %p] as stack\n", task->id, task->stack, (char*) task->stack + DEFAULT_STACK_SIZE - 1);
+	LOG_INFO("Task %d uses memory region [%p - %p] as IST1\n", task->id, task->ist_addr, (char*) task->ist_addr + KERNEL_STACK_SIZE - 1);
 
 	memset(task->stack, 0xCD, DEFAULT_STACK_SIZE);
 

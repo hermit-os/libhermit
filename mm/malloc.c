@@ -134,9 +134,6 @@ void buddy_dump(void)
 void* create_stack(size_t sz)
 {
 	LOG_DEBUG("create_stack(0x%zx)\n", sz);
-	kputs("create_stack(");
-	print_hex(sz);
-	kputs(")\n");
 
 	if (BUILTIN_EXPECT(!sz, 0))
 		return NULL;
@@ -147,11 +144,6 @@ void* create_stack(size_t sz)
 int destroy_stack(void* viraddr, size_t sz)
 {
 	LOG_DEBUG("destroy_stack(0x%zx) (size 0x%zx)\n", viraddr, sz);
-	kputs("destroy_stack(");
-	print_hex(viraddr);
-	kputs(") (size ");
-	print_hex(sz);
-	kputs(")\n");
 
 	if (BUILTIN_EXPECT(!viraddr, 0))
 		return -EINVAL;
@@ -159,5 +151,6 @@ int destroy_stack(void* viraddr, size_t sz)
 		return -EINVAL;
 
 	kfree(viraddr);
+
 	return 0;
 }

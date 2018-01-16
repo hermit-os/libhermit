@@ -40,7 +40,7 @@ b start64
 
 .align 8
 .global boot_processor
-boot_processor: .dword -1
+boot_processor: .dword 0
 .global cpu_online
 cpu_online: .dword 0
 .global possible_cpus
@@ -80,7 +80,6 @@ start64:
   //msr DAIFClr, #0b1111
   //mrs x0, DAIF
   //mrs x0, hcr_el2
-  bl print_hex_return;
 
   /* Test floating point */
   //fmov d0, #5.0
@@ -89,11 +88,9 @@ start64:
   //fmov x0, d0
   //mrs x0, fpcr
   //mrs x0, fpsr
-  //bl print_hex_return
 
   /* Test core ID */
   mrs x0, mpidr_el1
-  bl print_hex_return
 
 //   /* Enter user space */
 //   ldr x0, =el0_return

@@ -41,8 +41,8 @@ set(HAVE_ARCH_STRCPY "0" CACHE STRING
 set(HAVE_ARCH_STRNCPY "0" CACHE STRING
 	"Use machine specific version of strncpy")
 else()
-set(HAVE_ARCH_STRCPY  "1" CACHE STRING
+set(HAVE_ARCH_STRCPY  "0" CACHE STRING
 	"Use machine specific version of strcpy")
-set(HAVE_ARCH_STRNCPY "1" CACHE STRING
+set(HAVE_ARCH_STRNCPY "0" CACHE STRING
 	"Use machine specific version of strncpy")
 endif()

@@ -6,7 +6,7 @@ set_default(TOOLCHAIN_BIN_DIR /opt/hermit/bin)
 
 set(TARGET_ARCH aarch64-hermit)
 set(HERMIT_KERNEL_FLAGS
-					-Wall -O2
+					-Wall -O2 -mgeneral-regs-only
 					-fno-var-tracking-assignments -fstrength-reduce
 					-fomit-frame-pointer -finline-functions -ffreestanding
 					-nostdinc -fno-stack-protector

@@ -38,7 +38,9 @@
 #include <asm/irq.h>
 #include <asm/page.h>
 #include <asm/uart.h>
+#ifdef __x86_64__
 #include <asm/multiboot.h>
+#endif
 #include <asm/uhyve.h>
 
 #include <lwip/init.h>
@@ -221,10 +223,10 @@ static int init_netifs(void)
 
 		/* Note: Our drivers guarantee that the input function will be called in the context of the tcpip thread.
 		 * => Therefore, we are able to use ethernet_input instead of tcpip_input */
-		if ((err = netifapi_netif_add(&default_netif, ip_2_ip4(&ipaddr), ip_2_ip4(&netmask), ip_2_ip4(&gw), NULL, vioif_init, ethernet_input)) == ERR_OK)
+		/*if ((err = netifapi_netif_add(&default_netif, ip_2_ip4(&ipaddr), ip_2_ip4(&netmask), ip_2_ip4(&gw), NULL, vioif_init, ethernet_input)) == ERR_OK)
 			goto success;
 		if ((err = netifapi_netif_add(&default_netif, ip_2_ip4(&ipaddr), ip_2_ip4(&netmask), ip_2_ip4(&gw), NULL, rtl8139if_init, ethernet_input)) == ERR_OK)
-			goto success;
+			goto success;*/
 #ifdef USE_E1000
 		if ((err = netifapi_netif_add(&default_netif, ip_2_ip4(&ipaddr), ip_2_ip4(&netmask), ip_2_ip4(&gw), NULL, e1000if_init, ethernet_input)) == ERR_OK)
 			goto success;
@@ -318,141 +320,6 @@ char* itoa(uint64_t input, char* str);
 // init task => creates all other tasks and initializes the LwIP
 static int initd(void* arg)
 {
-#if 0
-	kputs("\tHello from initd! Argument ");
-	kputs((char*) arg);
-	kputs("\n");
-	return 0;
-#endif
-
-/* Floating point testing */
-#if 0
-	kputs("Hello from initd!\nArgument: ");
-	kputs((char*) arg);
-	kputs("\n");
-
-	float volatile a = 5.0;
-	float volatile b = 2.0;
-	float volatile c;
-
- 	c = a / b;
-	c = c * 2.0;
-	char str_c[50];
-	itoa(c, str_c);
-	kputs(str_c);
-
-
-	kputs("XXXXX Hello from after float operations XXXXX\n");
-	reschedule();
-	return 0;
-#endif
-
-/* Interrupt testing */
-#if 0
-	kputs("Hello from initd!\nArgument: ");
-	kputs((char*) arg);
-	kputs("\n");
-
-	//int v, x = 5;
-	//x = x / 0;
-	int x = 0;
-	/*asm volatile(
-		"mov x0, #0\n\t"
-		"udiv %0, %0, x0\n\t"
-		"brk"
-		: "+r"(v)
-		:
-		: "memory", "x0", "x1");*/
-	/*asm volatile(
-		"brk 0"
-		:
-		:
-		: "memory");*/
-	trigger_interrupt();
-	kputs("XXXXX Hello from after trigger_interrupt XXXXX\n");
-	reschedule();
-	return x;
-#endif
-
-/* Sheduling testing */
-#if 0
-	int i = 0;
-	char str_i[100];
-
-	for(i=0; i<5; i++) {
-		kputs("\tHello from initd! Argument ");
-		kputs((char*) arg);
-		kputs(" in iteration ");
-		itoa(i, str_i);
-		kputs(str_i);
-		kputs("\n");
-		reschedule();
-	}
-	LOG_INFO("Reached end of initd()\n");
-#endif
-
-/* kmalloc() and kfree() testing */
-#if 1
-	uint64_t* a = (uint64_t*) kmalloc(sizeof(uint64_t));
-	uint64_t* b = (uint64_t*) kmalloc(sizeof(uint64_t));
-	uint32_t* c = (uint32_t*) kmalloc(sizeof(uint32_t));
-
-	print_hex(a);
-	kputs(" This is the address of integer a\n");
-
-	*a = 1;
-	*b = 2;
-	*c = 0;
-	*c = *a + *b;
-
-	kputs("int a: ");
-	print_int(*a);
-	kputs("\n");
-	kputs("int b: ");
-	print_int(*b);
-	kputs("\n");
-	kputs("int c: ");
-	print_int(*c);
-	kputs("\n");
-
-	kfree(b);
-	//kfree(c);
-
-	uint64_t* d = (uint64_t*) kmalloc(sizeof(uint64_t));
-	*d = 9;
-
-	kputs("int a: ");
-	print_int(*a);
-	kputs("\n");
-	kputs("int b: ");
-	print_int(*b);
-	kputs("\n");
-	kputs("int c: ");
-	print_int(*c);
-	kputs("\n");
-	//print_int(*d);
-	//kputs("\n");
-
-	kputs("Test string: ");
-	int i = 30;
-	char* str = (char*) kmalloc(i+1);
-	for (int n = 0; n < i; n++)
-		str[n] = lwip_rand() % 26 + 'a';
-	str[i] = '\0';
-	kputs(str);
-	kputs("\n");
-
-	print_free_list();
-
-	kfree(a);
-	kfree(c);
-	kfree(d);
-	kfree(str);
-
-#endif
-
-/* Original initd */
-#if 0
 	int s = -1, c = -1;
 	int i, j, flag;
 	int len, err;
@@ -490,6 +357,7 @@ static int initd(void* arg)
 	// initialize network
 	err = init_netifs();
 
+#if 0
 	if (is_uhyve()) {
 		int i;
 		uhyve_cmdsize_t uhyve_cmdsize;
@@ -699,81 +567,6 @@ out:
 	return 0;
 }
 
-char* itoa(uint64_t input, char* str) {
-	char* p = str;
-	uint64_t tmp = input;
-
-	if (input == 0) {
-		str[0] = '0';
-		str[1] = '\0';
-		return str;
-	}
-
-	if (input < 0) {
-		*p++ = '-';
-		input *= -1;
-	}
-
-	while (tmp) {
-		p++;
-		tmp /= 10;
-	}
-	*p = '\0';
-	while (input) {
-		*--p = '0' + input % 10;
-		input /= 10;
-	}
-
-	return str;
-}
-
-void print_int(int input) {
-	char* str[50];
-
-	itoa(input, str);
-	kputs(str);
-}
-
-void print_binary(uint64_t input) {
-	char* bit = 0;
-
-	for (int i = 0; i < 64; i++) {
-		bit = (input << i) >> 63;
-		if (bit == 1)
-			kputs("1");
-		else
-			kputs("0");
-	}
-}
-
-void print_hex(uint64_t input) {
-	uint64_t bits = 0;
-	int i = 0;
-	char tmp[2] = "0";
-
-	while(!bits && i < 16) {
-		bits = (input << i * 4) >> 60;
-		i++;
-	}
-	i--;
-
-	kputs("0x");
-	while (i < 16) {
-		bits = (input << i * 4) >> 60;
-		if (bits > 9)
-			tmp[0] = 'A' + bits - 10;
-		else
-			tmp[0] = '0' + bits;
-		kputs(tmp);
-		i++;
-	}
-}
-
-void print_hex_return(uint64_t input) {
-	print_hex(input);
-	kputs("\n");
-}
-
 int foo() {
 	kputs("Hello from foo\n");
 	LOG_INFO("We can't go over any LOG_INFO.\n");
@@ -785,14 +578,15 @@ int hermit_main(void)
 {
 	hermit_init();
 	system_calibration(); // enables also interrupts
-#if 0
+
 	LOG_INFO("This is Hermit %s, build date %u\n", PACKAGE_VERSION, &__DATE__);
-	LOG_INFO("Isle %d of %d possible isles\n", isle, possible_isles);
+	//LOG_INFO("Isle %d of %d possible isles\n", isle, possible_isles);
 	LOG_INFO("Kernel starts at %p and ends at %p\n", &kernel_start, (size_t)&kernel_start + image_size);
-	LOG_INFO("TLS image starts at %p and ends at %p (size 0x%zx)\n", &tls_start, &tls_end, ((size_t) &tls_end) - ((size_t) &tls_start));
+	//LOG_INFO("TLS image starts at %p and ends at %p (size 0x%zx)\n", &tls_start, &tls_end, ((size_t) &tls_end) - ((size_t) &tls_start));
 	LOG_INFO("BBS starts at %p and ends at %p\n", &hbss_start, (size_t)&kernel_start + image_size);
 	LOG_INFO("Per core data starts at %p and ends at %p\n", &percore_start, &percore_end);
 	LOG_INFO("Per core size 0x%zx\n", (size_t) &percore_end0 - (size_t) &percore_start);
+#if 0
 	LOG_INFO("Processor frequency: %u MHz\n", get_cpu_frequency());
 	LOG_INFO("Total memory: %zd MiB\n", atomic_int64_read(&total_pages) * PAGE_SIZE / (1024ULL*1024ULL));
 	LOG_INFO("Current allocated memory: %zd KiB\n", atomic_int64_read(&total_allocated_pages) * PAGE_SIZE / 1024ULL);
@@ -801,8 +595,8 @@ int hermit_main(void)
 	LOG_INFO("System is able to use %d processors\n", possible_cpus);
 	if (get_cmdline())
 		LOG_INFO("Kernel cmdline: %s\n", get_cmdline());
-	//if (hbmem_base)
-	//	LOG_INFO("Found high bandwidth memory at 0x%zx (size 0x%zx)\n", hbmem_base, hbmem_size);
+	if (hbmem_base)
+		LOG_INFO("Found high bandwidth memory at 0x%zx (size 0x%zx)\n", hbmem_base, hbmem_size);
 #endif
 
 #if 0
@@ -820,28 +614,8 @@ int hermit_main(void)
 	print_cpu_status(isle);
 	//vma_dump();
 
-	kputs("Hello from before create_kernel_task_on_core\n");
-	create_kernel_task_on_core(NULL, initd, "test0", NORMAL_PRIO, CORE_ID);
-	create_kernel_task_on_core(NULL, initd, "test1", NORMAL_PRIO, CORE_ID);
+	create_kernel_task_on_core(NULL, initd, NULL, NORMAL_PRIO, boot_processor);
 	create_kernel_task_on_core(NULL, foo, NULL, NORMAL_PRIO, CORE_ID);
-	kputs("Hello from after create_kernel_task_on_core\n\n");
-
-
-	/* just to see some addresses */
-	extern const void kernel_start;
-	extern const void kernel_end;
-
-	kputs("Just some addresses:\n");
-	print_hex(&kernel_start);
-	kputs("\n");
-
-	print_hex(&kernel_end);
-	kputs("\n");
-
-	int random_adr = 7;
-	print_hex(&random_adr);
-	kputs("\n\n");
-	/* end address area */
 
 	while(1) {
 		reschedule();

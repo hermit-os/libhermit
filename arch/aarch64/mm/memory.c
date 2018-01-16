@@ -396,10 +396,8 @@ oom:
 	free_start->prev = NULL;
 	free_start->next = NULL;
 
-	print_hex(free_start);
-	kputs(" This is the address of free_start\n");
+	LOG_INFO("memory_init() was executed and free memory initialized\n");
 
-	kputs("memory_init() was executed and free memory initialized\n");
 	return 0;
 }
 
@@ -436,8 +434,8 @@ void* kmalloc(size_t sz)
 	spinlock_unlock(&list_lock);
 
 	LOG_DEBUG("kmalloc(%zd) = %p\n", sz, NULL);
-	kputs("Out of memory!\n");
-	//LOG_ERROR("Out of memory!");
+	LOG_ERROR("Out of memory!");
+
 	return NULL;
 }
 
@@ -452,9 +450,6 @@ void kfree(void *addr)
 	LOG_DEBUG("kfree(%p)\n", addr);
 
 	free_list_t* block = addr - BLOCK_HEADER_SIZE;
-	kputs("Freeing block with address ");
-	print_hex(block);
-	kputs("\n");
 
 	spinlock_lock(&list_lock);
 
@@ -478,41 +473,28 @@ void kfree(void *addr)
 	return;
 }
 
-void print_free_list() {
+void print_free_list(void) {
 	free_list_t* block = free_start;
 
-	kputs("\n");
-	kputs("Every block of free_list:");
-	kputs("\n");
+	LOG_INFO("Every block of free_list:\n");
 
 	spinlock_lock(&list_lock);
 
 	while (block != NULL) {
 		//this is the address of the block with header, not the beginning of usuable space
-		kputs("address:");
-		print_hex(block);
-		kputs("\n");
+		LOG_INFO("address: 0x%p\n", block);
 
-		kputs("type:\t");
-		if (block->type == BLOCK_FREE)
-			kputs("free\n");
-		else if (block->type == BLOCK_ALLOCATED)
-			kputs("allocated\n");
-		else
-			kputs("UNDEFINED\n");
+		if (block->type == BLOCK_FREE) {
+			LOG_INFO("type: free\n");
+		} else if (block->type == BLOCK_ALLOCATED) {
+			LOG_INFO("type: allocated\n");
+		} else {
+			LOG_INFO("type: UNDEFINED\n");
+		}
 
-		kputs("size:\t");
-		print_hex(block->size);
-		kputs("\n");
-
-		kputs("prev:\t");
-		print_hex(block->prev);
-		kputs("\n");
-
-		kputs("next:\t");
-		print_hex(block->next);
-		kputs("\n");
-		kputs("\n");
+		LOG_INFO("size: 0x%zx\n", block->size);
+		LOG_INFO("prev: 0x%zx\n", block->prev);
+		LOG_INFO("next: 0x%zx\n\n", block->next);
 
 		block = block->next;
 	}

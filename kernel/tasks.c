@@ -321,7 +321,6 @@ void finish_task_switch(void)
 	task_t* old;
 	const uint32_t core_id = CORE_ID;
 
-	kputs("Hello from the beginning of finish_task_switch\n");
 	spinlock_irqsave_lock(&readyqueues[core_id].lock);
 
 	if ((old = readyqueues[core_id].old_task) != NULL) {
@@ -368,7 +367,7 @@ void NORETURN do_exit(int arg)
 	void* tls_addr = NULL;
 	const uint32_t core_id = CORE_ID;
 
-	//LOG_INFO("Terminate task: %u, return value %d\n", curr_task->id, arg);
+	LOG_INFO("Terminate task: %u, return value %d\n", curr_task->id, arg);
 
 	uint8_t flags = irq_nested_disable();
 
@@ -385,7 +384,7 @@ void NORETURN do_exit(int arg)
 	}
 
 	curr_task->status = TASK_FINISHED;
-	kputs("--------------- Task finished ---------------\n");
+
 	reschedule();
 
 	irq_nested_enable(flags);
@@ -545,24 +544,6 @@ int create_task(tid_t* id, entry_point_t ep, void* arg, uint8_t prio, uint32_t c
 
 	if (BUILTIN_EXPECT(!ep, 0))
 		return -EINVAL;
-	kputs("\tep != 0\n");
-	if (BUILTIN_EXPECT(prio == IDLE_PRIO, 0))
-		return -EINVAL;
-	kputs("\tprio != IDLE_PRIO\n");
-	if (BUILTIN_EXPECT(prio > MAX_PRIO, 0))
-		return -EINVAL;
-	kputs("\tprio <= MAX_PRIO\n");
-	if (BUILTIN_EXPECT(core_id >= MAX_CORES, 0))
-		return -EINVAL;
-	kputs("\tcore_id < MAX_CORES\n");
-	if (BUILTIN_EXPECT(!readyqueues[core_id].idle, 0))
-		return -EINVAL;
-	kputs("\treadyqueues[core_id].idle != 0\n");
-	kputs("Hello from after error check in create_task\n");
-
-#if 0
-	if (BUILTIN_EXPECT(!ep, 0))
-		return -EINVAL;
 	if (BUILTIN_EXPECT(prio == IDLE_PRIO, 0))
 		return -EINVAL;
 	if (BUILTIN_EXPECT(prio > MAX_PRIO, 0))
@@ -571,7 +552,6 @@ int create_task(tid_t* id, entry_point_t ep, void* arg, uint8_t prio, uint32_t c
 		return -EINVAL;
 	if (BUILTIN_EXPECT(!readyqueues[core_id].idle, 0))
 		return -EINVAL;
-#endif
 
 	stack = create_stack(DEFAULT_STACK_SIZE);
 	if (BUILTIN_EXPECT(!stack, 0))
@@ -615,7 +595,6 @@ int create_task(tid_t* id, entry_point_t ep, void* arg, uint8_t prio, uint32_t c
 				*id = i;
 
 			ret = create_default_frame(task_table+i, ep, arg, core_id);
-			kputs("Hello from after create_default_frame\n");
 			if (ret)
 				goto out;
 
@@ -639,7 +618,7 @@ int create_task(tid_t* id, entry_point_t ep, void* arg, uint8_t prio, uint32_t c
 	}
 
 	if (!ret)
-		//LOG_INFO("start new task %d on core %d with stack address %p\n", i, core_id, stack);
+		LOG_INFO("start new task %d on core %d with stack address %p\n", i, core_id, stack);
 
 out:
 	spinlock_irqsave_unlock(&table_lock);
@@ -822,7 +801,6 @@ size_t** scheduler(void)
 	const uint32_t core_id = CORE_ID;
 	uint64_t prio;
 
-	kputs("Hello from the beginning of sheduler\n");
 	orig_task = curr_task = per_core(current_task);
 	curr_task->last_core = core_id;
 
@@ -871,7 +849,6 @@ size_t** scheduler(void)
 			while(1);
 		}
 		if (BUILTIN_EXPECT(curr_task->status == TASK_INVALID, 0)) {
-			kputs("Kernel panic: Invalid task\n");
 			LOG_ERROR("Kernel panic: Got invalid task %d, orig task %d\n",
 			        curr_task->id, orig_task->id);
 			while(1);
@@ -894,7 +871,7 @@ get_task_out:
 	spinlock_irqsave_unlock(&readyqueues[core_id].lock);
 
 	if (curr_task != orig_task) {
-		LOG_DEBUG("schedule on core %d from %u to %u with prio %u\n", core_id, orig_task->id, curr_task->id, (uint32_t)curr_task->prio);
+		LOG_INFO("schedule on core %d from %u to %u with prio %u\n", core_id, orig_task->id, curr_task->id, (uint32_t)curr_task->prio);
 
 		return (size_t**) &(orig_task->last_stack_pointer);
 	}
