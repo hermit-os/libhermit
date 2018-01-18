@@ -52,23 +52,24 @@ int main(int argc, char** argv)
 	struct ibv_device **dev_list;
 	int num_devices;
 
-	printf("ib-test.c: before get dev list.\n");
+	printf("\t\tib-test.c: before get dev list.\n");
 	dev_list = ibv_get_device_list(&num_devices);
-	printf("after get device list -- ib-test.c: num devices: %d\n", num_devices);
-	printf("after get device list -- ib-test.c: ptr 1: %p\n",  dev_list[0]);
-	printf("after get device list -- ib-test.c: ptr 2: %p\n",  dev_list[1]);
-	printf("after get device list -- ib-test.c: name 1: %s\n", dev_list[0]->name);
-	printf("after get device list -- ib-test.c: name 2: %s\n", dev_list[1]->name);
+	printf("\t\tib-test.c: after get device list -- ib-test.c: num devices: %d \n", num_devices);
+	printf("\t\tib-test.c: dev_list ptr: %p\n", dev_list);
+	/* printf("after get device list -- ib-test.c: ptr 1: %p\n",  dev_list[0]); */
+	/* printf("after get device list -- ib-test.c: ptr 2: %p\n",  dev_list[1]); */
+	/* printf("\t\tafter get device list -- ib-test.c: name 1: %s\n", dev_list[0]->name); */
+	/* printf("\t\tafter get device list -- ib-test.c: name 2: %s\n", dev_list[1]->name); */
 
-	printf("before get device name loop.\n");
+	printf("\t\tib-test.c: before get device name loop.\n");
 	for (int i=0; i < num_devices; i++) {
 		const char* dev_name = ibv_get_device_name(dev_list[i]);
-		printf("after get device name -- Device name %d: %s\n", i, dev_name);
+		printf("\t\tib-test.c: after get device name -- Device name %d: %s\n", i, dev_name);
 	}
 
-	printf("before open_device\n");
+	printf("\t\tib-test.c: before open_device\n");
 	struct ibv_context * context = ibv_open_device(dev_list[0]);
-	printf("after open device\n");
+	printf("\t\tib-test.c: after open device\n");
 
 	return 0;
 }

@@ -65,6 +65,7 @@
 #include <asm/mman.h>
 #include <malloc.h>
 #include <dlfcn.h>
+#include <inttypes.h>
 
 #include <infiniband/verbs.h>		// Linux include
 
@@ -171,7 +172,7 @@
 #define APIC_DEFAULT_BASE	0xfee00000
 
 #define IB_POOL_SIZE 0x400000ULL
-#define IB_MEM_DEBUG 
+#define IB_MEM_DEBUG
 
 static bool restart = false;
 static bool cap_tsc_deadline = false;
@@ -229,16 +230,20 @@ typedef struct {
 /* uint64_t ib_pool_addr = 0; // TODO: static? */
 static uint8_t* ib_pool_addr = 0;
 static uint8_t* ib_pool_top  = 0;
-bool ib_malloc = false;
 static const size_t std_alignment = 16; // TODO: Use sizeof(maxint_t) (?) or similar
+static pthread_mutex_t ib_pool_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-
-/* Redefining malloc */
+bool use_ib_mem_pool = false;
+bool init_real_calloc_active = false;
+/* void * dlsym_mem = NULL; */
+/* size_t dlsym_mem_len = 0; */
+static unsigned char dlsym_mem_buffer[8192];
 
 static void * (*real_malloc) (size_t)         = NULL;
+static void * (*real_calloc) (size_t, size_t) = NULL;
 static void * (*real_realloc)(void *, size_t) = NULL;
 static void   (*real_free)   (void *)         = NULL;
-/* static void   (*real_free_alt)  (void *) = NULL; */
+
 
 /*
  * init_ib_mem_functions
@@ -246,17 +251,37 @@ static void   (*real_free)   (void *)         = NULL;
 
 static void init_ib_mem_functions(void)
 {
-#ifdef IB_MEM_DEBUG
-	printf("Entered init_ib_mem_functions.\n");
-#endif
-	real_malloc  = dlsym(RTLD_NEXT, "malloc");
-	real_realloc = dlsym(RTLD_NEXT, "realloc");
-	real_free    = dlsym(RTLD_NEXT, "free");
-	/* real_free_alt = dlsym(RTLD_DEFAULT, "free"); */
+	pthread_mutex_lock(&ib_pool_mutex);
 
-	if (!real_malloc || !real_free || !real_realloc /* || !real_free_alt */ ) {
+#ifdef IB_MEM_DEBUG
+	printf("FUNCTION: init_ib_mem_functions().\n");
+#endif
+
+	if (real_malloc == NULL && real_calloc == NULL && real_realloc == NULL && real_free == NULL) {
+		init_real_calloc_active = true;
+		/* size_t dlsym_mem_len = 1024 * 8; */
+		/* dlsym_mem = mmap(NULL, dlsym_mem_len, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_SHARED, -1, 0); */
+
+		real_calloc  = dlsym(RTLD_NEXT, "calloc");
+
+		init_real_calloc_active = false;
+		/* munmap(dlsym_mem, dlsym_mem_len); */
+		/* dlsym_mem = NULL; */
+
+		real_malloc  = dlsym(RTLD_NEXT, "malloc");
+		real_realloc = dlsym(RTLD_NEXT, "realloc");
+		real_free    = dlsym(RTLD_NEXT, "free");
+	}
+
+	if (!real_malloc || !real_calloc || !real_free || !real_realloc /* || !real_free_alt */ ) {
 		fprintf(stderr, "Error in `dlsym`: %s\n", dlerror());
 	}
+
+	pthread_mutex_unlock(&ib_pool_mutex);
+
+#ifdef IB_MEM_DEBUG
+	printf("\tInit finished.\n");
+#endif
 }
 
 
@@ -265,15 +290,15 @@ static void init_ib_mem_functions(void)
  */
 
 void * new_ib_malloc_region(size_t size)
-{
+{ // TODO: add check if requested chunk fits in remaining memory
 #ifdef IB_MEM_DEBUG
-	printf("Entered new_ib_malloc_region.\n");
+	printf("FUNCTION: new_ib_malloc_region() ---------- size: %lu\n", size);
 #endif
 
 	void * result = NULL;
 
 	if (0 == ib_pool_top || 0 == ib_pool_addr) {
-		fprintf(stderr, "Error: ib_malloc called before ib_mem has been set.\n");
+		fprintf(stderr, "Error: ib_pool address not set yet.\n");
 	}
 	if (size > 0) {
 		size_t * block_size = (size_t *) ib_pool_top;
@@ -282,9 +307,9 @@ void * new_ib_malloc_region(size_t size)
 
 		result = ib_pool_top;
 		ib_pool_top += size;
-		ib_pool_top += (size_t) ((uintptr_t) ib_pool_top % std_alignment);
+		ib_pool_top += (size_t) (std_alignment - ((uintptr_t)ib_pool_top % std_alignment));
 #ifdef IB_MEM_DEBUG
-		printf("ib_pool_top aligned: %p\n", ib_pool_top);
+		printf("\tReturning ib memory pool address: %p\n", result);
 #endif
 	}
 
@@ -304,23 +329,70 @@ void * new_ib_malloc_region(size_t size)
 
 void * malloc(size_t size)
 {
+#ifdef IB_MEM_DEBUG
+	printf("FUNCTION: malloc()\n");
+#endif
+
 	if (real_malloc == NULL) {
 		init_ib_mem_functions();
 	}
 
+	pthread_mutex_lock(&ib_pool_mutex);
+
+	void * result;
+	if (use_ib_mem_pool) {
+		result = new_ib_malloc_region(size);
+	} else { // !use_ib_mem_pool
+		result = real_malloc(size);
+	}
+
+	pthread_mutex_unlock(&ib_pool_mutex);
+	return result;
+}
+
+
+/*
+ * calloc
+ */
+
+void * calloc(size_t nitems, size_t size)
+{
 #ifdef IB_MEM_DEBUG
-	printf(" ib_malloc_hook\tib_malloc %s\t Args:\tsize = %lu\n",
-			ib_malloc ? "true " : "false", size);
+	printf("FUNCTION: calloc()\n");
 #endif
 
 	void * result;
-	if (ib_malloc) {
-		result = new_ib_malloc_region(size);
-	} else { // !ib_malloc
+
+	if (real_calloc == NULL && !init_real_calloc_active) {
+		init_ib_mem_functions();
+	}
+
+	size_t full_size = nitems * size; // TODO: check if multiplication overflow
+	if (init_real_calloc_active) {
+		/* dlsym_mem_len = full_size; */
+		/* dlsym_mem = mmap(NULL, dlsym_mem_len, PROT_READ | PROT_WRITE | PROT_EXEC, */
+										 /* MAP_ANONYMOUS | MAP_SHARED, -1, 0); */
+		/* memset(dlsym_mem, 0, dlsym_mem_len); */
+/* #ifdef IB_MEM_DEBUG */
+		/* printf("\treturn annonymous mapped dlsym_mem pointer: %p len: %lu\n", */
+					 /* dlsym_mem, dlsym_mem_len); */
+/* #endif */
+		/* result = dlsym_mem; */
 #ifdef IB_MEM_DEBUG
-		printf("\n");
+		printf("\treturn dlsym_mem_buffer.\n");
 #endif
-		result = real_malloc(size);
+		result = dlsym_mem_buffer;
+	} else if (use_ib_mem_pool) {
+#ifdef IB_MEM_DEBUG
+		printf("\tuse_ib == true\n");
+#endif
+		result = new_ib_malloc_region(full_size);
+		memset(result, 0, full_size);
+	} else {
+#ifdef IB_MEM_DEBUG
+		printf("\tcalling real_calloc()\n");
+#endif
+		result = real_calloc(nitems, size);
 	}
 
 	return result;
@@ -333,39 +405,53 @@ void * malloc(size_t size)
 
 void * realloc(void * ptr, size_t new_size) {
 #ifdef IB_MEM_DEBUG
-	printf("ib_realloc_hook\tib_malloc %s\t Args:\tptr = %p, size = %lu\n", ib_malloc ? "true " : "false", ptr, new_size);
+	printf("FUNCTION: realloc() ----------------------- ptr: %p\n", ptr);
 #endif
+
+	if (real_realloc == NULL) {
+		init_ib_mem_functions();
+	}
+
+	if (!ptr) {
+		return malloc(new_size); // works, like standard
+	}
 
 	void * result;
 
-	if (ib_malloc) {
+	pthread_mutex_lock(&ib_pool_mutex);
+
+	if (use_ib_mem_pool) {
 		size_t* mem_block_size_ptr = (size_t*) (ptr - std_alignment);
 		size_t orig_size = *mem_block_size_ptr;
 
 		if (new_size <= 0 || ptr == NULL) {
 #ifdef IB_MEM_DEBUG
-			printf("new_size <= 0 || ptr == NULL\n");
+			printf("\tnew_size <= 0 || ptr == NULL ----------------------\n");
 #endif
 			result = NULL;
 
 		} else if (new_size <= orig_size) {
 #ifdef IB_MEM_DEBUG
-			printf("new_size <= orig_size = %lu\n", orig_size);
+			printf("\tnew_size <= orig_size = %lu\n", orig_size);
 #endif
 			*mem_block_size_ptr = new_size;
 			result = ptr;
 		} else { // new_size > orig_size
+#ifdef IB_MEM_DEBUG
+			printf("\tnew_size > orig_size = %lu\n", orig_size);
+#endif
 			result = new_ib_malloc_region(new_size);
 			memcpy(result, ptr, orig_size);
 		}
 
-	} else { // !ib_malloc
+	} else { // !use_ib_mem_pool
 #ifdef IB_MEM_DEBUG
-		printf("\n");
+		printf("\trealloc() real\n");
 #endif
 		result = real_realloc(ptr, new_size);
 	}
 
+	pthread_mutex_unlock(&ib_pool_mutex);
 	return result;
 }
 
@@ -374,29 +460,52 @@ void * realloc(void * ptr, size_t new_size) {
  * free
  */
 
+ // TODO: just use free and real free depending on ptr given (in pool or not)
 void free(void * ptr) {
-	/* if (real_free == NULL) { */
-		/* init_ib_mem_functions(); */
+	if (!ptr) {
+		return;
+	}
+
+#ifdef IB_MEM_DEBUG
+	printf("FUNCTION: free() --- ptr: %p\n", ptr);
+#endif
+
+	pthread_mutex_lock(&ib_pool_mutex);
+
+	if ((uint8_t*)ptr > ib_pool_addr && (uint8_t*)ptr < ib_pool_addr + IB_POOL_SIZE) {
+		if (use_ib_mem_pool) {
+#ifdef IB_MEM_DEBUG
+			printf("\tib free() (no action).\n");
+#endif
+		} else {
+#ifdef IB_MEM_DEBUG
+			printf("\tfree() in IB pool but use_ib_mem_pool not set.\n");
+#endif
+		}
+	} else { // ptr not within ib memory pool
+#ifdef IB_MEM_DEBUG
+			printf("\tfree() real\n");
+#endif
+			real_free(ptr);
+	}
+
+	/* if (!use_ib_mem_pool) { */
+/* #ifdef IB_MEM_DEBUG */
+		/* printf("\tfree() real\n"); */
+/* #endif */
+		/* real_free(ptr); */
+	/* } else if ((uint8_t*)ptr != NULL && ((uint8_t*)ptr <= ib_pool_addr || */
+						 /* (uint8_t*)ptr >= ib_pool_addr + IB_POOL_SIZE)) { */
+/* #ifdef IB_MEM_DEBUG */
+		/* printf("\tIB PTR OUT OF POOL: ptr: %p -------------------------------\n", ptr); */
+		/* printf("\tib_pool_addr       :     %p\n", ib_pool_addr); */
+		/* printf("\tib_pool_addr + SIZE:     %p\n", ib_pool_addr + IB_POOL_SIZE); */
+
+		/* real_free(ptr);  // TODO: trying this. */
+/* #endif */
 	/* } */
 
-#ifdef IB_MEM_DEBUG
-	/* printf(" ib_free_hook\tib_malloc %s\t Args:\tptr = %p\n", ib_malloc ? "true " : "false", ptr); */
-	/* printf(" real_free:     %p\n", real_free); */
-	/* printf(" my own free:   %p\n", free); */
-
-	/* printf(" real_free_alt: %p\n", real_free_alt); */
-#endif
-
-	if (!ib_malloc) {
-		real_free(ptr);
-	} else if (ptr != NULL && (ptr <= ib_pool_addr || ptr >= ib_pool_addr + IB_POOL_SIZE)) {
-#ifdef IB_MEM_DEBUG
-		printf("\t!!! ptr out of ib bounds !!!");
-#endif
-	}
-#ifdef IB_MEM_DEBUG
-	printf("\n");
-#endif
+	pthread_mutex_unlock(&ib_pool_mutex);
 }
 
 
@@ -1167,9 +1276,15 @@ static int vcpu_loop(void)
 			case UHYVE_PORT_SET_IB_POOL_ADDR:
 				printf("LOG: UHYVE CASE\n");
 				unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-				ib_pool_addr = (uint8_t*) *((uint64_t*) (guest_mem + data));
+				uint64_t * temp = (uint64_t*)(guest_mem + data);
+				/* printf("LOG: Value of uint64 pool start: %" PRIu64 "\n", *temp); */
+				printf("LOG: Value of uint64 pool start: %p\n", *temp);
+				ib_pool_addr = (uint8_t*) *temp;
+				/* printf("LOG: Value of uint8  pool start: %" PRIu8 "\n", ib_pool_addr); */
+				printf("LOG: Value of uint8  pool start: %p\n", ib_pool_addr);
 				ib_pool_top = ib_pool_addr;
 				break;
+
 			case UHYVE_PORT_IBV_GET_DEVICE_LIST:
 				printf("LOG: UHYVE CASE\n");
 				call_ibv_get_device_list(run, guest_mem);
@@ -1639,7 +1754,6 @@ int uhyve_init(char *path)
 	/* ib_mem = guest_mem + guest_size; */
 	/* printf("guest_mem: %p, guest_size: %p\n", guest_mem, guest_size); */
 	/* printf("ib_mem = guest_mem + guest_size: %p\n", ib_mem); */
-	/* init_ib_mem_functions(); */
 
 	return ret;
 }

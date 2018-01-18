@@ -25,7 +25,7 @@
 
 #define MAX_NUM_OF_IBV_DEVICES 16
 
-extern bool ib_malloc;
+extern bool use_ib_mem_pool;
 
 typedef enum {
 	UHYVE_PORT_SET_IB_POOL_ADDR        = 0x609,

@@ -40,26 +40,12 @@
 void call_ibv_get_device_list(struct kvm_run * run, uint8_t * guest_mem) {
 	printf("LOG: UHYVE - call_ibv_get_device_list\n");
 
-	printf("temp check 1\n");
-	int * temp = malloc(sizeof(int));
-	*temp = 42;
-	free(temp);
-
 	unsigned data = *((unsigned *)((size_t)run+run->io.data_offset));
 	uhyve_ibv_get_device_list_t * args = (uhyve_ibv_get_device_list_t *) (guest_mem + data);
 
-	printf("temp check 2\n");
-	ib_malloc = true;
-	temp = malloc(sizeof(int));
-	*temp = 42;
-	free(temp);
-
-	ib_malloc = false;
-	printf("LOG: UHYVE - call_ibv_get_device_list -- before ibv call\n");
-	ib_malloc = true;
+	use_ib_mem_pool = true;
 	args->ret = ibv_get_device_list(args->num_devices);
-	ib_malloc = false;
-	printf("LOG: UHYVE - call_ibv_get_device_list -- after ibv call\n");
+	use_ib_mem_pool = false;
 }
 
 
@@ -73,7 +59,9 @@ void call_ibv_get_device_name(struct kvm_run * run, uint8_t * guest_mem) {
 	uhyve_ibv_get_device_name_t * args = (uhyve_ibv_get_device_name_t *) (guest_mem + data);
 
 	// TODO: Tricky because char ptr isn't allocated in called function.
+	use_ib_mem_pool = true;
 	args->ret = ibv_get_device_name(args->device);
+	use_ib_mem_pool = false;
 	/* memcpy(args->ret, host_ret, sizeof(host_ret)); */
 	// TODO: Convert ptrs contained in return value.
 	// TODO: How to tell if ret needs to be deleted?
@@ -87,7 +75,7 @@ void call_ibv_get_device_name(struct kvm_run * run, uint8_t * guest_mem) {
 void call_ibv_open_device(struct kvm_run * run, uint8_t * guest_mem) {
 	printf("LOG: UHYVE - call_ibv_open_device\n");
 
-	ib_malloc = true;
+	use_ib_mem_pool = true;
 
 	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 	uhyve_ibv_open_device_t * args = (uhyve_ibv_open_device_t *) (guest_mem + data);
@@ -101,7 +89,7 @@ void call_ibv_open_device(struct kvm_run * run, uint8_t * guest_mem) {
 	free(host_ret);
 	printf("LOG: UHYVE - call_ibv_open_device\n");
 
-	ib_malloc = false;
+	use_ib_mem_pool = false;
 }
 
 
