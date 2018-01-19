@@ -43,17 +43,12 @@
 
 int main(int argc, char** argv)
 {
-	/* printf("checking kernel outputs.\n"); */
-
 	int i, random;
 
-	// ---------------------------------------------------------------------------
 
-	struct ibv_device **dev_list;
 	int num_devices;
-
 	printf("\t\tib-test.c: before get dev list.\n");
-	dev_list = ibv_get_device_list(&num_devices);
+	struct ibv_device ** dev_list = ibv_get_device_list(&num_devices);
 	printf("\t\tib-test.c: after get device list -- ib-test.c: num devices: %d \n", num_devices);
 	printf("\t\tib-test.c: dev_list ptr: %p\n", dev_list);
 	/* printf("after get device list -- ib-test.c: ptr 1: %p\n",  dev_list[0]); */

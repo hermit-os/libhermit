@@ -39,7 +39,6 @@
 
 void call_ibv_get_device_list(struct kvm_run * run, uint8_t * guest_mem) {
 	printf("LOG: UHYVE - call_ibv_get_device_list\n");
-
 	unsigned data = *((unsigned *)((size_t)run+run->io.data_offset));
 	uhyve_ibv_get_device_list_t * args = (uhyve_ibv_get_device_list_t *) (guest_mem + data);
 
@@ -58,13 +57,9 @@ void call_ibv_get_device_name(struct kvm_run * run, uint8_t * guest_mem) {
 	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 	uhyve_ibv_get_device_name_t * args = (uhyve_ibv_get_device_name_t *) (guest_mem + data);
 
-	// TODO: Tricky because char ptr isn't allocated in called function.
 	use_ib_mem_pool = true;
 	args->ret = ibv_get_device_name(args->device);
 	use_ib_mem_pool = false;
-	/* memcpy(args->ret, host_ret, sizeof(host_ret)); */
-	// TODO: Convert ptrs contained in return value.
-	// TODO: How to tell if ret needs to be deleted?
 }
 
 
@@ -74,21 +69,11 @@ void call_ibv_get_device_name(struct kvm_run * run, uint8_t * guest_mem) {
 
 void call_ibv_open_device(struct kvm_run * run, uint8_t * guest_mem) {
 	printf("LOG: UHYVE - call_ibv_open_device\n");
-
-	use_ib_mem_pool = true;
-
 	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 	uhyve_ibv_open_device_t * args = (uhyve_ibv_open_device_t *) (guest_mem + data);
 
-	printf("LOG: UHYVE - call_ibv_open_device\n");
-	struct ibv_context * host_ret = ibv_open_device(args->device);
-	printf("LOG: UHYVE - call_ibv_open_device\n");
-	memcpy(args->ret, host_ret, sizeof(host_ret));
-	printf("LOG: UHYVE - call_ibv_open_device\n");
-	// TODO: Convert ptrs contained in return value.
-	free(host_ret);
-	printf("LOG: UHYVE - call_ibv_open_device\n");
-
+	use_ib_mem_pool = true;
+	args->ret = ibv_open_device(args->device);
 	use_ib_mem_pool = false;
 }
 
@@ -102,8 +87,9 @@ void call_ibv_query_port(struct kvm_run * run, uint8_t * guest_mem) {
 	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 	uhyve_ibv_query_port_t * args = (uhyve_ibv_query_port_t *) (guest_mem + data);
 
-	int host_ret = ibv_query_port(args->context, args->port_num, args->port_attr);
-	args->ret = host_ret;
+	use_ib_mem_pool = true;
+	args->ret = ibv_query_port(args->context, args->port_num, args->port_attr);
+	use_ib_mem_pool = false;
 }
 
 
@@ -115,11 +101,10 @@ void call_ibv_create_comp_channel(struct kvm_run * run, uint8_t * guest_mem) {
 	printf("LOG: UHYVE - call_ibv_create_comp_channel");
 	unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 	uhyve_ibv_create_comp_channel_t * args = (uhyve_ibv_create_comp_channel_t *) (guest_mem + data);
-	/*uhyve_ibv_create_comp_channel_t * args = (uhyve_ibv_create_comp_channel_t *) get_data(run);*/
 
-	struct ibv_comp_channel * host_ret = ibv_create_comp_channel(args->context);
-	memcpy(args->ret, host_ret, sizeof(host_ret)); // TODO: This will only work for ABI ver > 2.
-	free(host_ret);
+	use_ib_mem_pool = true;
+	args->ret = ibv_create_comp_channel(args->context);
+	use_ib_mem_pool = false;
 }
 
 

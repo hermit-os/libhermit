@@ -369,15 +369,6 @@ void * calloc(size_t nitems, size_t size)
 
 	size_t full_size = nitems * size; // TODO: check if multiplication overflow
 	if (init_real_calloc_active) {
-		/* dlsym_mem_len = full_size; */
-		/* dlsym_mem = mmap(NULL, dlsym_mem_len, PROT_READ | PROT_WRITE | PROT_EXEC, */
-										 /* MAP_ANONYMOUS | MAP_SHARED, -1, 0); */
-		/* memset(dlsym_mem, 0, dlsym_mem_len); */
-/* #ifdef IB_MEM_DEBUG */
-		/* printf("\treturn annonymous mapped dlsym_mem pointer: %p len: %lu\n", */
-					 /* dlsym_mem, dlsym_mem_len); */
-/* #endif */
-		/* result = dlsym_mem; */
 #ifdef IB_MEM_DEBUG
 		printf("\treturn dlsym_mem_buffer.\n");
 #endif
