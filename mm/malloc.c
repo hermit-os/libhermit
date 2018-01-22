@@ -201,6 +201,42 @@ void* create_stack(size_t sz)
 	return (void*) (viraddr+PAGE_SIZE);
 }
 
+void* create_ib_pool_stack(size_t sz)
+{
+	size_t phyaddr, viraddr, bits;
+	uint32_t npages = PAGE_CEIL(sz) >> PAGE_BITS;
+	int err;
+
+	LOG_DEBUG("create_stack(0x%zx) (%u pages)\n", DEFAULT_STACK_SIZE, npages);
+
+	if (BUILTIN_EXPECT(!sz, 0))
+		return NULL;
+
+	// get free virtual address space
+	viraddr = vma_alloc((npages+2)*PAGE_SIZE, VMA_READ|VMA_WRITE|VMA_CACHEABLE);
+	if (BUILTIN_EXPECT(!viraddr, 0))
+		return NULL;
+
+	// get continous physical pages
+	phyaddr = get_pages(npages);
+	if (BUILTIN_EXPECT(!phyaddr, 0)) {
+		vma_free(viraddr, viraddr+(npages+2)*PAGE_SIZE);
+		return NULL;
+	}
+
+	bits = PG_RW|PG_GLOBAL|PG_NX;
+
+	// map physical pages to VMA
+	err = page_map(viraddr+PAGE_SIZE, phyaddr, npages, bits);
+	if (BUILTIN_EXPECT(err, 0)) {
+		vma_free(viraddr, viraddr+(npages+2)*PAGE_SIZE);
+		put_pages(phyaddr, npages);
+		return NULL;
+	}
+
+	return (void*) (viraddr+PAGE_SIZE);
+}
+
 int destroy_stack(void* viraddr, size_t sz)
 {
 	size_t phyaddr;

@@ -139,7 +139,7 @@ typedef struct {
 int ibv_start_poll(struct ibv_cq_ex * cq, struct ibv_poll_cq_attr * attr) {
 	uhyve_ibv_start_poll_t uhyve_args;
 	uhyve_args.cq = cq;
-	uhyve_args.attr = attr;
+	uhyve_args.attr = (struct ibv_poll_cq_attr *) guest_to_host((size_t) attr);
 
 	uhyve_send(UHYVE_PORT_IBV_START_POLL, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -662,7 +662,7 @@ typedef struct {
 int ibv_get_async_event(struct ibv_context * context, struct ibv_async_event * event) {
 	uhyve_ibv_get_async_event_t uhyve_args;
 	uhyve_args.context = context;
-	uhyve_args.event = event;
+	uhyve_args.event = (struct ibv_async_event *) guest_to_host((size_t) event);
 
 	uhyve_send(UHYVE_PORT_IBV_GET_ASYNC_EVENT, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -681,7 +681,7 @@ typedef struct {
 
 void ibv_ack_async_event(struct ibv_async_event * event) {
 	uhyve_ibv_ack_async_event_t uhyve_args;
-	uhyve_args.event = event;
+	uhyve_args.event = (struct ibv_async_event *) guest_to_host((size_t) event);
 
 	uhyve_send(UHYVE_PORT_IBV_ACK_ASYNC_EVENT, (unsigned) virt_to_phys((size_t) &uhyve_args));
 }
@@ -702,7 +702,7 @@ typedef struct {
 int ibv_query_device(struct ibv_context * context, struct ibv_device_attr * device_attr) {
 	uhyve_ibv_query_device_t uhyve_args;
 	uhyve_args.context = context;
-	uhyve_args.device_attr = device_attr;
+	uhyve_args.device_attr = (struct ibv_device_attr *) guest_to_host((size_t) device_attr);
 
 	uhyve_send(UHYVE_PORT_IBV_QUERY_DEVICE, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -727,7 +727,7 @@ int ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_po
 	uhyve_ibv_query_port_t uhyve_args;
 	uhyve_args.context = context;
 	uhyve_args.port_num = port_num;
-	uhyve_args.port_attr = port_attr;
+	uhyve_args.port_attr = (struct ibv_port_attr *) guest_to_host((size_t) port_attr);
 
 	uhyve_send(UHYVE_PORT_IBV_QUERY_PORT, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -752,7 +752,7 @@ int ___ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv
 	uhyve____ibv_query_port_t uhyve_args;
 	uhyve_args.context = context;
 	uhyve_args.port_num = port_num;
-	uhyve_args.port_attr = port_attr;
+	uhyve_args.port_attr = (struct ibv_port_attr *) guest_to_host((size_t) port_attr);
 
 	uhyve_send(UHYVE_PORT____IBV_QUERY_PORT, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -871,7 +871,7 @@ typedef struct {
 struct ibv_flow * ibv_create_flow(struct ibv_qp * qp, struct ibv_flow_attr * flow) {
 	uhyve_ibv_create_flow_t uhyve_args;
 	uhyve_args.qp = qp;
-	uhyve_args.flow = flow;
+	uhyve_args.flow = (struct ibv_flow_attr *) guest_to_host((size_t) flow);
 
 	uhyve_send(UHYVE_PORT_IBV_CREATE_FLOW, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1105,7 +1105,7 @@ int ibv_bind_mw(struct ibv_qp * qp, struct ibv_mw * mw, struct ibv_mw_bind * mw_
 	uhyve_ibv_bind_mw_t uhyve_args;
 	uhyve_args.qp = qp;
 	uhyve_args.mw = mw;
-	uhyve_args.mw_bind = mw_bind;
+	uhyve_args.mw_bind = (struct ibv_mw_bind *) guest_to_host((size_t) mw_bind);
 
 	uhyve_send(UHYVE_PORT_IBV_BIND_MW, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1199,7 +1199,7 @@ typedef struct {
 struct ibv_cq_ex * ibv_create_cq_ex(struct ibv_context * context, struct ibv_cq_init_attr_ex * cq_attr) {
 	uhyve_ibv_create_cq_ex_t uhyve_args;
 	uhyve_args.context = context;
-	uhyve_args.cq_attr = cq_attr;
+	uhyve_args.cq_attr = (struct ibv_cq_init_attr_ex *) guest_to_host((size_t) cq_attr);
 
 	uhyve_send(UHYVE_PORT_IBV_CREATE_CQ_EX, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1312,7 +1312,7 @@ int ibv_poll_cq(struct ibv_cq * cq, int num_entries, struct ibv_wc * wc) {
 	uhyve_ibv_poll_cq_t uhyve_args;
 	uhyve_args.cq = cq;
 	uhyve_args.num_entries = num_entries;
-	uhyve_args.wc = wc;
+	uhyve_args.wc = (struct ibv_wc *) guest_to_host((size_t) wc);
 
 	uhyve_send(UHYVE_PORT_IBV_POLL_CQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1358,7 +1358,7 @@ typedef struct {
 struct ibv_srq * ibv_create_srq(struct ibv_pd * pd, struct ibv_srq_init_attr * srq_init_attr) {
 	uhyve_ibv_create_srq_t uhyve_args;
 	uhyve_args.pd = pd;
-	uhyve_args.srq_init_attr = srq_init_attr;
+	uhyve_args.srq_init_attr = (struct ibv_srq_init_attr *) guest_to_host((size_t) srq_init_attr);
 
 	uhyve_send(UHYVE_PORT_IBV_CREATE_SRQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1381,7 +1381,7 @@ typedef struct {
 struct ibv_srq * ibv_create_srq_ex(struct ibv_context * context, struct ibv_srq_init_attr_ex * srq_init_attr_ex) {
 	uhyve_ibv_create_srq_ex_t uhyve_args;
 	uhyve_args.context = context;
-	uhyve_args.srq_init_attr_ex = srq_init_attr_ex;
+	uhyve_args.srq_init_attr_ex = (struct ibv_srq_init_attr_ex *) guest_to_host((size_t) srq_init_attr_ex);
 
 	uhyve_send(UHYVE_PORT_IBV_CREATE_SRQ_EX, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1405,7 +1405,7 @@ typedef struct {
 int ibv_modify_srq(struct ibv_srq * srq, struct ibv_srq_attr * srq_attr, int srq_attr_mask) {
 	uhyve_ibv_modify_srq_t uhyve_args;
 	uhyve_args.srq = srq;
-	uhyve_args.srq_attr = srq_attr;
+	uhyve_args.srq_attr = (struct ibv_srq_attr *) guest_to_host((size_t) srq_attr);
 	uhyve_args.srq_attr_mask = srq_attr_mask;
 
 	uhyve_send(UHYVE_PORT_IBV_MODIFY_SRQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
@@ -1429,7 +1429,7 @@ typedef struct {
 int ibv_query_srq(struct ibv_srq * srq, struct ibv_srq_attr * srq_attr) {
 	uhyve_ibv_query_srq_t uhyve_args;
 	uhyve_args.srq = srq;
-	uhyve_args.srq_attr = srq_attr;
+	uhyve_args.srq_attr = (struct ibv_srq_attr *) guest_to_host((size_t) srq_attr);
 
 	uhyve_send(UHYVE_PORT_IBV_QUERY_SRQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1521,7 +1521,7 @@ typedef struct {
 struct ibv_qp * ibv_create_qp(struct ibv_pd * pd, struct ibv_qp_init_attr * qp_init_attr) {
 	uhyve_ibv_create_qp_t uhyve_args;
 	uhyve_args.pd = pd;
-	uhyve_args.qp_init_attr = qp_init_attr;
+	uhyve_args.qp_init_attr = (struct ibv_qp_init_attr *) guest_to_host((size_t) qp_init_attr);
 
 	uhyve_send(UHYVE_PORT_IBV_CREATE_QP, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1544,7 +1544,7 @@ typedef struct {
 struct ibv_qp * ibv_create_qp_ex(struct ibv_context * context, struct ibv_qp_init_attr_ex * qp_init_attr_ex) {
 	uhyve_ibv_create_qp_ex_t uhyve_args;
 	uhyve_args.context = context;
-	uhyve_args.qp_init_attr_ex = qp_init_attr_ex;
+	uhyve_args.qp_init_attr_ex = (struct ibv_qp_init_attr_ex *) guest_to_host((size_t) qp_init_attr_ex);
 
 	uhyve_send(UHYVE_PORT_IBV_CREATE_QP_EX, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1567,7 +1567,7 @@ typedef struct {
 int ibv_query_rt_values_ex(struct ibv_context * context, struct ibv_values_ex * values) {
 	uhyve_ibv_query_rt_values_ex_t uhyve_args;
 	uhyve_args.context = context;
-	uhyve_args.values = values;
+	uhyve_args.values = (struct ibv_values_ex *) guest_to_host((size_t) values);
 
 	uhyve_send(UHYVE_PORT_IBV_QUERY_RT_VALUES_EX, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1592,7 +1592,7 @@ int ibv_query_device_ex(struct ibv_context * context, const struct ibv_query_dev
 	uhyve_ibv_query_device_ex_t uhyve_args;
 	uhyve_args.context = context;
 	uhyve_args.input = input;
-	uhyve_args.attr = attr;
+	uhyve_args.attr = (struct ibv_device_attr_ex *) guest_to_host((size_t) attr);
 
 	uhyve_send(UHYVE_PORT_IBV_QUERY_DEVICE_EX, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1615,7 +1615,7 @@ typedef struct {
 struct ibv_qp * ibv_open_qp(struct ibv_context * context, struct ibv_qp_open_attr * qp_open_attr) {
 	uhyve_ibv_open_qp_t uhyve_args;
 	uhyve_args.context = context;
-	uhyve_args.qp_open_attr = qp_open_attr;
+	uhyve_args.qp_open_attr = (struct ibv_qp_open_attr *) guest_to_host((size_t) qp_open_attr);
 
 	uhyve_send(UHYVE_PORT_IBV_OPEN_QP, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1639,7 +1639,7 @@ typedef struct {
 int ibv_modify_qp(struct ibv_qp * qp, struct ibv_qp_attr * attr, int attr_mask) {
 	uhyve_ibv_modify_qp_t uhyve_args;
 	uhyve_args.qp = qp;
-	uhyve_args.attr = attr;
+	uhyve_args.attr = (struct ibv_qp_attr *) guest_to_host((size_t) attr);
 	uhyve_args.attr_mask = attr_mask;
 
 	uhyve_send(UHYVE_PORT_IBV_MODIFY_QP, (unsigned) virt_to_phys((size_t) &uhyve_args));
@@ -1665,9 +1665,9 @@ typedef struct {
 int ibv_query_qp(struct ibv_qp * qp, struct ibv_qp_attr * attr, int attr_mask, struct ibv_qp_init_attr * init_attr) {
 	uhyve_ibv_query_qp_t uhyve_args;
 	uhyve_args.qp = qp;
-	uhyve_args.attr = attr;
+	uhyve_args.attr = (struct ibv_qp_attr *) guest_to_host((size_t) attr);
 	uhyve_args.attr_mask = attr_mask;
-	uhyve_args.init_attr = init_attr;
+	uhyve_args.init_attr = (struct ibv_qp_init_attr *) guest_to_host((size_t) init_attr);
 
 	uhyve_send(UHYVE_PORT_IBV_QUERY_QP, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1711,7 +1711,7 @@ typedef struct {
 struct ibv_wq * ibv_create_wq(struct ibv_context * context, struct ibv_wq_init_attr * wq_init_attr) {
 	uhyve_ibv_create_wq_t uhyve_args;
 	uhyve_args.context = context;
-	uhyve_args.wq_init_attr = wq_init_attr;
+	uhyve_args.wq_init_attr = (struct ibv_wq_init_attr *) guest_to_host((size_t) wq_init_attr);
 
 	uhyve_send(UHYVE_PORT_IBV_CREATE_WQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1734,7 +1734,7 @@ typedef struct {
 int ibv_modify_wq(struct ibv_wq * wq, struct ibv_wq_attr * wq_attr) {
 	uhyve_ibv_modify_wq_t uhyve_args;
 	uhyve_args.wq = wq;
-	uhyve_args.wq_attr = wq_attr;
+	uhyve_args.wq_attr = (struct ibv_wq_attr *) guest_to_host((size_t) wq_attr);
 
 	uhyve_send(UHYVE_PORT_IBV_MODIFY_WQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1872,7 +1872,7 @@ typedef struct {
 struct ibv_ah * ibv_create_ah(struct ibv_pd * pd, struct ibv_ah_attr * attr) {
 	uhyve_ibv_create_ah_t uhyve_args;
 	uhyve_args.pd = pd;
-	uhyve_args.attr = attr;
+	uhyve_args.attr = (struct ibv_ah_attr *) guest_to_host((size_t) attr);
 
 	uhyve_send(UHYVE_PORT_IBV_CREATE_AH, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1899,9 +1899,9 @@ int ibv_init_ah_from_wc(struct ibv_context * context, uint8_t port_num, struct i
 	uhyve_ibv_init_ah_from_wc_t uhyve_args;
 	uhyve_args.context = context;
 	uhyve_args.port_num = port_num;
-	uhyve_args.wc = wc;
-	uhyve_args.grh = grh;
-	uhyve_args.ah_attr = ah_attr;
+	uhyve_args.wc = (struct ibv_wc *) guest_to_host((size_t) wc);
+	uhyve_args.grh = (struct ibv_grh *) guest_to_host((size_t) grh);
+	uhyve_args.ah_attr = (struct ibv_ah_attr *) guest_to_host((size_t) ah_attr);
 
 	uhyve_send(UHYVE_PORT_IBV_INIT_AH_FROM_WC, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1926,8 +1926,8 @@ typedef struct {
 struct ibv_ah * ibv_create_ah_from_wc(struct ibv_pd * pd, struct ibv_wc * wc, struct ibv_grh * grh, uint8_t port_num) {
 	uhyve_ibv_create_ah_from_wc_t uhyve_args;
 	uhyve_args.pd = pd;
-	uhyve_args.wc = wc;
-	uhyve_args.grh = grh;
+	uhyve_args.wc = (struct ibv_wc *) guest_to_host((size_t) wc);
+	uhyve_args.grh = (struct ibv_grh *) guest_to_host((size_t) grh);
 	uhyve_args.port_num = port_num;
 
 	uhyve_send(UHYVE_PORT_IBV_CREATE_AH_FROM_WC, (unsigned) virt_to_phys((size_t) &uhyve_args));
@@ -2108,7 +2108,7 @@ typedef struct {
 int ibv_resolve_eth_l2_from_gid(struct ibv_context * context, struct ibv_ah_attr * attr, uint8_t [6] eth_mac, uint16_t * vid) {
 	uhyve_ibv_resolve_eth_l2_from_gid_t uhyve_args;
 	uhyve_args.context = context;
-	uhyve_args.attr = attr;
+	uhyve_args.attr = (struct ibv_ah_attr *) guest_to_host((size_t) attr);
 	uhyve_args.eth_mac = eth_mac;
 	uhyve_args.vid = vid;
 

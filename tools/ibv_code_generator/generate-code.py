@@ -109,6 +109,52 @@ PORT_NUMBER_START = 0x610
 TABS = ["", "\t", "\t\t", "\t\t\t", "\t\t\t\t"]
 NEWLINES = ["", "\n", "\n\n"]
 
+params_in_guest_mem = ['struct ibv_device_attr',
+                       'struct ibv_device_attr_ex',
+                       'struct ibv_port_attr',
+                       'struct ibv_ah_attr',
+                       'struct ibv_srq_attr',
+                       'struct ibv_wq_attr',
+                       'struct ibv_qp_attr',
+                       'struct ibv_poll_cq_attr',
+                       'struct ibv_flow_attr',
+                       'struct ibv_global_route',
+                       'struct ibv_packet_pacing_caps',
+                       'struct ibv_qp_cap',
+                       'struct ibv_odp_caps',
+                       'struct ibv_tso_caps',
+                       'struct ibv_rss_caps',
+                       'struct ibv_flow_eth_filter',
+                       'struct ibv_flow_spec_eth',
+                       'struct ibv_flow_ipv4_filter',
+                       'struct ibv_flow_spec_ipv4',
+                       'struct ibv_flow_ipv4_ext_filter',
+                       'struct ibv_flow_spec_ipv4_ext',
+                       'struct ibv_flow_ipv6_filter',
+                       'struct ibv_flow_spec_ipv6',
+                       'struct ibv_flow_tcp_udp_filter',
+                       'struct ibv_flow_spec_tcp_udp',
+                       'struct ibv_flow_tunnel_filter',
+                       'struct ibv_flow_spec_tunnel',
+                       'struct ibv_flow_spec_action_tag',
+                       'struct ibv_flow_spec_action_drop',
+                       'struct ibv_query_device_ex_input',
+                       'struct ibv_wc',
+                       'struct ibv_grh',
+                       'struct ibv_mw_bind',
+                       'struct ibv_flow_spec',
+                       'struct ibv_values_ex',
+                       # containing ib pool pointers:
+                       'struct ibv_wq_init_attr',
+                       'struct ibv_qp_init_attr',
+                       'struct ibv_qp_init_attr_ex',
+                       'struct ibv_srq_init_attr_ex',
+                       'struct ibv_srq_init_attr',
+                       'struct ibv_qp_open_attr',
+                       'struct ibv_cq_init_attr_ex',
+                       'struct ibv_async_event']
+
+
 class Type:
   def __init__(self, string):
     ts = string
@@ -124,7 +170,7 @@ class Type:
 
   def get_struct_name(self):
     name = ""
-    if is_struct():
+    if self.is_struct():
       name = self.type_components[1]
     return name
 
@@ -148,8 +194,6 @@ class FunctionParameter:
   def __init__(self, string):
     components = string.split(" ")
     type_string = " ".join(components[:-1])
-
-    #  print("string in FunctionParameter: ", string)
 
     self.type = Type(type_string)
     self.name = components[-1]
@@ -202,7 +246,7 @@ class FunctionPrototype:
     return code
 
   def generate_function_declaration(self):
-    return "{} {}({});\n".format(self.ret.type_string, self.function_name, 
+    return "{} {}({});\n".format(self.ret.type_string, self.function_name,
                                  self.get_string_of_parameters())
 
   def get_string_of_parameters(self):
@@ -258,11 +302,18 @@ def generate_kernel_function(function_prototype):
   code = "{0} {1}({2}) {{\n".format(ret_type.type_string, fnc_name, comma_separated_params)
   code += "\t{0} uhyve_args;\n".format(function_prototype.get_args_struct_name())
 
+	#  uhyve_args.attr = (struct ibv_poll_cq_attr *) guest_to_host((size_t) attr);
+
   for p in params or []:
     if p.is_pointer_pointer():
       code += "\t// TODO: Take care of ** parameter.\n"
     else:
-      code += "\tuhyve_args.{0} = {0};\n".format(p.name)
+      #  print (p.get_struct_name())
+      if 'struct ' + p.get_struct_name() in params_in_guest_mem and p.is_pointer():
+        code += "\tuhyve_args.{0} = ({1}) guest_to_host((size_t) {0});\n".format(
+          p.name, p.type.type_string)
+      else:
+        code += "\tuhyve_args.{0} = {0};\n".format(p.name)
   code += "\n"
 
   code += "\tuhyve_send({0}, (unsigned) virt_to_phys((size_t) &uhyve_args));\n".format(port_name)
@@ -272,17 +323,6 @@ def generate_kernel_function(function_prototype):
 
   return code
 
-			#  case UHYVE_PORT_SET_IB_POOL_ADDR:
-				#  printf("LOG: UHYVE CASE\n");
-				#  unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-				#  uint64_t * temp = (uint64_t*)(guest_mem + data);
-				#  /* printf("LOG: Value of uint64 pool start: %" PRIu64 "\n", *temp); */
-				#  printf("LOG: Value of uint64 pool start: %p\n", *temp);
-				#  ib_pool_addr = (uint8_t*) *temp;
-				#  /* printf("LOG: Value of uint8  pool start: %" PRIu8 "\n", ib_pool_addr); */
-				#  printf("LOG: Value of uint8  pool start: %p\n", ib_pool_addr);
-				#  ib_pool_top = ib_pool_addr;
-				#  break;
 
 def generate_uhyve_cases(function_prototypes):
   """ Generates all switch-cases for uhyve's KVM exit IO.
