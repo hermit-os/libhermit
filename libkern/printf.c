@@ -63,7 +63,6 @@ typedef unsigned long u_long;
 typedef unsigned short u_short;
 typedef unsigned long long u_quad_t;
 typedef long long quad_t;
-typedef unsigned long uintptr_t;
 #define NBBY    8		/* number of bits in a byte */
 static char const hex2ascii_data[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 #define hex2ascii(hex)  (hex2ascii_data[hex])

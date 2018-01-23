@@ -50,6 +50,7 @@ extern "C" {
 typedef unsigned long long size_t;
 /// Pointer differences
 typedef long long ptrdiff_t;
+typedef unsigned long long uintptr_t;
 #ifdef __KERNEL__
 typedef long long ssize_t;
 typedef long long off_t;
