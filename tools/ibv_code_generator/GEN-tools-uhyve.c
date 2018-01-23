@@ -78,9 +78,6 @@
 			case UHYVE_PORT_IBV_POST_WQ_RECV:
 				call_ibv_post_wq_recv(run, guest_mem);
 				break;
-			case UHYVE_PORT_VERBS_GET_CTX:
-				call_verbs_get_ctx(run, guest_mem);
-				break;
 			case UHYVE_PORT_IBV_GET_DEVICE_LIST:
 				call_ibv_get_device_list(run, guest_mem);
 				break;
@@ -110,9 +107,6 @@
 				break;
 			case UHYVE_PORT_IBV_QUERY_PORT:
 				call_ibv_query_port(run, guest_mem);
-				break;
-			case UHYVE_PORT____IBV_QUERY_PORT:
-				call____ibv_query_port(run, guest_mem);
 				break;
 			case UHYVE_PORT_IBV_QUERY_GID:
 				call_ibv_query_gid(run, guest_mem);

@@ -1044,7 +1044,7 @@ struct ibv_send_wr {
 			void		       *hdr;
 			uint16_t		hdr_sz;
 			uint16_t		mss;
-		} tso; // TCP Segmentation Offload
+		} tso;
 	};
 };
 
@@ -1606,43 +1606,43 @@ enum verbs_context_mask {
 	VERBS_CONTEXT_RESERVED	= 1 << 5
 };
 
-// struct verbs_context {
-	// /*  "grows up" - new fields go here */
-	// int (*destroy_rwq_ind_table)(struct ibv_rwq_ind_table *rwq_ind_table);
-	// struct ibv_rwq_ind_table *(*create_rwq_ind_table)(struct ibv_context *context,
-								// struct ibv_rwq_ind_table_init_attr *init_attr);
-	// int (*destroy_wq)(struct ibv_wq *wq);
-	// int (*modify_wq)(struct ibv_wq *wq, struct ibv_wq_attr *wq_attr);
-	// struct ibv_wq * (*create_wq)(struct ibv_context *context,
-						 // struct ibv_wq_init_attr *wq_init_attr);
-	// int (*query_rt_values)(struct ibv_context *context,
-						 // struct ibv_values_ex *values);
-	// struct ibv_cq_ex *(*create_cq_ex)(struct ibv_context *context,
-						// struct ibv_cq_init_attr_ex *init_attr);
-	// struct verbs_ex_private *priv;
-	// int (*query_device_ex)(struct ibv_context *context,
-						 // const struct ibv_query_device_ex_input *input,
-						 // struct ibv_device_attr_ex *attr,
-						 // size_t attr_size);
-	// int (*ibv_destroy_flow) (struct ibv_flow *flow);
-	// void (*ABI_placeholder2) (void); [> DO NOT COPY THIS GARBAGE <]
-	// struct ibv_flow * (*ibv_create_flow) (struct ibv_qp *qp,
-								// struct ibv_flow_attr *flow_attr);
-	// void (*ABI_placeholder1) (void); [> DO NOT COPY THIS GARBAGE <]
-	// struct ibv_qp *(*open_qp)(struct ibv_context *context,
-			// struct ibv_qp_open_attr *attr);
-	// struct ibv_qp *(*create_qp_ex)(struct ibv_context *context,
-			// struct ibv_qp_init_attr_ex *qp_init_attr_ex);
-	// int (*get_srq_num)(struct ibv_srq *srq, uint32_t *srq_num);
-	// struct ibv_srq *	(*create_srq_ex)(struct ibv_context *context,
-						 // struct ibv_srq_init_attr_ex *srq_init_attr_ex);
-	// struct ibv_xrcd *	(*open_xrcd)(struct ibv_context *context,
-							 // struct ibv_xrcd_init_attr *xrcd_init_attr);
-	// int			(*close_xrcd)(struct ibv_xrcd *xrcd);
-	// uint64_t has_comp_mask;
-	// size_t   sz;			[> Must be immediately before struct ibv_context <]
-	// struct ibv_context context;	[> Must be last field in the struct <]
-// };
+struct verbs_context {
+	/*  "grows up" - new fields go here */
+	int (*destroy_rwq_ind_table)(struct ibv_rwq_ind_table *rwq_ind_table);
+	struct ibv_rwq_ind_table *(*create_rwq_ind_table)(struct ibv_context *context,
+							  struct ibv_rwq_ind_table_init_attr *init_attr);
+	int (*destroy_wq)(struct ibv_wq *wq);
+	int (*modify_wq)(struct ibv_wq *wq, struct ibv_wq_attr *wq_attr);
+	struct ibv_wq * (*create_wq)(struct ibv_context *context,
+				     struct ibv_wq_init_attr *wq_init_attr);
+	int (*query_rt_values)(struct ibv_context *context,
+			       struct ibv_values_ex *values);
+	struct ibv_cq_ex *(*create_cq_ex)(struct ibv_context *context,
+					  struct ibv_cq_init_attr_ex *init_attr);
+	struct verbs_ex_private *priv;
+	int (*query_device_ex)(struct ibv_context *context,
+			       const struct ibv_query_device_ex_input *input,
+			       struct ibv_device_attr_ex *attr,
+			       size_t attr_size);
+	int (*ibv_destroy_flow) (struct ibv_flow *flow);
+	void (*ABI_placeholder2) (void); /* DO NOT COPY THIS GARBAGE */
+	struct ibv_flow * (*ibv_create_flow) (struct ibv_qp *qp,
+					      struct ibv_flow_attr *flow_attr);
+	void (*ABI_placeholder1) (void); /* DO NOT COPY THIS GARBAGE */
+	struct ibv_qp *(*open_qp)(struct ibv_context *context,
+			struct ibv_qp_open_attr *attr);
+	struct ibv_qp *(*create_qp_ex)(struct ibv_context *context,
+			struct ibv_qp_init_attr_ex *qp_init_attr_ex);
+	int (*get_srq_num)(struct ibv_srq *srq, uint32_t *srq_num);
+	struct ibv_srq *	(*create_srq_ex)(struct ibv_context *context,
+						 struct ibv_srq_init_attr_ex *srq_init_attr_ex);
+	struct ibv_xrcd *	(*open_xrcd)(struct ibv_context *context,
+					     struct ibv_xrcd_init_attr *xrcd_init_attr);
+	int			(*close_xrcd)(struct ibv_xrcd *xrcd);
+	uint64_t has_comp_mask;
+	size_t   sz;			/* Must be immediately before struct ibv_context */
+	struct ibv_context context;	/* Must be last field in the struct */
+};
 
 //static inline struct verbs_context *verbs_get_ctx(struct ibv_context *ctx)
 //{
@@ -1655,10 +1655,10 @@ enum verbs_context_mask {
 	// (!__vctx || (__vctx->sz < sizeof(*__vctx) - offsetof(struct verbs_context, op)) || \
 	 // !__vctx->op) ? NULL : __vctx; })
 
-// #define verbs_set_ctx_op(_vctx, op, ptr) ({ \
-	// struct verbs_context *vctx = _vctx; \
-	// if (vctx && (vctx->sz >= sizeof(*vctx) - offsetof(struct verbs_context, op))) \
-		// vctx->op = ptr; })
+#define verbs_set_ctx_op(_vctx, op, ptr) ({ \
+	struct verbs_context *vctx = _vctx; \
+	if (vctx && (vctx->sz >= sizeof(*vctx) - offsetof(struct verbs_context, op))) \
+		vctx->op = ptr; })
 
 ///**
 // * ibv_get_device_list - Get list of IB devices currently available
@@ -1727,26 +1727,26 @@ enum verbs_context_mask {
 // */
 //int ibv_query_device(struct ibv_context *context,
 //		     struct ibv_device_attr *device_attr);
-//
-///**
-// * ibv_query_port - Get port properties
-// */
-//int ibv_query_port(struct ibv_context *context, uint8_t port_num,
-//		   struct ibv_port_attr *port_attr);
-//
-//static inline int ___ibv_query_port(struct ibv_context *context,
-//				    uint8_t port_num,
-//				    struct ibv_port_attr *port_attr)
-//{
-//	/* For compatibility when running with old libibverbs */
-//	port_attr->link_layer = IBV_LINK_LAYER_UNSPECIFIED;
-//	port_attr->reserved   = 0;
-//
-//	return ibv_query_port(context, port_num, port_attr);
-//}
 
-#define ibv_query_port(context, port_num, port_attr) \
-	___ibv_query_port(context, port_num, port_attr)
+/**
+* ibv_query_port - Get port properties
+*/
+// int ibv_query_port(struct ibv_context *context, uint8_t port_num,
+       // struct ibv_port_attr *port_attr);
+
+// static inline int ___ibv_query_port(struct ibv_context *context,
+            // uint8_t port_num,
+            // struct ibv_port_attr *port_attr)
+// {
+  // [> For compatibility when running with old libibverbs <]
+  // port_attr->link_layer = IBV_LINK_LAYER_UNSPECIFIED;
+  // port_attr->reserved   = 0;
+
+  // return ibv_query_port(context, port_num, port_attr);
+// }
+
+// #define ibv_query_port(context, port_num, port_attr) \
+	// ___ibv_query_port(context, port_num, port_attr)
 
 ///**
 // * ibv_query_gid - Get a GID table entry
@@ -2444,7 +2444,7 @@ enum verbs_context_mask {
 // */
 //const char *ibv_event_type_str(enum ibv_event_type event);
 //
-//#define ETHERNET_LL_SIZE 6
+#define ETHERNET_LL_SIZE 6
 //int ibv_resolve_eth_l2_from_gid(struct ibv_context *context,
 //				struct ibv_ah_attr *attr,
 //				uint8_t eth_mac[ETHERNET_LL_SIZE],

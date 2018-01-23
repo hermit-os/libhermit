@@ -51,7 +51,6 @@ typedef enum {
 	UHYVE_PORT_IBV_WC_READ_CVLAN            = 0x625,
 	UHYVE_PORT_IBV_WC_READ_FLOW_TAG         = 0x626,
 	UHYVE_PORT_IBV_POST_WQ_RECV             = 0x627,
-	UHYVE_PORT_VERBS_GET_CTX                = 0x628,
 	UHYVE_PORT_IBV_GET_DEVICE_LIST          = 0x629,
 	UHYVE_PORT_IBV_FREE_DEVICE_LIST         = 0x62A,
 	UHYVE_PORT_IBV_GET_DEVICE_NAME          = 0x62B,
@@ -62,7 +61,6 @@ typedef enum {
 	UHYVE_PORT_IBV_ACK_ASYNC_EVENT          = 0x630,
 	UHYVE_PORT_IBV_QUERY_DEVICE             = 0x631,
 	UHYVE_PORT_IBV_QUERY_PORT               = 0x632,
-	UHYVE_PORT____IBV_QUERY_PORT            = 0x633,
 	UHYVE_PORT_IBV_QUERY_GID                = 0x634,
 	UHYVE_PORT_IBV_QUERY_PKEY               = 0x635,
 	UHYVE_PORT_IBV_ALLOC_PD                 = 0x636,
@@ -120,7 +118,7 @@ typedef enum {
 	UHYVE_PORT_IBV_NODE_TYPE_STR            = 0x66A,
 	UHYVE_PORT_IBV_PORT_STATE_STR           = 0x66B,
 	UHYVE_PORT_IBV_EVENT_TYPE_STR           = 0x66C,
-	UHYVE_PORT_IBV_RESOLVE_ETH_L2_FROM_GID  = 0x66D,
+	// UHYVE_PORT_IBV_RESOLVE_ETH_L2_FROM_GID  = 0x66D,
 	UHYVE_PORT_IBV_IS_QPT_SUPPORTED         = 0x66E,
 
 	UHYVE_PORT_KERNEL_IBV_LOG               = 0x66F,
@@ -298,13 +296,6 @@ typedef struct {
 
 typedef struct {
 	// Parameters:
-	struct ibv_context * ctx;
-	// Return value:
-	struct verbs_context * ret;
-} __attribute__((packed)) uhyve_verbs_get_ctx_t;
-
-typedef struct {
-	// Parameters:
 	int * num_devices;
 	// Return value:
 	struct ibv_device ** ret;
@@ -372,15 +363,6 @@ typedef struct {
 	// Return value:
 	int ret;
 } __attribute__((packed)) uhyve_ibv_query_port_t;
-
-typedef struct {
-	// Parameters:
-	struct ibv_context * context;
-	uint8_t port_num;
-	struct ibv_port_attr * port_attr;
-	// Return value:
-	int ret;
-} __attribute__((packed)) uhyve____ibv_query_port_t;
 
 typedef struct {
 	// Parameters:
@@ -848,15 +830,15 @@ typedef struct {
 	const char * ret;
 } __attribute__((packed)) uhyve_ibv_event_type_str_t;
 
-typedef struct {
-	// Parameters:
-	struct ibv_context * context;
-	struct ibv_ah_attr * attr;
-	uint8_t [6] eth_mac;
-	uint16_t * vid;
-	// Return value:
-	int ret;
-} __attribute__((packed)) uhyve_ibv_resolve_eth_l2_from_gid_t;
+// typedef struct {
+	// // Parameters:
+	// struct ibv_context * context;
+	// struct ibv_ah_attr * attr;
+	// uint8_t eth_mac[ETHERNET_LL_SIZE];
+	// uint16_t * vid;
+	// // Return value:
+	// int ret;
+// } __attribute__((packed)) uhyve_ibv_resolve_eth_l2_from_gid_t;
 
 typedef struct {
 	// Parameters:
@@ -892,7 +874,6 @@ void call_ibv_wc_read_completion_ts(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_wc_read_cvlan(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_wc_read_flow_tag(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_post_wq_recv(struct kvm_run * run, uint8_t * guest_mem);
-void call_verbs_get_ctx(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_get_device_list(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_free_device_list(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_get_device_name(struct kvm_run * run, uint8_t * guest_mem);
@@ -903,7 +884,6 @@ void call_ibv_get_async_event(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_ack_async_event(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_query_device(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_query_port(struct kvm_run * run, uint8_t * guest_mem);
-void call____ibv_query_port(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_query_gid(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_query_pkey(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_alloc_pd(struct kvm_run * run, uint8_t * guest_mem);
@@ -961,7 +941,7 @@ void call_ibv_fork_init(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_node_type_str(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_port_state_str(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_event_type_str(struct kvm_run * run, uint8_t * guest_mem);
-void call_ibv_resolve_eth_l2_from_gid(struct kvm_run * run, uint8_t * guest_mem);
+// void call_ibv_resolve_eth_l2_from_gid(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_is_qpt_supported(struct kvm_run * run, uint8_t * guest_mem);
 
 #endif // UHYVE_IBV_H

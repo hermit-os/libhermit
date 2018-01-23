@@ -24,77 +24,75 @@ typedef enum {
 	UHYVE_PORT_IBV_WC_READ_CVLAN = 0x625,
 	UHYVE_PORT_IBV_WC_READ_FLOW_TAG = 0x626,
 	UHYVE_PORT_IBV_POST_WQ_RECV = 0x627,
-	UHYVE_PORT_VERBS_GET_CTX = 0x628,
-	UHYVE_PORT_IBV_GET_DEVICE_LIST = 0x629,
-	UHYVE_PORT_IBV_FREE_DEVICE_LIST = 0x62A,
-	UHYVE_PORT_IBV_GET_DEVICE_NAME = 0x62B,
-	UHYVE_PORT_IBV_GET_DEVICE_GUID = 0x62C,
-	UHYVE_PORT_IBV_OPEN_DEVICE = 0x62D,
-	UHYVE_PORT_IBV_CLOSE_DEVICE = 0x62E,
-	UHYVE_PORT_IBV_GET_ASYNC_EVENT = 0x62F,
-	UHYVE_PORT_IBV_ACK_ASYNC_EVENT = 0x630,
-	UHYVE_PORT_IBV_QUERY_DEVICE = 0x631,
-	UHYVE_PORT_IBV_QUERY_PORT = 0x632,
-	UHYVE_PORT____IBV_QUERY_PORT = 0x633,
-	UHYVE_PORT_IBV_QUERY_GID = 0x634,
-	UHYVE_PORT_IBV_QUERY_PKEY = 0x635,
-	UHYVE_PORT_IBV_ALLOC_PD = 0x636,
-	UHYVE_PORT_IBV_DEALLOC_PD = 0x637,
-	UHYVE_PORT_IBV_CREATE_FLOW = 0x638,
-	UHYVE_PORT_IBV_DESTROY_FLOW = 0x639,
-	UHYVE_PORT_IBV_OPEN_XRCD = 0x63A,
-	UHYVE_PORT_IBV_CLOSE_XRCD = 0x63B,
-	UHYVE_PORT_IBV_REG_MR = 0x63C,
-	UHYVE_PORT_IBV_REREG_MR = 0x63D,
-	UHYVE_PORT_IBV_DEREG_MR = 0x63E,
-	UHYVE_PORT_IBV_ALLOC_MW = 0x63F,
-	UHYVE_PORT_IBV_DEALLOC_MW = 0x640,
-	UHYVE_PORT_IBV_INC_RKEY = 0x641,
-	UHYVE_PORT_IBV_BIND_MW = 0x642,
-	UHYVE_PORT_IBV_CREATE_COMP_CHANNEL = 0x643,
-	UHYVE_PORT_IBV_DESTROY_COMP_CHANNEL = 0x644,
-	UHYVE_PORT_IBV_CREATE_CQ = 0x645,
-	UHYVE_PORT_IBV_CREATE_CQ_EX = 0x646,
-	UHYVE_PORT_IBV_RESIZE_CQ = 0x647,
-	UHYVE_PORT_IBV_DESTROY_CQ = 0x648,
-	UHYVE_PORT_IBV_GET_CQ_EVENT = 0x649,
-	UHYVE_PORT_IBV_ACK_CQ_EVENTS = 0x64A,
-	UHYVE_PORT_IBV_POLL_CQ = 0x64B,
-	UHYVE_PORT_IBV_REQ_NOTIFY_CQ = 0x64C,
-	UHYVE_PORT_IBV_CREATE_SRQ = 0x64D,
-	UHYVE_PORT_IBV_CREATE_SRQ_EX = 0x64E,
-	UHYVE_PORT_IBV_MODIFY_SRQ = 0x64F,
-	UHYVE_PORT_IBV_QUERY_SRQ = 0x650,
-	UHYVE_PORT_IBV_GET_SRQ_NUM = 0x651,
-	UHYVE_PORT_IBV_DESTROY_SRQ = 0x652,
-	UHYVE_PORT_IBV_POST_SRQ_RECV = 0x653,
-	UHYVE_PORT_IBV_CREATE_QP = 0x654,
-	UHYVE_PORT_IBV_CREATE_QP_EX = 0x655,
-	UHYVE_PORT_IBV_QUERY_RT_VALUES_EX = 0x656,
-	UHYVE_PORT_IBV_QUERY_DEVICE_EX = 0x657,
-	UHYVE_PORT_IBV_OPEN_QP = 0x658,
-	UHYVE_PORT_IBV_MODIFY_QP = 0x659,
-	UHYVE_PORT_IBV_QUERY_QP = 0x65A,
-	UHYVE_PORT_IBV_DESTROY_QP = 0x65B,
-	UHYVE_PORT_IBV_CREATE_WQ = 0x65C,
-	UHYVE_PORT_IBV_MODIFY_WQ = 0x65D,
-	UHYVE_PORT_IBV_DESTROY_WQ = 0x65E,
-	UHYVE_PORT_IBV_CREATE_RWQ_IND_TABLE = 0x65F,
-	UHYVE_PORT_IBV_DESTROY_RWQ_IND_TABLE = 0x660,
-	UHYVE_PORT_IBV_POST_SEND = 0x661,
-	UHYVE_PORT_IBV_POST_RECV = 0x662,
-	UHYVE_PORT_IBV_CREATE_AH = 0x663,
-	UHYVE_PORT_IBV_INIT_AH_FROM_WC = 0x664,
-	UHYVE_PORT_IBV_CREATE_AH_FROM_WC = 0x665,
-	UHYVE_PORT_IBV_DESTROY_AH = 0x666,
-	UHYVE_PORT_IBV_ATTACH_MCAST = 0x667,
-	UHYVE_PORT_IBV_DETACH_MCAST = 0x668,
-	UHYVE_PORT_IBV_FORK_INIT = 0x669,
-	UHYVE_PORT_IBV_NODE_TYPE_STR = 0x66A,
-	UHYVE_PORT_IBV_PORT_STATE_STR = 0x66B,
-	UHYVE_PORT_IBV_EVENT_TYPE_STR = 0x66C,
-	UHYVE_PORT_IBV_RESOLVE_ETH_L2_FROM_GID = 0x66D,
-	UHYVE_PORT_IBV_IS_QPT_SUPPORTED = 0x66E,
+	UHYVE_PORT_IBV_GET_DEVICE_LIST = 0x628,
+	UHYVE_PORT_IBV_FREE_DEVICE_LIST = 0x629,
+	UHYVE_PORT_IBV_GET_DEVICE_NAME = 0x62A,
+	UHYVE_PORT_IBV_GET_DEVICE_GUID = 0x62B,
+	UHYVE_PORT_IBV_OPEN_DEVICE = 0x62C,
+	UHYVE_PORT_IBV_CLOSE_DEVICE = 0x62D,
+	UHYVE_PORT_IBV_GET_ASYNC_EVENT = 0x62E,
+	UHYVE_PORT_IBV_ACK_ASYNC_EVENT = 0x62F,
+	UHYVE_PORT_IBV_QUERY_DEVICE = 0x630,
+	UHYVE_PORT_IBV_QUERY_PORT = 0x631,
+	UHYVE_PORT_IBV_QUERY_GID = 0x632,
+	UHYVE_PORT_IBV_QUERY_PKEY = 0x633,
+	UHYVE_PORT_IBV_ALLOC_PD = 0x634,
+	UHYVE_PORT_IBV_DEALLOC_PD = 0x635,
+	UHYVE_PORT_IBV_CREATE_FLOW = 0x636,
+	UHYVE_PORT_IBV_DESTROY_FLOW = 0x637,
+	UHYVE_PORT_IBV_OPEN_XRCD = 0x638,
+	UHYVE_PORT_IBV_CLOSE_XRCD = 0x639,
+	UHYVE_PORT_IBV_REG_MR = 0x63A,
+	UHYVE_PORT_IBV_REREG_MR = 0x63B,
+	UHYVE_PORT_IBV_DEREG_MR = 0x63C,
+	UHYVE_PORT_IBV_ALLOC_MW = 0x63D,
+	UHYVE_PORT_IBV_DEALLOC_MW = 0x63E,
+	UHYVE_PORT_IBV_INC_RKEY = 0x63F,
+	UHYVE_PORT_IBV_BIND_MW = 0x640,
+	UHYVE_PORT_IBV_CREATE_COMP_CHANNEL = 0x641,
+	UHYVE_PORT_IBV_DESTROY_COMP_CHANNEL = 0x642,
+	UHYVE_PORT_IBV_CREATE_CQ = 0x643,
+	UHYVE_PORT_IBV_CREATE_CQ_EX = 0x644,
+	UHYVE_PORT_IBV_RESIZE_CQ = 0x645,
+	UHYVE_PORT_IBV_DESTROY_CQ = 0x646,
+	UHYVE_PORT_IBV_GET_CQ_EVENT = 0x647,
+	UHYVE_PORT_IBV_ACK_CQ_EVENTS = 0x648,
+	UHYVE_PORT_IBV_POLL_CQ = 0x649,
+	UHYVE_PORT_IBV_REQ_NOTIFY_CQ = 0x64A,
+	UHYVE_PORT_IBV_CREATE_SRQ = 0x64B,
+	UHYVE_PORT_IBV_CREATE_SRQ_EX = 0x64C,
+	UHYVE_PORT_IBV_MODIFY_SRQ = 0x64D,
+	UHYVE_PORT_IBV_QUERY_SRQ = 0x64E,
+	UHYVE_PORT_IBV_GET_SRQ_NUM = 0x64F,
+	UHYVE_PORT_IBV_DESTROY_SRQ = 0x650,
+	UHYVE_PORT_IBV_POST_SRQ_RECV = 0x651,
+	UHYVE_PORT_IBV_CREATE_QP = 0x652,
+	UHYVE_PORT_IBV_CREATE_QP_EX = 0x653,
+	UHYVE_PORT_IBV_QUERY_RT_VALUES_EX = 0x654,
+	UHYVE_PORT_IBV_QUERY_DEVICE_EX = 0x655,
+	UHYVE_PORT_IBV_OPEN_QP = 0x656,
+	UHYVE_PORT_IBV_MODIFY_QP = 0x657,
+	UHYVE_PORT_IBV_QUERY_QP = 0x658,
+	UHYVE_PORT_IBV_DESTROY_QP = 0x659,
+	UHYVE_PORT_IBV_CREATE_WQ = 0x65A,
+	UHYVE_PORT_IBV_MODIFY_WQ = 0x65B,
+	UHYVE_PORT_IBV_DESTROY_WQ = 0x65C,
+	UHYVE_PORT_IBV_CREATE_RWQ_IND_TABLE = 0x65D,
+	UHYVE_PORT_IBV_DESTROY_RWQ_IND_TABLE = 0x65E,
+	UHYVE_PORT_IBV_POST_SEND = 0x65F,
+	UHYVE_PORT_IBV_POST_RECV = 0x660,
+	UHYVE_PORT_IBV_CREATE_AH = 0x661,
+	UHYVE_PORT_IBV_INIT_AH_FROM_WC = 0x662,
+	UHYVE_PORT_IBV_CREATE_AH_FROM_WC = 0x663,
+	UHYVE_PORT_IBV_DESTROY_AH = 0x664,
+	UHYVE_PORT_IBV_ATTACH_MCAST = 0x665,
+	UHYVE_PORT_IBV_DETACH_MCAST = 0x666,
+	UHYVE_PORT_IBV_FORK_INIT = 0x667,
+	UHYVE_PORT_IBV_NODE_TYPE_STR = 0x668,
+	UHYVE_PORT_IBV_PORT_STATE_STR = 0x669,
+	UHYVE_PORT_IBV_EVENT_TYPE_STR = 0x66A,
+	UHYVE_PORT_IBV_RESOLVE_ETH_L2_FROM_GID = 0x66B,
+	UHYVE_PORT_IBV_IS_QPT_SUPPORTED = 0x66C,
 } uhyve_ibv_t;
 
 typedef struct {
@@ -268,13 +266,6 @@ typedef struct {
 
 typedef struct {
 	// Parameters:
-	struct ibv_context * ctx;
-	// Return value:
-	struct verbs_context * ret;
-} __attribute__((packed)) uhyve_verbs_get_ctx_t;
-
-typedef struct {
-	// Parameters:
 	int * num_devices;
 	// Return value:
 	struct ibv_device ** ret;
@@ -342,15 +333,6 @@ typedef struct {
 	// Return value:
 	int ret;
 } __attribute__((packed)) uhyve_ibv_query_port_t;
-
-typedef struct {
-	// Parameters:
-	struct ibv_context * context;
-	uint8_t port_num;
-	struct ibv_port_attr * port_attr;
-	// Return value:
-	int ret;
-} __attribute__((packed)) uhyve____ibv_query_port_t;
 
 typedef struct {
 	// Parameters:
@@ -791,8 +773,6 @@ typedef struct {
 } __attribute__((packed)) uhyve_ibv_detach_mcast_t;
 
 typedef struct {
-	// Parameters:
-	 ;
 	// Return value:
 	int ret;
 } __attribute__((packed)) uhyve_ibv_fork_init_t;
@@ -862,7 +842,6 @@ void call_ibv_wc_read_completion_ts(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_wc_read_cvlan(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_wc_read_flow_tag(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_post_wq_recv(struct kvm_run * run, uint8_t * guest_mem);
-void call_verbs_get_ctx(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_get_device_list(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_free_device_list(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_get_device_name(struct kvm_run * run, uint8_t * guest_mem);
@@ -873,7 +852,6 @@ void call_ibv_get_async_event(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_ack_async_event(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_query_device(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_query_port(struct kvm_run * run, uint8_t * guest_mem);
-void call____ibv_query_port(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_query_gid(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_query_pkey(struct kvm_run * run, uint8_t * guest_mem);
 void call_ibv_alloc_pd(struct kvm_run * run, uint8_t * guest_mem);

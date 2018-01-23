@@ -43,6 +43,97 @@
 
 int main(int argc, char** argv)
 {
+// CONTAINING HOST PTRS:
+
+struct ibv_wq_init_attr {
+	void *wq_context; // host
+	enum ibv_wq_type wq_type;
+	uint32_t max_wr;
+	uint32_t max_sge;
+	struct ibv_pd *pd; // host
+	struct ibv_cq *cq; // host
+	uint32_t comp_mask; /* Use ibv_wq_init_attr_mask */
+	uint32_t create_flags; /* use ibv_wq_flags */
+};
+
+struct ibv_qp_init_attr {
+	void *qp_context; // host
+	struct ibv_cq *send_cq; // host
+	struct ibv_cq *recv_cq; // host
+	struct ibv_srq *srq; // host
+	struct ibv_qp_cap cap;
+	enum ibv_qp_type qp_type;
+	int sq_sig_all;
+};
+
+struct ibv_qp_init_attr_ex {
+	void *qp_context; // host
+	struct ibv_cq *send_cq; // host
+	struct ibv_cq *recv_cq; // host
+	struct ibv_srq *srq; // host
+	struct ibv_qp_cap cap;
+	enum ibv_qp_type qp_type;
+	int sq_sig_all;
+
+	uint32_t comp_mask;
+	struct ibv_pd *pd; // host
+	struct ibv_xrcd *xrcd; // host
+	uint32_t create_flags;
+	uint16_t max_tso_header;
+	struct ibv_rwq_ind_table *rwq_ind_tbl; // host
+	struct ibv_rx_hash_conf rx_hash_conf;
+	uint32_t source_qpn;
+};
+
+struct ibv_srq_init_attr_ex {
+	void *srq_context; // host
+	struct ibv_srq_attr attr;
+
+	uint32_t comp_mask;
+	enum ibv_srq_type srq_type;
+	struct ibv_pd *pd; // host
+	struct ibv_xrcd *xrcd; // host
+	struct ibv_cq *cq; // host
+};
+
+struct ibv_srq_init_attr {
+	void *srq_context; // host
+	struct ibv_srq_attr attr;
+};
+
+struct ibv_qp_open_attr {
+	uint32_t comp_mask;
+	uint32_t qp_num;
+	struct ibv_xrcd *xrcd; // host
+	void *qp_context; // host
+	enum ibv_qp_type qp_type;
+};
+
+struct ibv_cq_init_attr_ex {
+	/* Minimum number of entries required for CQ */
+	uint32_t cqe;
+	void *cq_context; // host
+	struct ibv_comp_channel *channel; // host
+	/* Completion vector used to signal completion events.
+	 * Must be < context->num_comp_vectors.
+	 */
+	uint32_t comp_vector;
+	uint64_t wc_flags;
+	uint32_t comp_mask;
+	uint32_t flags;
+};
+
+struct ibv_async_event {
+	union {
+		struct ibv_cq *cq;
+		struct ibv_qp *qp;
+		struct ibv_srq *srq;
+		struct ibv_wq *wq;
+		int port_num;
+	} element;
+	enum ibv_event_type event_type;
+};
+
 	int i, random;
 
 

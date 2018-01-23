@@ -505,27 +505,6 @@ int ibv_post_wq_recv(struct ibv_wq * wq, struct ibv_recv_wr * recv_wr, struct ib
 
 
 /*
- * verbs_get_ctx
- */
-
-typedef struct {
-	// Parameters:
-	struct ibv_context * ctx;
-	// Return value:
-	struct verbs_context * ret;
-} __attribute__((packed)) uhyve_verbs_get_ctx_t;
-
-struct verbs_context * verbs_get_ctx(struct ibv_context * ctx) {
-	uhyve_verbs_get_ctx_t uhyve_args;
-	uhyve_args.ctx = ctx;
-
-	uhyve_send(UHYVE_PORT_VERBS_GET_CTX, (unsigned) virt_to_phys((size_t) &uhyve_args));
-
-	return uhyve_args.ret;
-}
-
-
-/*
  * ibv_get_device_list
  */
 
@@ -736,31 +715,6 @@ int ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_po
 
 
 /*
- * ___ibv_query_port
- */
-
-typedef struct {
-	// Parameters:
-	struct ibv_context * context;
-	uint8_t port_num;
-	struct ibv_port_attr * port_attr;
-	// Return value:
-	int ret;
-} __attribute__((packed)) uhyve____ibv_query_port_t;
-
-int ___ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_port_attr * port_attr) {
-	uhyve____ibv_query_port_t uhyve_args;
-	uhyve_args.context = context;
-	uhyve_args.port_num = port_num;
-	uhyve_args.port_attr = (struct ibv_port_attr *) guest_to_host((size_t) port_attr);
-
-	uhyve_send(UHYVE_PORT____IBV_QUERY_PORT, (unsigned) virt_to_phys((size_t) &uhyve_args));
-
-	return uhyve_args.ret;
-}
-
-
-/*
  * ibv_query_gid
  */
 
@@ -915,7 +869,7 @@ typedef struct {
 struct ibv_xrcd * ibv_open_xrcd(struct ibv_context * context, struct ibv_xrcd_init_attr * xrcd_init_attr) {
 	uhyve_ibv_open_xrcd_t uhyve_args;
 	uhyve_args.context = context;
-	uhyve_args.xrcd_init_attr = xrcd_init_attr;
+	uhyve_args.xrcd_init_attr = (struct ibv_xrcd_init_attr *) guest_to_host((size_t) xrcd_init_attr);
 
 	uhyve_send(UHYVE_PORT_IBV_OPEN_XRCD, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1778,7 +1732,7 @@ typedef struct {
 struct ibv_rwq_ind_table * ibv_create_rwq_ind_table(struct ibv_context * context, struct ibv_rwq_ind_table_init_attr * init_attr) {
 	uhyve_ibv_create_rwq_ind_table_t uhyve_args;
 	uhyve_args.context = context;
-	uhyve_args.init_attr = init_attr;
+	uhyve_args.init_attr = (struct ibv_rwq_ind_table_init_attr *) guest_to_host((size_t) init_attr);
 
 	uhyve_send(UHYVE_PORT_IBV_CREATE_RWQ_IND_TABLE, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -2012,15 +1966,12 @@ int ibv_detach_mcast(struct ibv_qp * qp, const union ibv_gid * gid, uint16_t lid
  */
 
 typedef struct {
-	// Parameters:
-	 ;
 	// Return value:
 	int ret;
 } __attribute__((packed)) uhyve_ibv_fork_init_t;
 
-int ibv_fork_init( ) {
+int ibv_fork_init() {
 	uhyve_ibv_fork_init_t uhyve_args;
-	uhyve_args. = ;
 
 	uhyve_send(UHYVE_PORT_IBV_FORK_INIT, (unsigned) virt_to_phys((size_t) &uhyve_args));
 

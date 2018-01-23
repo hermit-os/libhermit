@@ -393,21 +393,6 @@ void call_ibv_post_wq_recv(struct kvm_run * run, uint8_t * guest_mem) {
 
 
 /*
- * verbs_get_ctx
- */
-
-void call_verbs_get_ctx(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("LOG: UHYVE - call_verbs_get_ctx\n");
-	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
-	uhyve_verbs_get_ctx_t * args = (uhyve_verbs_get_ctx_t *) (guest_mem + data);
-
-	use_ib_mem_pool = true;
-	args->ret = verbs_get_ctx(args->ctx);
-	use_ib_mem_pool = false;
-}
-
-
-/*
  * ibv_get_device_list
  */
 
@@ -553,21 +538,6 @@ void call_ibv_query_port(struct kvm_run * run, uint8_t * guest_mem) {
 
 	use_ib_mem_pool = true;
 	args->ret = ibv_query_port(args->context, args->port_num, args->port_attr);
-	use_ib_mem_pool = false;
-}
-
-
-/*
- * ___ibv_query_port
- */
-
-void call____ibv_query_port(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("LOG: UHYVE - call____ibv_query_port\n");
-	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
-	uhyve____ibv_query_port_t * args = (uhyve____ibv_query_port_t *) (guest_mem + data);
-
-	use_ib_mem_pool = true;
-	args->ret = ___ibv_query_port(args->context, args->port_num, args->port_attr);
 	use_ib_mem_pool = false;
 }
 
@@ -1377,7 +1347,7 @@ void call_ibv_fork_init(struct kvm_run * run, uint8_t * guest_mem) {
 	uhyve_ibv_fork_init_t * args = (uhyve_ibv_fork_init_t *) (guest_mem + data);
 
 	use_ib_mem_pool = true;
-	args->ret = ibv_fork_init(args->);
+	args->ret = ibv_fork_init();
 	use_ib_mem_pool = false;
 }
 
@@ -1431,15 +1401,15 @@ void call_ibv_event_type_str(struct kvm_run * run, uint8_t * guest_mem) {
  * ibv_resolve_eth_l2_from_gid
  */
 
-void call_ibv_resolve_eth_l2_from_gid(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("LOG: UHYVE - call_ibv_resolve_eth_l2_from_gid\n");
-	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
-	uhyve_ibv_resolve_eth_l2_from_gid_t * args = (uhyve_ibv_resolve_eth_l2_from_gid_t *) (guest_mem + data);
+/* void call_ibv_resolve_eth_l2_from_gid(struct kvm_run * run, uint8_t * guest_mem) { */
+	/* printf("LOG: UHYVE - call_ibv_resolve_eth_l2_from_gid\n"); */
+	/* unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset)); */
+	/* uhyve_ibv_resolve_eth_l2_from_gid_t * args = (uhyve_ibv_resolve_eth_l2_from_gid_t *) (guest_mem + data); */
 
-	use_ib_mem_pool = true;
-	args->ret = ibv_resolve_eth_l2_from_gid(args->context, args->attr, args->eth_mac, args->vid);
-	use_ib_mem_pool = false;
-}
+	/* use_ib_mem_pool = true; */
+	/* args->ret = ibv_resolve_eth_l2_from_gid(args->context, args->attr, args->eth_mac, args->vid); */
+	/* use_ib_mem_pool = false; */
+/* } */
 
 
 /*

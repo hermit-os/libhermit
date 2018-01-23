@@ -1345,9 +1345,6 @@ static int vcpu_loop(void)
 			case UHYVE_PORT_IBV_POST_WQ_RECV:
 				call_ibv_post_wq_recv(run, guest_mem);
 				break;
-			case UHYVE_PORT_VERBS_GET_CTX:
-				call_verbs_get_ctx(run, guest_mem);
-				break;
 			case UHYVE_PORT_IBV_GET_DEVICE_LIST:
 				call_ibv_get_device_list(run, guest_mem);
 				break;
@@ -1377,9 +1374,6 @@ static int vcpu_loop(void)
 				break;
 			case UHYVE_PORT_IBV_QUERY_PORT:
 				call_ibv_query_port(run, guest_mem);
-				break;
-			case UHYVE_PORT____IBV_QUERY_PORT:
-				call____ibv_query_port(run, guest_mem);
 				break;
 			case UHYVE_PORT_IBV_QUERY_GID:
 				call_ibv_query_gid(run, guest_mem);
@@ -1552,9 +1546,9 @@ static int vcpu_loop(void)
 			case UHYVE_PORT_IBV_EVENT_TYPE_STR:
 				call_ibv_event_type_str(run, guest_mem);
 				break;
-			case UHYVE_PORT_IBV_RESOLVE_ETH_L2_FROM_GID:
-				call_ibv_resolve_eth_l2_from_gid(run, guest_mem);
-				break;
+			/* case UHYVE_PORT_IBV_RESOLVE_ETH_L2_FROM_GID: */
+				/* call_ibv_resolve_eth_l2_from_gid(run, guest_mem); */
+				/* break; */
 			case UHYVE_PORT_IBV_IS_QPT_SUPPORTED:
 				call_ibv_is_qpt_supported(run, guest_mem);
 				break;

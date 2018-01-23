@@ -86,6 +86,8 @@ Required in: ./tool/uhyve-ibv.h
   } uhyve_ibv_t;
 """
 
+# TODO: Add ibv_resolve_eth_l2_from_gid function back in. Not linking right now.
+
 from __future__ import print_function
 from parser import generate_struct_conversions
 
@@ -144,6 +146,8 @@ params_in_guest_mem = ['struct ibv_device_attr',
                        'struct ibv_mw_bind',
                        'struct ibv_flow_spec',
                        'struct ibv_values_ex',
+                       'struct ibv_rwq_ind_table_init_attr',
+                       'struct ibv_xrcd_init_attr',
                        # containing ib pool pointers:
                        'struct ibv_wq_init_attr',
                        'struct ibv_qp_init_attr',
@@ -219,7 +223,10 @@ class FunctionPrototype:
     parens_split = string.split("(")
     ret_and_name = parens_split[0].split(" ")
     all_params = parens_split[-1].split(")")[0]
-    param_strings = all_params.split(",")
+    if all_params:
+      param_strings = all_params.split(",")
+    else:
+      param_strings = []
 
     self.parameters    = [FunctionParameter(p) for p in param_strings]
     self.ret           = Type(" ".join(ret_and_name[:-1]))
@@ -233,9 +240,10 @@ class FunctionPrototype:
     """
     code = "typedef struct {\n"
 
-    code += "\t// Parameters:\n"
-    for param in self.parameters or []:
-      code += "\t{0};\n".format(param.get_full_expression())
+    if self.get_num_parameters() > 0:
+      code += "\t// Parameters:\n"
+      for param in self.parameters:
+        code += "\t{0};\n".format(param.get_full_expression())
 
     if not self.ret.is_void():
       code += "\t// Return value:\n"
@@ -302,13 +310,10 @@ def generate_kernel_function(function_prototype):
   code = "{0} {1}({2}) {{\n".format(ret_type.type_string, fnc_name, comma_separated_params)
   code += "\t{0} uhyve_args;\n".format(function_prototype.get_args_struct_name())
 
-	#  uhyve_args.attr = (struct ibv_poll_cq_attr *) guest_to_host((size_t) attr);
-
-  for p in params or []:
+  for p in params:
     if p.is_pointer_pointer():
       code += "\t// TODO: Take care of ** parameter.\n"
     else:
-      #  print (p.get_struct_name())
       if 'struct ' + p.get_struct_name() in params_in_guest_mem and p.is_pointer():
         code += "\tuhyve_args.{0} = ({1}) guest_to_host((size_t) {0});\n".format(
           p.name, p.type.type_string)
@@ -364,9 +369,10 @@ def generate_uhyve_function(prototype):
                 + "{0}(".format(fnc_name))
 
   if prototype.get_num_parameters() > 0:
-    for param in prototype.parameters[:-1] or []:
+    for param in prototype.parameters[:-1]:
       code += "args->{}, ".format(param.name)
-    code += "args->{});\n".format(prototype.parameters[-1].name)
+    code += "args->{}".format(prototype.parameters[-1].name)
+  code += ");\n"
   code += "\tuse_ib_mem_pool = false;\n}\n\n\n"
 
   return code

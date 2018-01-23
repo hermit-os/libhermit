@@ -22,7 +22,6 @@ uint64_t ibv_wc_read_completion_ts(struct ibv_cq_ex * cq);
 uint16_t ibv_wc_read_cvlan(struct ibv_cq_ex * cq);
 uint32_t ibv_wc_read_flow_tag(struct ibv_cq_ex * cq);
 int ibv_post_wq_recv(struct ibv_wq * wq, struct ibv_recv_wr * recv_wr, struct ibv_recv_wr ** bad_recv_wr);
-struct verbs_context * verbs_get_ctx(struct ibv_context * ctx);
 struct ibv_device ** ibv_get_device_list(int * num_devices);
 void ibv_free_device_list(struct ibv_device ** list);
 const char * ibv_get_device_name(struct ibv_device * device);
@@ -33,7 +32,6 @@ int ibv_get_async_event(struct ibv_context * context, struct ibv_async_event * e
 void ibv_ack_async_event(struct ibv_async_event * event);
 int ibv_query_device(struct ibv_context * context, struct ibv_device_attr * device_attr);
 int ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_port_attr * port_attr);
-int ___ibv_query_port(struct ibv_context * context, uint8_t port_num, struct ibv_port_attr * port_attr);
 int ibv_query_gid(struct ibv_context * context, uint8_t port_num, int index, union ibv_gid * gid);
 int ibv_query_pkey(struct ibv_context * context, uint8_t port_num, int index, __be16 * pkey);
 struct ibv_pd * ibv_alloc_pd(struct ibv_context * context);
@@ -87,7 +85,7 @@ struct ibv_ah * ibv_create_ah_from_wc(struct ibv_pd * pd, struct ibv_wc * wc, st
 int ibv_destroy_ah(struct ibv_ah * ah);
 int ibv_attach_mcast(struct ibv_qp * qp, const union ibv_gid * gid, uint16_t lid);
 int ibv_detach_mcast(struct ibv_qp * qp, const union ibv_gid * gid, uint16_t lid);
-int ibv_fork_init( );
+int ibv_fork_init();
 const char * ibv_node_type_str(enum ibv_node_type node_type);
 const char * ibv_port_state_str(enum ibv_port_state port_state);
 const char * ibv_event_type_str(enum ibv_event_type event);
