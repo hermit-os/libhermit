@@ -34,12 +34,6 @@
 
 #include <hermit/ibv.h>	// Geht per cmake copy workaround
 
-/* #define N	255 */
-
-/* static void test_handler(int s) */
-/* { */
-	/* printf("Receive signal with number %d\n", s); */
-/* } */
 
 int main(int argc, char** argv)
 {

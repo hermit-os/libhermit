@@ -718,7 +718,10 @@ int check_add_port(char **service,int port,
 {
 	int number;
 
-	if (asprintf(service,"%d", port) < 0) {
+  int str_size_max = 6;
+  *service = calloc(str_size_max, sizeof(char));
+	/* if (asprintf(service,"%d", port) < 0) { */
+	if (snprintf(*service, str_size_max, "%d", port) < 0) {
 		return FAILURE;
 	}
 
