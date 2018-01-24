@@ -1226,6 +1226,17 @@ void call_ibv_post_send(struct kvm_run * run, uint8_t * guest_mem) {
 	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
 	uhyve_ibv_post_send_t * args = (uhyve_ibv_post_send_t *) (guest_mem + data);
 
+	/* printf("\tqp->context:                 %p\n", args->qp->context); */
+	/* printf("\tqp->state:                   %d\n", args->qp->state); */
+	/* printf("\twr->id:                      %lu\n", args->wr->wr_id); */
+	/* printf("\twr->next:                    %p\n",  args->wr->next); */
+	/* printf("\twr->num_sge:                 %d\n",  args->wr->num_sge); */
+	/* printf("\twr->sg_list:                 %p\n",  args->wr->sg_list); */
+	/* printf("\t  ->sg_list[0].length:       %lu\n", args->wr->sg_list[0].length); */
+	/* printf("\t  ->sg_list[0].lkey:         %lu\n", args->wr->sg_list[0].lkey); */
+	/* printf("\t  ->sg_list[0].addr:         %p\n",  (char *) args->wr->sg_list[0].addr); */
+	printf("\t  ->sg_list[0].addr deref 1: %u\n",  *((uint8_t *) args->wr->sg_list[0].addr));
+
 	use_ib_mem_pool = true;
 	args->ret = ibv_post_send(args->qp, args->wr, args->bad_wr);
 	use_ib_mem_pool = false;

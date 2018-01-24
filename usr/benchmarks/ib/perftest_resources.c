@@ -525,26 +525,26 @@ static struct ibv_qp *ctx_rss_eth_qp_create(struct pingpong_context *ctx,struct 
 /******************************************************************************
  *
  ******************************************************************************/
-/* int check_add_port(char **service,int port, */
-		/* const char *servername, */
-		/* struct addrinfo *hints, */
-		/* struct addrinfo **res) */
-/* { */
-	/* int number; */
+int check_add_port(char **service,int port,
+		const char *servername,
+		struct addrinfo *hints,
+		struct addrinfo **res)
+{
+	int number;
 
-	/* if (asprintf(service,"%d", port) < 0) { */
-		/* return FAILURE; */
-	/* } */
+	if (asprintf(service,"%d", port) < 0) {
+		return FAILURE;
+	}
 
-	/* number = getaddrinfo(servername,*service,hints,res); */
+	number = getaddrinfo(servername,*service,hints,res);
 
-	/* if (number < 0) { */
-		/* fprintf(stderr, "%s for %s:%d\n", gai_strerror(number), servername, port); */
-		/* return FAILURE; */
-	/* } */
+	if (number < 0) {
+		fprintf(stderr, "%s for %s:%d\n", gai_strerror(number), servername, port);
+		return FAILURE;
+	}
 
-	/* return SUCCESS; */
-/* } */
+	return SUCCESS;
+}
 
 /******************************************************************************
   + *

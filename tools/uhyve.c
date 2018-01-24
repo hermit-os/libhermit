@@ -172,7 +172,6 @@
 #define APIC_DEFAULT_BASE	0xfee00000
 
 #define IB_POOL_SIZE 0x400000ULL
-#define IB_MEM_DEBUG
 
 static bool restart = false;
 static bool cap_tsc_deadline = false;
@@ -226,6 +225,8 @@ typedef struct {
 
 // DLSYM
 
+/* #define IB_MEM_DEBUG */
+
 /* static uint8_t * ib_pool_top = NULL; */
 /* uint64_t ib_pool_addr = 0; // TODO: static? */
 static uint8_t* ib_pool_addr = 0;
@@ -259,31 +260,23 @@ static void init_ib_mem_functions(void)
 
 	if (real_malloc == NULL && real_calloc == NULL && real_realloc == NULL && real_free == NULL) {
 		init_real_calloc_active = true;
-		/* size_t dlsym_mem_len = 1024 * 8; */
-		/* dlsym_mem = mmap(NULL, dlsym_mem_len, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_SHARED, -1, 0); */
-
 		real_calloc  = dlsym(RTLD_NEXT, "calloc");
-
 		init_real_calloc_active = false;
-		/* munmap(dlsym_mem, dlsym_mem_len); */
-		/* dlsym_mem = NULL; */
 
 		real_malloc  = dlsym(RTLD_NEXT, "malloc");
 		real_realloc = dlsym(RTLD_NEXT, "realloc");
 		real_free    = dlsym(RTLD_NEXT, "free");
 	}
 
-	if (!real_malloc || !real_calloc || !real_free || !real_realloc /* || !real_free_alt */ ) {
+	if (!real_malloc || !real_calloc || !real_free || !real_realloc) {
 		fprintf(stderr, "Error in `dlsym`: %s\n", dlerror());
 	}
 
 	pthread_mutex_unlock(&ib_pool_mutex);
-
 #ifdef IB_MEM_DEBUG
 	printf("\tInit finished.\n");
 #endif
 }
-
 
 /*
  * new_ib_malloc_region
@@ -314,14 +307,13 @@ void * new_ib_malloc_region(size_t size)
 	}
 
 	if (ib_pool_top > ib_pool_addr + IB_POOL_SIZE) { // TODO: make ib addr a uint8* as well?
-#ifdef IB_MEM_DEBUG
-		fprintf(stderr, "Error: IB Memory Pool overflow.\n");
-#endif
+		fprintf(stderr, "\nError: IB Memory Pool overflow.------------------------------\n\n");
 	}
 
 	return result;
 }
 
+// TODO: locks ok?
 
 /*
  * malloc
@@ -330,7 +322,7 @@ void * new_ib_malloc_region(size_t size)
 void * malloc(size_t size)
 {
 #ifdef IB_MEM_DEBUG
-	printf("FUNCTION: malloc()\n");
+	printf("FUNCTION: malloc() ------------- size: %lu\n", size);
 #endif
 
 	if (real_malloc == NULL) {
@@ -341,8 +333,14 @@ void * malloc(size_t size)
 
 	void * result;
 	if (use_ib_mem_pool) {
+#ifdef IB_MEM_DEBUG
+		printf("\tuse_ib_mem_pool == true.\n");
+#endif
 		result = new_ib_malloc_region(size);
 	} else { // !use_ib_mem_pool
+#ifdef IB_MEM_DEBUG
+		printf("\tcalling real_malloc()\n");
+#endif
 		result = real_malloc(size);
 	}
 
@@ -358,7 +356,7 @@ void * malloc(size_t size)
 void * calloc(size_t nitems, size_t size)
 {
 #ifdef IB_MEM_DEBUG
-	printf("FUNCTION: calloc()\n");
+	printf("FUNCTION: calloc() ------------- nitems: %lu  size: %lu\n", nitems, size);
 #endif
 
 	void * result;
@@ -375,11 +373,11 @@ void * calloc(size_t nitems, size_t size)
 		result = dlsym_mem_buffer;
 	} else if (use_ib_mem_pool) {
 #ifdef IB_MEM_DEBUG
-		printf("\tuse_ib == true\n");
+		printf("\tuse_ib_mem_pool == true\n");
 #endif
 		result = new_ib_malloc_region(full_size);
 		memset(result, 0, full_size);
-	} else {
+	} else { // !use_ib_mem_pool && !init_real_calloc_active
 #ifdef IB_MEM_DEBUG
 		printf("\tcalling real_calloc()\n");
 #endif

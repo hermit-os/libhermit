@@ -212,10 +212,10 @@ struct raw_ethernet_info { // !
  *
  * Return Value : SUCCESS, FAILURE.
  */
-// int check_add_port(char **service,int port,
-					 // const char *servername,
-					 // struct addrinfo *hints,
-					 // struct addrinfo **res);
+int check_add_port(char **service,int port,
+           const char *servername,
+           struct addrinfo *hints,
+           struct addrinfo **res);
 
 /* ctx_find_dev
  *

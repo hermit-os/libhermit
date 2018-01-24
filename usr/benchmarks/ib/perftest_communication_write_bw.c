@@ -442,17 +442,17 @@ static int ethernet_client_connect(struct perftest_comm *comm)
 {
 	struct addrinfo *res, *t;
 	struct addrinfo hints;
-	/* char *service; */
+  char *service;
 
 	int sockfd = -1;
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family   = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 
-	/* if (check_add_port(&service, comm->rdma_params->port, comm->rdma_params->servername, &hints, &res)) { */
-		/* fprintf(stderr, "Problem in resolving basic address and port\n"); */
-		/* return 1; */
-	/* } */
+  if (check_add_port(&service, comm->rdma_params->port, comm->rdma_params->servername, &hints, &res)) {
+    fprintf(stderr, "Problem in resolving basic address and port\n");
+    return 1;
+  }
 
 	for (t = res; t; t = t->ai_next) {
 		sockfd = socket(t->ai_family, t->ai_socktype, t->ai_protocol);
@@ -483,7 +483,7 @@ static int ethernet_server_connect(struct perftest_comm *comm)
 {
 	struct addrinfo *res, *t;
 	struct addrinfo hints;
-	/* char *service; */
+  char *service;
 	int n;
 
 	int sockfd = -1, connfd;
@@ -492,10 +492,10 @@ static int ethernet_server_connect(struct perftest_comm *comm)
 	hints.ai_family   = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 
-	/* if (check_add_port(&service, comm->rdma_params->port, NULL, &hints, &res)) { */
-		/* fprintf(stderr, "Problem in resolving basic address and port\n"); */
-		/* return 1; */
-	/* } */
+  if (check_add_port(&service, comm->rdma_params->port, NULL, &hints, &res)) {
+    fprintf(stderr, "Problem in resolving basic address and port\n");
+    return 1;
+  }
 
 	for (t = res; t; t = t->ai_next) {
 		sockfd = socket(t->ai_family, t->ai_socktype, t->ai_protocol);

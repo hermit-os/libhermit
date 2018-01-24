@@ -87,6 +87,8 @@ Required in: ./tool/uhyve-ibv.h
 """
 
 # TODO: Add ibv_resolve_eth_l2_from_gid function back in. Not linking right now.
+# TODO: int * num devices --> guest to host
+# TODO: void * as well
 
 from __future__ import print_function
 from parser import generate_struct_conversions

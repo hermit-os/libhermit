@@ -711,6 +711,28 @@ int verify_params_with_device_context(struct ibv_context *context,
 // -----------------------------------------------------------------------------
 
 
+int check_add_port(char **service,int port,
+		const char *servername,
+		struct addrinfo *hints,
+		struct addrinfo **res)
+{
+	int number;
+
+	if (asprintf(service,"%d", port) < 0) {
+		return FAILURE;
+	}
+
+	number = getaddrinfo(servername,*service,hints,res);
+
+	if (number < 0) {
+		/* fprintf(stderr, "%s for %s:%d\n", gai_strerror(number), servername, port); */
+		fprintf(stderr, "Error");
+		return FAILURE;
+	}
+
+	return SUCCESS;
+}
+
 struct ibv_device* ctx_find_dev(const char *ib_devname)
 {
 	int num_of_device;
