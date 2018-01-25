@@ -38,9 +38,10 @@
 
 #include <hermit/ibv.h>
 
+
 extern uint8_t * host_logical_addr;
 
-inline size_t guest_to_host(size_t address) {
+size_t guest_to_host(size_t address) {
 	return address ? virt_to_phys(address) + (size_t) host_logical_addr : address;
 }
 
@@ -1955,29 +1956,29 @@ int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_w
 	struct ibv_send_wr * wr__next[num_wrs];
 	struct ibv_sge *     wr__sg_list[num_wrs];
 	uint64_t             wr__sg_list__addr[num_wrs][num_sges_max];
-	uint64_t             wr__wr__rdma__remote_addr[num_wrs];
-	uint64_t             wr__wr__atomic__remote_addr[num_wrs];
+	/* uint64_t             wr__wr__rdma__remote_addr[num_wrs]; */
+	/* uint64_t             wr__wr__atomic__remote_addr[num_wrs]; */
 	uint64_t             wr__bind_mw__bind_info__addr[num_wrs];
 	void *               wr__tso__hdr[num_wrs];
 
 	curr_wr = wr;
 	for (int i = 0; i < num_wrs; i++) {
-		is_rdma    = curr_wr->opcode == IBV_WR_RDMA_WRITE ||
-		             curr_wr->opcode == IBV_WR_RDMA_WRITE_WITH_IMM ||
-		             curr_wr->opcode == IBV_WR_RDMA_READ;
-		is_atomic  = curr_wr->opcode == IBV_WR_ATOMIC_CMP_AND_SWP ||
-		             curr_wr->opcode == IBV_WR_ATOMIC_FETCH_AND_ADD;
+		/* is_rdma    = curr_wr->opcode == IBV_WR_RDMA_WRITE || */
+								 /* curr_wr->opcode == IBV_WR_RDMA_WRITE_WITH_IMM || */
+								 /* curr_wr->opcode == IBV_WR_RDMA_READ; */
+		/* is_atomic  = curr_wr->opcode == IBV_WR_ATOMIC_CMP_AND_SWP || */
+								 /* curr_wr->opcode == IBV_WR_ATOMIC_FETCH_AND_ADD; */
 		is_bind_mw = curr_wr->opcode == IBV_WR_BIND_MW;
 		is_tso     = curr_wr->opcode == IBV_WR_TSO;
 
 		// union wr: rdma and atomic
-		if (is_rdma) {
-			wr__wr__rdma__remote_addr[i] = curr_wr->wr.rdma.remote_addr;
-			curr_wr->wr.rdma.remote_addr = (uint64_t) guest_to_host((size_t) curr_wr->wr.rdma.remote_addr);
-		} else if (is_atomic) {
-			wr__wr__atomic__remote_addr[i] = curr_wr->wr.atomic.remote_addr;
-			curr_wr->wr.atomic.remote_addr = (uint64_t) guest_to_host((size_t) curr_wr->wr.atomic.remote_addr);
-		}
+		/* if (is_rdma) { */
+			/* wr__wr__rdma__remote_addr[i] = curr_wr->wr.rdma.remote_addr; */
+			/* curr_wr->wr.rdma.remote_addr = (uint64_t) guest_to_host((size_t) curr_wr->wr.rdma.remote_addr); */
+		/* } else if (is_atomic) { */
+			/* wr__wr__atomic__remote_addr[i] = curr_wr->wr.atomic.remote_addr; */
+			/* curr_wr->wr.atomic.remote_addr = (uint64_t) guest_to_host((size_t) curr_wr->wr.atomic.remote_addr); */
+		/* } */
 
 		// union: bind_mw and tso
 		if (is_bind_mw) {
@@ -2014,20 +2015,20 @@ int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_w
 
 	curr_wr = wr;
 	for (int i = 0; i < num_wrs; i++) {
-		is_rdma    = curr_wr->opcode == IBV_WR_RDMA_WRITE ||
-		             curr_wr->opcode == IBV_WR_RDMA_WRITE_WITH_IMM ||
-		             curr_wr->opcode == IBV_WR_RDMA_READ;
-		is_atomic  = curr_wr->opcode == IBV_WR_ATOMIC_CMP_AND_SWP ||
-		             curr_wr->opcode == IBV_WR_ATOMIC_FETCH_AND_ADD;
+		/* is_rdma    = curr_wr->opcode == IBV_WR_RDMA_WRITE || */
+								 /* curr_wr->opcode == IBV_WR_RDMA_WRITE_WITH_IMM || */
+								 /* curr_wr->opcode == IBV_WR_RDMA_READ; */
+		/* is_atomic  = curr_wr->opcode == IBV_WR_ATOMIC_CMP_AND_SWP || */
+								 /* curr_wr->opcode == IBV_WR_ATOMIC_FETCH_AND_ADD; */
 		is_bind_mw = curr_wr->opcode == IBV_WR_BIND_MW;
 		is_tso     = curr_wr->opcode == IBV_WR_TSO;
 
 		// union wr: rdma and atomic
-		if (is_rdma) {
-			curr_wr->wr.rdma.remote_addr = wr__wr__rdma__remote_addr[i];
-		} else if (is_atomic) {
-			curr_wr->wr.atomic.remote_addr = wr__wr__atomic__remote_addr[i];
-		}
+		/* if (is_rdma) { */
+			/* curr_wr->wr.rdma.remote_addr = wr__wr__rdma__remote_addr[i]; */
+		/* } else if (is_atomic) { */
+			/* curr_wr->wr.atomic.remote_addr = wr__wr__atomic__remote_addr[i]; */
+		/* } */
 
 		// union: bind_mw and tso
 		if (is_bind_mw) {

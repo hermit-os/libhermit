@@ -1235,7 +1235,7 @@ void call_ibv_post_send(struct kvm_run * run, uint8_t * guest_mem) {
 	/* printf("\t  ->sg_list[0].length:       %lu\n", args->wr->sg_list[0].length); */
 	/* printf("\t  ->sg_list[0].lkey:         %lu\n", args->wr->sg_list[0].lkey); */
 	/* printf("\t  ->sg_list[0].addr:         %p\n",  (char *) args->wr->sg_list[0].addr); */
-	printf("\t  ->sg_list[0].addr deref 1: %u\n",  *((uint8_t *) args->wr->sg_list[0].addr));
+	/* printf("\t  ->sg_list[0].addr deref 1: %u\n",  *((uint8_t *) args->wr->sg_list[0].addr)); */
 
 	use_ib_mem_pool = true;
 	args->ret = ibv_post_send(args->qp, args->wr, args->bad_wr);

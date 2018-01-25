@@ -40,6 +40,8 @@
 extern "C" {
 #endif
 
+size_t guest_to_host(size_t address);
+
 const char * ibv_wc_status_str(enum ibv_wc_status status);
 int ibv_rate_to_mult(enum ibv_rate rate);
 enum ibv_rate mult_to_ibv_rate(int mult);

@@ -27,8 +27,7 @@ static enum ibv_wr_opcode opcode_atomic_array[] = {IBV_WR_ATOMIC_CMP_AND_SWP, IB
 struct perftest_parameters* duration_param;
 struct check_alive_data check_alive_data;
 
-struct ibv_qp* ctx_qp_create(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param)
+struct ibv_qp* ctx_qp_create(struct pingpong_context *ctx, struct perftest_parameters *user_param)
 {
 	struct ibv_qp_init_attr attr;
 	struct ibv_qp* qp = NULL;
@@ -200,9 +199,8 @@ int create_single_mr(struct pingpong_context *ctx, struct perftest_parameters *u
 	return SUCCESS;
 }
 
-int create_reg_cqs(struct pingpong_context *ctx,
-		   struct perftest_parameters *user_param,
-		   int tx_buffer_depth, int need_recv_cq)
+int create_reg_cqs(struct pingpong_context *ctx, struct perftest_parameters *user_param,
+                   int tx_buffer_depth, int need_recv_cq)
 {
 	ctx->send_cq = ibv_create_cq(ctx->context, tx_buffer_depth *
 					user_param->num_of_qps, NULL, ctx->channel, user_param->eq_num);
@@ -223,9 +221,8 @@ int create_reg_cqs(struct pingpong_context *ctx,
 	return SUCCESS;
 }
 
-int create_reg_qp_main(struct pingpong_context *ctx,
-		       struct perftest_parameters *user_param,
-		       int i, int num_of_qps)
+int create_reg_qp_main(struct pingpong_context *ctx, struct perftest_parameters *user_param,
+                       int i, int num_of_qps)
 {
 	if (user_param->use_xrc) {
 		/* #ifdef HAVE_XRCD */
@@ -420,12 +417,10 @@ int check_packet_pacing_support(struct pingpong_context *ctx)
 }
 #endif
 
-static int ctx_modify_qp_to_rtr(struct ibv_qp *qp,
-		struct ibv_qp_attr *attr,
-		struct perftest_parameters *user_param,
-		struct pingpong_dest *dest,
-		struct pingpong_dest *my_dest,
-		int qpindex)
+static int ctx_modify_qp_to_rtr(struct ibv_qp *qp, struct ibv_qp_attr *attr,
+                                struct perftest_parameters *user_param,
+                                struct pingpong_dest *dest,
+                                struct pingpong_dest *my_dest, int qpindex)
 {
 	int num_of_qps = user_param->num_of_qps;
 	int num_of_qps_per_port = user_param->num_of_qps / 2;
@@ -504,9 +499,8 @@ static int ctx_modify_qp_to_rtr(struct ibv_qp *qp,
 	return ibv_modify_qp(qp, attr, flags);
 }
 
-void ctx_set_send_reg_wqes(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param,
-		struct pingpong_dest *rem_dest)
+void ctx_set_send_reg_wqes(struct pingpong_context *ctx, struct perftest_parameters *user_param,
+                           struct pingpong_dest *rem_dest)
 {
 	int i, j;
 	int num_of_qps = user_param->num_of_qps;
@@ -530,14 +524,13 @@ void ctx_set_send_reg_wqes(struct pingpong_context *ctx,
 			}
 		}
 
-		if (user_param->verb == WRITE || user_param->verb == READ)
+		if (user_param->verb == WRITE || user_param->verb == READ) {
 			ctx->wr[i*user_param->post_list].wr.rdma.remote_addr = rem_dest[xrc_offset + i].vaddr;
-
-		else if (user_param->verb == ATOMIC)
+		} else if (user_param->verb == ATOMIC) {
 			ctx->wr[i*user_param->post_list].wr.atomic.remote_addr = rem_dest[xrc_offset + i].vaddr;
+		}
 
 		if (user_param->tst == BW || user_param->tst == LAT_BY_BW) {
-
 			ctx->scnt[i] = 0;
 			ctx->ccnt[i] = 0;
 			ctx->my_addr[i] = (uintptr_t)ctx->buf[i];
@@ -639,11 +632,9 @@ void ctx_set_send_reg_wqes(struct pingpong_context *ctx,
 	}
 }
 
-static int ctx_modify_qp_to_rts(struct ibv_qp *qp,
-		void *_attr,
-		struct perftest_parameters *user_param,
-		struct pingpong_dest *dest,
-		struct pingpong_dest *my_dest)
+static int ctx_modify_qp_to_rts(struct ibv_qp *qp, void *_attr,
+                                struct perftest_parameters *user_param,
+                                struct pingpong_dest *dest, struct pingpong_dest *my_dest)
 {
 	/* #ifdef HAVE_PACKET_PACING_EXP */
 	/* uint64_t flags = IBV_QP_STATE; */
@@ -693,7 +684,7 @@ static int ctx_modify_qp_to_rts(struct ibv_qp *qp,
 }
 
 int verify_params_with_device_context(struct ibv_context *context,
-				      struct perftest_parameters *user_param)
+                                      struct perftest_parameters *user_param)
 {
 	if(user_param->use_event) {
 		if(user_param->eq_num > context->num_comp_vectors) {
@@ -711,10 +702,8 @@ int verify_params_with_device_context(struct ibv_context *context,
 // -----------------------------------------------------------------------------
 
 
-int check_add_port(char **service,int port,
-		const char *servername,
-		struct addrinfo *hints,
-		struct addrinfo **res)
+int check_add_port(char **service,int port, const char *servername,
+                   struct addrinfo *hints, struct addrinfo **res)
 {
 	int number;
 
@@ -996,10 +985,8 @@ int ctx_init(struct pingpong_context *ctx, struct perftest_parameters *user_para
 	return SUCCESS;
 }
 
-int ctx_connect(struct pingpong_context *ctx,
-		struct pingpong_dest *dest,
-		struct perftest_parameters *user_param,
-		struct pingpong_dest *my_dest)
+int ctx_connect(struct pingpong_context *ctx, struct pingpong_dest *dest,
+                struct perftest_parameters *user_param, struct pingpong_dest *my_dest)
 {
 	int i;
 
@@ -1139,8 +1126,7 @@ int ctx_connect(struct pingpong_context *ctx,
 	return SUCCESS;
 }
 
-int destroy_ctx(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param)
+int destroy_ctx(struct pingpong_context *ctx, struct perftest_parameters *user_param)
 {
 	int i, first, dereg_counter;
 	int test_result = 0;
@@ -1329,12 +1315,10 @@ int destroy_ctx(struct pingpong_context *ctx,
 	return test_result;
 }
 
-void ctx_set_send_wqes(struct pingpong_context *ctx,
-		struct perftest_parameters *user_param,
-		struct pingpong_dest *rem_dest)
+void ctx_set_send_wqes(struct pingpong_context *ctx, struct perftest_parameters *user_param,
+                       struct pingpong_dest *rem_dest)
 {
 	ctx_set_send_reg_wqes(ctx, user_param, rem_dest);
-
 }
 
 int perform_warm_up(struct pingpong_context *ctx, struct perftest_parameters *user_param)
@@ -1369,8 +1353,8 @@ int perform_warm_up(struct pingpong_context *ctx, struct perftest_parameters *us
 		}
 
 		do {
-			ne = ibv_poll_cq(ctx->send_cq, 1, &wc);
-			if (ne > 0) {
+			ne = ibv_poll_cq(ctx->send_cq, 1, &wc); // read 1 WC from CQ, wc on stack.
+			if (ne > 0) { // num of WCs
 				if (wc.status != IBV_WC_SUCCESS) {
 					return_value = FAILURE;
 					goto cleaning;

@@ -335,9 +335,7 @@ static int ethernet_write_keys(struct pingpong_dest *my_dest,
 	return 0;
 }
 
-/******************************************************************************
- *
- ******************************************************************************/
+
 static int ethernet_read_keys(struct pingpong_dest *rem_dest,
 		struct perftest_comm *comm)
 {
@@ -760,10 +758,22 @@ int set_up_connection(struct pingpong_context *ctx,
 
 		/* Each qp gives its receive buffer address.*/
 		my_dest[i].out_reads = user_param->out_reads;
-		if (user_param->mr_per_qp)
-			my_dest[i].vaddr = (uintptr_t)ctx->buf[i] + BUFF_SIZE(ctx->size, ctx->cycle_buffer);
-		else
-			my_dest[i].vaddr = (uintptr_t)ctx->buf[0] + (user_param->num_of_qps + i)*BUFF_SIZE(ctx->size, ctx->cycle_buffer);
+		uintptr_t guest_vaddr;
+		if (user_param->mr_per_qp) {
+			/* my_dest[i].vaddr = (uintptr_t)ctx->buf[i] + BUFF_SIZE(ctx->size, ctx->cycle_buffer); */
+			guest_vaddr = (uintptr_t)ctx->buf[i] + BUFF_SIZE(ctx->size, ctx->cycle_buffer); // !!!
+			my_dest[i].vaddr = (unsigned long long) guest_to_host((size_t) guest_vaddr);
+			/* printf("if:\nctx->buf[i]:\t%p\nguest_vaddr:\t%p\nmydestvaddr:\t%llu\n", ctx->buf[i], guest_vaddr, my_dest[i].vaddr); */
+		} else {
+			/* my_dest[i].vaddr = (uintptr_t)ctx->buf[0] + */
+												 /* (user_param->num_of_qps + i)*BUFF_SIZE(ctx->size, ctx->cycle_buffer); */
+			guest_vaddr = (uintptr_t)ctx->buf[0] +
+			              (user_param->num_of_qps + i)*BUFF_SIZE(ctx->size, ctx->cycle_buffer);
+			my_dest[i].vaddr = (unsigned long long) guest_to_host((size_t) guest_vaddr);
+			printf("\nelse:\nctx->buf[0]:\t%p\nguest_vaddr:\t%p\nmydestvaddr:\t%p\n",
+					ctx->buf[0], guest_vaddr, (uintptr_t) my_dest[i].vaddr);
+		}
+
 		if (user_param->dualport==ON) {
 			if (i % num_of_qps < num_of_qps_per_port)
 				memcpy(my_dest[i].gid.raw, temp_gid.raw , 16);
@@ -875,10 +885,9 @@ int ctx_hand_shake(struct perftest_comm *comm,
 			fprintf(stderr, " Unable to read from socket/rdam_cm\n");
 			return 1;
 		}
-
 		/*Server side will wait for the client side to reach the write function.*/
-	} else {
 
+	} else {
 		if ((*read_func_ptr)(rem_dest, comm)) {
 			fprintf(stderr, " Unable to read to socket/rdam_cm\n");
 			return 1;
