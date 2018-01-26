@@ -443,6 +443,7 @@ int ctx_alloc_credit(struct pingpong_context *ctx,
 int ctx_set_credit_wqes(struct pingpong_context *ctx,
 				struct perftest_parameters *user_param,
 				struct pingpong_dest *rem_dest);
+
 /* run_iter_bw.
  *
  * Description :

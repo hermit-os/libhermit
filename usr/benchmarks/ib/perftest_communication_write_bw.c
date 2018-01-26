@@ -294,15 +294,26 @@ uint16_t ctx_get_local_lid(struct ibv_context *context, int port)
 // -----------------------------------------------------------------------------
 
 
-static int ethernet_write_keys(struct pingpong_dest *my_dest,
-		struct perftest_comm *comm)
+static int ethernet_write_keys(struct pingpong_dest *my_dest, struct perftest_comm *comm)
 {
 	if (my_dest->gid_index == -1) {
-
 		char msg[KEY_MSG_SIZE];
 
+		uint32_t vaddr_hi, vaddr_lo;
+		unsigned long long vaddr_hi_shfd = my_dest->vaddr >> 32;
+		memcpy(&vaddr_hi, &vaddr_hi_shfd,  sizeof(uint32_t));
+		memcpy(&vaddr_lo, &my_dest->vaddr, sizeof(uint32_t));
+
+		/* sprintf(msg, KEY_PRINT_FMT, my_dest->lid, my_dest->out_reads, */
+				/* my_dest->qpn, my_dest->psn, my_dest->rkey, my_dest->vaddr, my_dest->srqn); */
 		sprintf(msg, KEY_PRINT_FMT, my_dest->lid, my_dest->out_reads,
-				my_dest->qpn, my_dest->psn, my_dest->rkey, my_dest->vaddr, my_dest->srqn);
+				my_dest->qpn, my_dest->psn, my_dest->rkey, vaddr_hi, vaddr_lo, my_dest->srqn);
+
+		/* printf("\nEthernet WRITE\n"); */
+		/* printf("my_dest->vaddr: %016llx\n", my_dest->vaddr); */
+		/* printf("vaddr_hi:       %08x\n", vaddr_hi); */
+		/* printf("vaddr_lo:               %08x\n\n", vaddr_lo); */
+		/* printf("msg:            %s\n\n", msg); */
 
 		if (write(comm->rdma_params->sockfd, msg, sizeof msg) != sizeof msg) {
 			perror("client write");
@@ -310,10 +321,16 @@ static int ethernet_write_keys(struct pingpong_dest *my_dest,
 			return 1;
 		}
 
-	} else {
+	} else { // gid_index != -1
 		char msg[KEY_MSG_SIZE_GID];
+
+		uint32_t vaddr_hi, vaddr_lo;
+		unsigned long long vaddr_hi_shfd = my_dest->vaddr >> 32;
+		memcpy(&vaddr_hi, &vaddr_hi_shfd,  sizeof(uint32_t));
+		memcpy(&vaddr_lo, &my_dest->vaddr, sizeof(uint32_t));
+
 		sprintf(msg, KEY_PRINT_FMT_GID, my_dest->lid, my_dest->out_reads,
-				my_dest->qpn, my_dest->psn, my_dest->rkey, my_dest->vaddr,
+				my_dest->qpn, my_dest->psn, my_dest->rkey, vaddr_hi, vaddr_lo,
 				my_dest->gid.raw[0], my_dest->gid.raw[1],
 				my_dest->gid.raw[2], my_dest->gid.raw[3],
 				my_dest->gid.raw[4], my_dest->gid.raw[5],
@@ -324,23 +341,24 @@ static int ethernet_write_keys(struct pingpong_dest *my_dest,
 				my_dest->gid.raw[14], my_dest->gid.raw[15],
 				my_dest->srqn);
 
+		/* printf("Ethernet WRITE (gid_index != -1)\n"); */
+		/* printf("my_dest->vaddr: %llx\n", my_dest->vaddr); */
+		/* printf("msg:            %s\n", msg); */
+
 		if (write(comm->rdma_params->sockfd, msg, sizeof msg) != sizeof msg) {
 			perror("client write");
 			fprintf(stderr, "Couldn't send local address\n");
 			return 1;
 		}
-
 	}
 
 	return 0;
 }
 
 
-static int ethernet_read_keys(struct pingpong_dest *rem_dest,
-		struct perftest_comm *comm)
+static int ethernet_read_keys(struct pingpong_dest *rem_dest, struct perftest_comm *comm)
 {
 	if (rem_dest->gid_index == -1) {
-
 		int parsed;
 		char msg[KEY_MSG_SIZE];
 
@@ -349,17 +367,30 @@ static int ethernet_read_keys(struct pingpong_dest *rem_dest,
 			return 1;
 		}
 
+		uint32_t vaddr_hi, vaddr_lo;
+
+		/* parsed = sscanf(msg, KEY_PRINT_FMT, (unsigned int*)&rem_dest->lid, */
+				/* &rem_dest->out_reads, &rem_dest->qpn, */
+				/* &rem_dest->psn, &rem_dest->rkey, &rem_dest->vaddr, &rem_dest->srqn); */
 		parsed = sscanf(msg, KEY_PRINT_FMT, (unsigned int*)&rem_dest->lid,
 				&rem_dest->out_reads, &rem_dest->qpn,
-				&rem_dest->psn, &rem_dest->rkey, &rem_dest->vaddr, &rem_dest->srqn);
+				&rem_dest->psn, &rem_dest->rkey, &vaddr_hi, &vaddr_lo, &rem_dest->srqn);
 
-		if (parsed != 7) {
+		rem_dest->vaddr = ((unsigned long long) vaddr_hi << 32) |
+		                  ((unsigned long long) vaddr_lo);
+
+		/* printf("\nEthernet READ\n"); */
+		/* printf("msg:             %s\n", msg); */
+		/* printf("vaddr_hi:        %08x\n", vaddr_hi); */
+		/* printf("vaddr_lo:                %08x\n", vaddr_lo); */
+		/* printf("rem_dest->vaddr: %016llx\n\n", rem_dest->vaddr); */
+
+		if (parsed != 8) {
 			fprintf(stderr, "Couldn't parse line <%.*s>\n", (int)sizeof msg, msg);
 			return 1;
 		}
 
-	} else {
-
+	} else { // gid_index != -1
 		char msg[KEY_MSG_SIZE_GID];
 		char *pstr = msg, *term;
 		char tmp[120];
@@ -404,6 +435,7 @@ static int ethernet_read_keys(struct pingpong_dest *rem_dest,
 		memcpy(tmp, pstr, term - pstr);
 		tmp[term - pstr] = 0;
 
+		// TODO: check if this works (no sscanf, so it should.)
 		rem_dest->vaddr = strtoull(tmp, NULL, 16); /*VA*/
 
 		for (i = 0; i < 15; ++i) {
@@ -427,6 +459,10 @@ static int ethernet_read_keys(struct pingpong_dest *rem_dest,
 		memcpy(tmp, pstr, term - pstr);
 		tmp[term - pstr] = 0;
 		rem_dest->srqn = (unsigned)strtoul(tmp, NULL, 16); /*SRQN*/
+
+		printf("\nEthernet READ (gid_index != -1)\n");
+		printf("rem_dest->vaddr: %llx\n", rem_dest->vaddr);
+		printf("msg:             %s\n\n", msg);
 
 	}
 	return 0;
@@ -474,9 +510,6 @@ static int ethernet_client_connect(struct perftest_comm *comm)
 	return 0;
 }
 
-/******************************************************************************
- *
- ******************************************************************************/
 static int ethernet_server_connect(struct perftest_comm *comm)
 {
 	struct addrinfo *res, *t;
@@ -758,20 +791,17 @@ int set_up_connection(struct pingpong_context *ctx,
 
 		/* Each qp gives its receive buffer address.*/
 		my_dest[i].out_reads = user_param->out_reads;
-		uintptr_t guest_vaddr;
+		uintptr_t guest_vaddr; // !!!
 		if (user_param->mr_per_qp) {
-			/* my_dest[i].vaddr = (uintptr_t)ctx->buf[i] + BUFF_SIZE(ctx->size, ctx->cycle_buffer); */
-			guest_vaddr = (uintptr_t)ctx->buf[i] + BUFF_SIZE(ctx->size, ctx->cycle_buffer); // !!!
+			guest_vaddr = (uintptr_t)ctx->buf[i] + BUFF_SIZE(ctx->size, ctx->cycle_buffer);
 			my_dest[i].vaddr = (unsigned long long) guest_to_host((size_t) guest_vaddr);
-			/* printf("if:\nctx->buf[i]:\t%p\nguest_vaddr:\t%p\nmydestvaddr:\t%llu\n", ctx->buf[i], guest_vaddr, my_dest[i].vaddr); */
 		} else {
-			/* my_dest[i].vaddr = (uintptr_t)ctx->buf[0] + */
-												 /* (user_param->num_of_qps + i)*BUFF_SIZE(ctx->size, ctx->cycle_buffer); */
 			guest_vaddr = (uintptr_t)ctx->buf[0] +
-			              (user_param->num_of_qps + i)*BUFF_SIZE(ctx->size, ctx->cycle_buffer);
+			              (user_param->num_of_qps + i) * BUFF_SIZE(ctx->size, ctx->cycle_buffer);
 			my_dest[i].vaddr = (unsigned long long) guest_to_host((size_t) guest_vaddr);
-			printf("\nelse:\nctx->buf[0]:\t%p\nguest_vaddr:\t%p\nmydestvaddr:\t%p\n",
-					ctx->buf[0], guest_vaddr, (uintptr_t) my_dest[i].vaddr);
+			/* printf("ctx->buf[0]:   %p\n", ctx->buf[0]); */
+			/* printf("guest_vaddr:   %p\n", guest_vaddr); */
+			printf("\nmydestvaddr:   %llx\n\n", (unsigned long long) my_dest[i].vaddr);
 		}
 
 		if (user_param->dualport==ON) {

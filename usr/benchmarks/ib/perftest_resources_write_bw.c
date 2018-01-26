@@ -1443,7 +1443,7 @@ int run_iter_bw(struct pingpong_context *ctx, struct perftest_parameters *user_p
 		gap_cycles = cpu_mhz * gap_time;
 	}
 
-	/* main loop for posting */
+	/* main loop for posting - iterations*/
 	while (totscnt < tot_iters || totccnt < tot_iters ||
 		(user_param->test_type == DURATION && user_param->state != END_STATE) ) {
 
@@ -1460,6 +1460,7 @@ int run_iter_bw(struct pingpong_context *ctx, struct perftest_parameters *user_p
 				burst_iter = 0;
 			}
 
+			/* Loop to post work requests */
 			while ( (ctx->scnt[index] < user_param->iters || user_param->test_type == DURATION) &&
               ((ctx->scnt[index] - ctx->ccnt[index]) < (user_param->tx_depth)) &&
 					   !((user_param->rate_limit_type == SW_RATE_LIMIT ) && is_sending_burst == 0)) {
@@ -1478,9 +1479,6 @@ int run_iter_bw(struct pingpong_context *ctx, struct perftest_parameters *user_p
 
 				if (user_param->noPeak == OFF)
 					user_param->tposted[totscnt] = get_cycles();
-
-				/* if (user_param->test_type == DURATION && user_param->state == END_STATE) */
-					/* break; */
 
 				err = ibv_post_send(ctx->qp[index], &ctx->wr[index*user_param->post_list], &bad_wr);
 				if (err) {

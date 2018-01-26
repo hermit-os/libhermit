@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (user_param.test_method == RUN_ALL) {
-		for (i = 1; i < 24 ; ++i) {
+		for (i = 1; i < MAX_SIZE_EXP; ++i) {
 			user_param.size = (uint64_t)1 << i;
 			if(run_iter_lat_write(&ctx, &user_param)) {
 				fprintf(stderr, "Test exited with Error\n");

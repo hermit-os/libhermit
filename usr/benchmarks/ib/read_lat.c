@@ -41,9 +41,9 @@
 #include <unistd.h>
 
 #include "get_clock.h"
-#include "perftest_resources.h"
-#include "perftest_parameters.h"
-#include "perftest_communication.h"
+#include "perftest_parameters_write_bw.h"
+#include "perftest_resources_write_bw.h"
+#include "perftest_communication_write_bw.h"
 
 int main(int argc, char *argv[])
 {
@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
 	ctx_set_send_wqes(&ctx, &user_param, rem_dest);
 
 	if (user_param.test_method == RUN_ALL) {
-		for (i = 1; i < 24 ; ++i) {
+		for (i = 1; i < MAX_SIZE_EXP; ++i) {
 			user_param.size = (uint64_t)1 << i;
 			if(run_iter_lat(&ctx, &user_param));
 				return 17;

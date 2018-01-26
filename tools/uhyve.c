@@ -227,8 +227,6 @@ typedef struct {
 
 /* #define IB_MEM_DEBUG */
 
-/* static uint8_t * ib_pool_top = NULL; */
-/* uint64_t ib_pool_addr = 0; // TODO: static? */
 static uint8_t* ib_pool_addr = 0;
 static uint8_t* ib_pool_top  = 0;
 static const size_t std_alignment = 16; // TODO: Use sizeof(maxint_t) (?) or similar
@@ -236,8 +234,6 @@ static pthread_mutex_t ib_pool_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 bool use_ib_mem_pool = false;
 bool init_real_calloc_active = false;
-/* void * dlsym_mem = NULL; */
-/* size_t dlsym_mem_len = 0; */
 static unsigned char dlsym_mem_buffer[8192];
 
 static void * (*real_malloc) (size_t)         = NULL;
@@ -313,7 +309,6 @@ void * new_ib_malloc_region(size_t size)
 	return result;
 }
 
-// TODO: locks ok?
 
 /*
  * malloc
@@ -402,7 +397,7 @@ void * realloc(void * ptr, size_t new_size) {
 	}
 
 	if (!ptr) {
-		return malloc(new_size); // works, like standard
+		return malloc(new_size); // This is what standard realloc will do for a null ptr.
 	}
 
 	void * result;
@@ -478,28 +473,8 @@ void free(void * ptr) {
 			real_free(ptr);
 	}
 
-	/* if (!use_ib_mem_pool) { */
-/* #ifdef IB_MEM_DEBUG */
-		/* printf("\tfree() real\n"); */
-/* #endif */
-		/* real_free(ptr); */
-	/* } else if ((uint8_t*)ptr != NULL && ((uint8_t*)ptr <= ib_pool_addr || */
-						 /* (uint8_t*)ptr >= ib_pool_addr + IB_POOL_SIZE)) { */
-/* #ifdef IB_MEM_DEBUG */
-		/* printf("\tIB PTR OUT OF POOL: ptr: %p -------------------------------\n", ptr); */
-		/* printf("\tib_pool_addr       :     %p\n", ib_pool_addr); */
-		/* printf("\tib_pool_addr + SIZE:     %p\n", ib_pool_addr + IB_POOL_SIZE); */
-
-		/* real_free(ptr);  // TODO: trying this. */
-/* #endif */
-	/* } */
-
 	pthread_mutex_unlock(&ib_pool_mutex);
 }
-
-
-
-
 
 
 static uint64_t memparse(const char *ptr)

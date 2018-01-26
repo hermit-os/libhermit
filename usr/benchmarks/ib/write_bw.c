@@ -226,21 +226,13 @@ int main(int argc, char *argv[])
 				printf(RESULT_LINE);
 		}
 
-		/* if (user_param.work_rdma_cm == ON) { */
-			/* if (destroy_ctx(&ctx, &user_param)) { */
-				/* fprintf(stderr, "Failed to destroy resources\n"); */
-				/* return FAILURE; */
-			/* } */
-			/* user_comm.rdma_params->work_rdma_cm = ON; */
-			/* return destroy_ctx(user_comm.rdma_ctx, user_comm.rdma_params); */
-		/* } */
-
 		return destroy_ctx(&ctx, &user_param);
 	}
 
 	if (user_param.test_method == RUN_ALL) {
 
-		for (i = 1; i < 24 ; ++i) {
+		// iterate over all 2^i sizes
+		for (i = 1; i < MAX_SIZE_EXP; ++i) { // !!!
 
 			user_param.size = (uint64_t)1 << i;
 			ctx_set_send_wqes(&ctx, &user_param, rem_dest);
@@ -327,14 +319,6 @@ int main(int argc, char *argv[])
 			printf((user_param.cpu_util_data.enable ? RESULT_EXT_CPU_UTIL : RESULT_EXT));
 			print_full_bw_report(&user_param, &rem_bw_rep, NULL);
 		}
-	/* } else if (user_param.test_method == RUN_INFINITELY) { */
-
-		/* ctx_set_send_wqes(&ctx, &user_param, rem_dest); */
-
-		/* if(run_iter_bw_infinitely(&ctx, &user_param)) { */
-			/* fprintf(stderr, " Error occurred while running infinitely! aborting ...\n"); */
-			/* return FAILURE; */
-		/* } */
 	}
 
 	if (user_param.output == FULL_VERBOSITY) {

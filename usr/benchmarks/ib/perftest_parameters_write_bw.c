@@ -1139,35 +1139,6 @@ static void force_dependecies(struct perftest_parameters *user_param)
 	if (user_param->verb == SEND && user_param->tst == BW && user_param->machine == SERVER && !user_param->duplex )
 		user_param->noPeak = ON;
 
-	/* Run infinitely dependencies */
-	if (user_param->test_method == RUN_INFINITELY) {
-		user_param->noPeak = ON;
-		user_param->test_type = DURATION;
-		if (user_param->use_event) {
-			printf(RESULT_LINE);
-			fprintf(stderr, " run_infinitely does not support events feature yet.\n");
-			exit(1);
-		}
-
-		if (user_param->tst == LAT) {
-			printf(RESULT_LINE);
-			fprintf(stderr, " run_infinitely exists only in BW tests for now.\n");
-			exit(1);
-
-		}
-
-		if (user_param->duplex && user_param->verb == SEND) {
-			printf(RESULT_LINE);
-			fprintf(stderr, " run_infinitely mode is not supported in SEND Bidirectional BW test\n");
-			exit(1);
-		}
-		if (user_param->rate_limit_type != DISABLE_RATE_LIMIT) {
-			printf(RESULT_LINE);
-			fprintf(stderr, " run_infinitely does not support rate limit feature yet\n");
-			exit(1);
-		}
-	}
-
 	if (user_param->connection_type == DC && !user_param->use_srq)
 		user_param->use_srq = 1;
 
@@ -1358,11 +1329,6 @@ static void force_dependecies(struct perftest_parameters *user_param)
 
 		/* if (user_param->duplex) { */
 			/* fprintf(stderr, "Accelerated verbs in perftest supports only unidir tests for now\n"); */
-			/* exit(1); */
-		/* } */
-
-		/* if (user_param->test_method == RUN_INFINITELY) { */
-			/* fprintf(stderr, "Accelerated verbs in perftest does not support Run Infinitely mode for now\n"); */
 			/* exit(1); */
 		/* } */
 	/* } */
@@ -2386,8 +2352,6 @@ void print_report_bw(struct perftest_parameters *user_param, struct bw_report_da
 	long num_of_calculated_iters = user_param->iters;
 
 	int free_my_bw_rep = 0;
-	if (user_param->test_method == RUN_INFINITELY)
-		user_param->tcompleted[opt_posted] = get_cycles();
 
 	cycles_t t, opt_delta, peak_up, peak_down, tsize;
 

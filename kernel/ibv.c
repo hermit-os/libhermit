@@ -1936,7 +1936,7 @@ int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_w
 	struct ibv_send_wr * curr_wr;
 	int num_wrs;
 	int num_sges_max;
-	int is_rdma, is_atomic, is_bind_mw, is_tso;
+	int is_bind_mw, is_tso;
 
 	// Number of work requests in linked list
 	num_wrs = 1;
@@ -1956,29 +1956,13 @@ int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_w
 	struct ibv_send_wr * wr__next[num_wrs];
 	struct ibv_sge *     wr__sg_list[num_wrs];
 	uint64_t             wr__sg_list__addr[num_wrs][num_sges_max];
-	/* uint64_t             wr__wr__rdma__remote_addr[num_wrs]; */
-	/* uint64_t             wr__wr__atomic__remote_addr[num_wrs]; */
 	uint64_t             wr__bind_mw__bind_info__addr[num_wrs];
 	void *               wr__tso__hdr[num_wrs];
 
 	curr_wr = wr;
 	for (int i = 0; i < num_wrs; i++) {
-		/* is_rdma    = curr_wr->opcode == IBV_WR_RDMA_WRITE || */
-								 /* curr_wr->opcode == IBV_WR_RDMA_WRITE_WITH_IMM || */
-								 /* curr_wr->opcode == IBV_WR_RDMA_READ; */
-		/* is_atomic  = curr_wr->opcode == IBV_WR_ATOMIC_CMP_AND_SWP || */
-								 /* curr_wr->opcode == IBV_WR_ATOMIC_FETCH_AND_ADD; */
 		is_bind_mw = curr_wr->opcode == IBV_WR_BIND_MW;
 		is_tso     = curr_wr->opcode == IBV_WR_TSO;
-
-		// union wr: rdma and atomic
-		/* if (is_rdma) { */
-			/* wr__wr__rdma__remote_addr[i] = curr_wr->wr.rdma.remote_addr; */
-			/* curr_wr->wr.rdma.remote_addr = (uint64_t) guest_to_host((size_t) curr_wr->wr.rdma.remote_addr); */
-		/* } else if (is_atomic) { */
-			/* wr__wr__atomic__remote_addr[i] = curr_wr->wr.atomic.remote_addr; */
-			/* curr_wr->wr.atomic.remote_addr = (uint64_t) guest_to_host((size_t) curr_wr->wr.atomic.remote_addr); */
-		/* } */
 
 		// union: bind_mw and tso
 		if (is_bind_mw) {
@@ -2015,20 +1999,8 @@ int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_w
 
 	curr_wr = wr;
 	for (int i = 0; i < num_wrs; i++) {
-		/* is_rdma    = curr_wr->opcode == IBV_WR_RDMA_WRITE || */
-								 /* curr_wr->opcode == IBV_WR_RDMA_WRITE_WITH_IMM || */
-								 /* curr_wr->opcode == IBV_WR_RDMA_READ; */
-		/* is_atomic  = curr_wr->opcode == IBV_WR_ATOMIC_CMP_AND_SWP || */
-								 /* curr_wr->opcode == IBV_WR_ATOMIC_FETCH_AND_ADD; */
 		is_bind_mw = curr_wr->opcode == IBV_WR_BIND_MW;
 		is_tso     = curr_wr->opcode == IBV_WR_TSO;
-
-		// union wr: rdma and atomic
-		/* if (is_rdma) { */
-			/* curr_wr->wr.rdma.remote_addr = wr__wr__rdma__remote_addr[i]; */
-		/* } else if (is_atomic) { */
-			/* curr_wr->wr.atomic.remote_addr = wr__wr__atomic__remote_addr[i]; */
-		/* } */
 
 		// union: bind_mw and tso
 		if (is_bind_mw) {
