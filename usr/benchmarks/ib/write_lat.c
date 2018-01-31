@@ -41,9 +41,9 @@
 #include <unistd.h>
 
 #include "get_clock.h"
-#include "perftest_parameters_write_bw.h"
-#include "perftest_resources_write_bw.h"
-#include "perftest_communication_write_bw.h"
+#include "perftest_parameters.h"
+#include "perftest_resources.h"
+#include "perftest_communication.h"
 
 
 int main(int argc, char *argv[])
@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
 
 	if (user_param.output == FULL_VERBOSITY) {
 		printf(RESULT_LINE);
-		printf("%s", (user_param.test_type == ITERATIONS) ? RESULT_FMT_LAT : RESULT_FMT_LAT_DUR);
+		printf("%s",  RESULT_FMT_LAT);
 		printf((user_param.cpu_util_data.enable ? RESULT_EXT_CPU_UTIL : RESULT_EXT));
 	}
 
@@ -203,8 +203,6 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "Test exited with Error\n");
 				return FAILURE;
 			}
-
-			/* user_param.test_type == ITERATIONS ? print_report_lat(&user_param) : print_report_lat_duration(&user_param); */
 			print_report_lat(&user_param);
 		}
 
@@ -213,7 +211,6 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Test exited with Error\n");
 			return FAILURE;
 		}
-		/* user_param.test_type == ITERATIONS ? print_report_lat(&user_param) : print_report_lat_duration(&user_param); */
 		print_report_lat(&user_param);
 	}
 

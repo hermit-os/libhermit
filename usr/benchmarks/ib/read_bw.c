@@ -38,9 +38,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "perftest_parameters_write_bw.h"
-#include "perftest_resources_write_bw.h"
-#include "perftest_communication_write_bw.h"
+#include "perftest_parameters.h"
+#include "perftest_resources.h"
+#include "perftest_communication.h"
 
 
 int main(int argc, char *argv[])
@@ -280,7 +280,6 @@ int main(int argc, char *argv[])
 		}
 
 	} else if (user_param.test_method == RUN_REGULAR) {
-
 		ctx_set_send_wqes(&ctx, &user_param, rem_dest);
 		if (user_param.perform_warm_up) {
 			if(perform_warm_up(&ctx, &user_param)) {
@@ -323,14 +322,6 @@ int main(int argc, char *argv[])
 			printf((user_param.cpu_util_data.enable ? RESULT_EXT_CPU_UTIL : RESULT_EXT));
 			print_full_bw_report(&user_param, &rem_bw_rep, NULL);
 		}
-
-	/* } else if (user_param.test_method == RUN_INFINITELY) { */
-		/* ctx_set_send_wqes(&ctx, &user_param, rem_dest); */
-
-		/* if(run_iter_bw_infinitely(&ctx, &user_param)) { */
-			/* fprintf(stderr, " Error occurred while running! aborting ...\n"); */
-			/* return FAILURE; */
-		/* } */
 	}
 
 	if (user_param.output == FULL_VERBOSITY) {

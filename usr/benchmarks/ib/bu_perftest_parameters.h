@@ -51,8 +51,8 @@
  *  set_eth_mtu    - set MTU for Raw Ethernet tests.
  */
 
-#ifndef PERFTEST_PARAMETERS_WRITE_BW_H
-#define PERFTEST_PARAMETERS_WRITE_BW_H
+#ifndef PERFTEST_PARAMETERS_H
+#define PERFTEST_PARAMETERS_H
 
 #include <hermit/ibv.h>
 #include <hermit/verbs.h>
@@ -110,15 +110,15 @@
 
 #define VERSION "1"
 
-/* ------------------------------------------------------------------- */
+/* -------------------------------------------------------------------
 
 /* Connection types available. */
-#define RC     (0)
-#define UC     (1)
-#define UD     (2)
-#define RawEth (3)
-#define XRC    (4)
-#define DC     (5)
+#define RC  (0)
+#define UC  (1)
+#define UD  (2)
+#define RawEth  (3)
+#define XRC (4)
+#define DC  (5)
 
 /* Genral control definitions */
 #define OFF	     (0)
@@ -128,15 +128,7 @@
 #define VERSION_EXIT (10)
 #define HELP_EXIT	 (11)
 #define MTU_FIX	     (7)
-
-#define MAX_SIZE_EXP (24)
-// #define MAX_SIZE_EXP (22)
-// #define MAX_SIZE_EXP (21)
-// #define MAX_SIZE_EXP (20)
-// #define MAX_SIZE_EXP (19)
-// #define MAX_SIZE_EXP (18)
-#define MAX_SIZE     (1UL << MAX_SIZE_EXP)
-
+#define MAX_SIZE     (8388608)
 #define LINK_FAILURE (-1)
 #define LINK_UNSPEC (-2)
 #define MAX_OUT_READ_HERMON (16)
@@ -174,7 +166,6 @@
 #define DEF_PAGE_SIZE       (4096)
 #define DEF_FLOWS           (1)
 #define RATE_VALUES_COUNT   (18)
-#define SERVER_NAME         "137.226.133.151"
 
 /* Optimal Values for Inline */
 #define DEF_INLINE_WRITE (220)
@@ -585,7 +576,8 @@ static const struct rate_gbps_string RATE_VALUES[RATE_VALUES_COUNT] = {
 	{IBV_RATE_MAX,      "MAX"}
 };
 
-char * duplicate_str(const char * given_str);
+
+
 
 /* link_layer_str
  *

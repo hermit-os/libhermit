@@ -39,9 +39,9 @@
 #include <string.h>
 #include <time.h>
 
-#include "perftest_parameters_write_bw.h"
-#include "perftest_resources_write_bw.h"
-#include "perftest_communication_write_bw.h"
+#include "perftest_parameters.h"
+#include "perftest_resources.h"
+#include "perftest_communication.h"
 
 
 int main(int argc, char *argv[])

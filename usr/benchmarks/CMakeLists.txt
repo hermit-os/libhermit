@@ -11,18 +11,14 @@ add_executable(hg hg.c hist.c rdtsc.c run.c init.c opt.c report.c setup.c)
 # add_executable(ib-pingpong-ud ib/pingpong.c ib/pingpong-ud.c)
 # add_executable(ib_write_bw ib/write_bw.c ib/get_clock.c ib/perftest_parameters.c
 	 # ib/perftest_resources.c ib/perftest_communication.c)
-add_executable(ib_write_bw ib/write_bw.c ib/get_clock.c
-	ib/perftest_parameters_write_bw.c ib/perftest_resources_write_bw.c
-	ib/perftest_communication_write_bw.c)
-add_executable(ib_write_lat ib/write_lat.c ib/get_clock.c
-	ib/perftest_parameters_write_bw.c ib/perftest_resources_write_bw.c
-	ib/perftest_communication_write_bw.c)
-add_executable(ib_read_bw ib/read_bw.c ib/get_clock.c
-	ib/perftest_parameters_write_bw.c ib/perftest_resources_write_bw.c
-	ib/perftest_communication_write_bw.c)
-add_executable(ib_read_lat ib/read_lat.c ib/get_clock.c
-	ib/perftest_parameters_write_bw.c ib/perftest_resources_write_bw.c
-ib/perftest_communication_write_bw.c)
+add_executable(ib_write_bw ib/write_bw.c ib/get_clock.c ib/perftest_parameters.c
+	ib/perftest_resources.c ib/perftest_communication.c)
+add_executable(ib_write_lat ib/write_lat.c ib/get_clock.c ib/perftest_parameters.c
+	ib/perftest_resources.c ib/perftest_communication.c)
+add_executable(ib_read_bw ib/read_bw.c ib/get_clock.c ib/perftest_parameters.c
+	ib/perftest_resources.c ib/perftest_communication.c)
+add_executable(ib_read_lat ib/read_lat.c ib/get_clock.c ib/perftest_parameters.c
+	ib/perftest_resources.c ib/perftest_communication.c)
 
 add_executable(netio netio.c)
 

@@ -36,15 +36,15 @@
  * Methods : ...
  */
 
-#ifndef PERFTEST_COMMUNICATION_WRITE_BW_H
-#define PERFTEST_COMMUNICATION_WRITE_BW_H
+#ifndef PERFTEST_COMMUNICATION_H
+#define PERFTEST_COMMUNICATION_H
 
 #include <netinet/in.h>
 
 #include <hermit/ibv.h>
 #include <hermit/verbs.h>
 
-#include "perftest_resources_write_bw.h"
+#include "perftest_resources.h"
 
 /* Macro for 64 bit variables to switch to/from net */
 #if __BYTE_ORDER == __BIG_ENDIAN || __BYTE_ORDER == __LITTLE_ENDIAN
@@ -81,9 +81,7 @@
 #define SYNC_SPEC_ID	 (5)
 
 /* The Format of the message we pass through sockets , without passing Gid. */
-// #define KEY_PRINT_FMT "%04x:%04x:%06x:%06x:%08x:%016Lx:%08x"
-// #define KEY_PRINT_FMT "%04x:%04x:%06x:%06x:%08x:%016llx:%08x"
-#define KEY_PRINT_FMT "%04x:%04x:%06x:%06x:%08x:%08Lx:%08Lx:%08x"
+#define KEY_PRINT_FMT "%04x:%04x:%06x:%06x:%08x:%016Lx:%08x"
 
 /* The Format of the message we pass through sockets (With Gid). */
 #define KEY_PRINT_FMT_GID "%04x:%04x:%06x:%06x:%08x:%016Lx:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%08x:"
@@ -95,7 +93,7 @@
 #define READ_FMT       " OUT %#04x"
 
 /* The print format of the pingpong_dest element for RDMA verbs. */
-#define RDMA_FMT       " RKey %#08x VAddr 0x%016llx"
+#define RDMA_FMT       " RKey %#08x VAddr %#016Lx"
 
 /* The print number of SRQ in case of XRC */
 #define XRC_FMT 	   " SRQn %#08x"

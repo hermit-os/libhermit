@@ -41,9 +41,9 @@
 #include <unistd.h>
 
 #include "get_clock.h"
-#include "perftest_parameters_write_bw.h"
-#include "perftest_resources_write_bw.h"
-#include "perftest_communication_write_bw.h"
+#include "perftest_parameters.h"
+#include "perftest_resources.h"
+#include "perftest_communication.h"
 
 int main(int argc, char *argv[])
 {
@@ -166,7 +166,6 @@ int main(int argc, char *argv[])
 
 	user_comm.rdma_params->side = REMOTE;
 	for (i=0; i < user_param.num_of_qps; i++) {
-
 		/* shaking hands and gather the other side info. */
 		if (ctx_hand_shake(&user_comm, &my_dest[i], &rem_dest[i])) {
 			fprintf(stderr, "Failed to exchange data between server and clients\n");
@@ -204,7 +203,6 @@ int main(int argc, char *argv[])
 			printf(RESULT_LINE);
 		}
 		return 0;
-
 	}
 
 	if (user_param.use_event) {
@@ -225,10 +223,9 @@ int main(int argc, char *argv[])
 	if (user_param.test_method == RUN_ALL) {
 		for (i = 1; i < MAX_SIZE_EXP; ++i) {
 			user_param.size = (uint64_t)1 << i;
-			if(run_iter_lat(&ctx, &user_param));
+			if(run_iter_lat(&ctx, &user_param))
 				return 17;
 
-			/* user_param.test_type == ITERATIONS ? print_report_lat(&user_param) : print_report_lat_duration(&user_param); */
 			print_report_lat(&user_param);
 		}
 	} else {
