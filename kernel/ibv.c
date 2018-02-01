@@ -38,6 +38,7 @@
 
 #include <hermit/ibv.h>
 
+#include <asm/processor.h>
 
 extern uint8_t * host_logical_addr;
 
@@ -45,6 +46,12 @@ size_t guest_to_host(size_t address) {
 	return address ? virt_to_phys(address) + (size_t) host_logical_addr : address;
 }
 
+/* inline static unsigned long long rdtsc(void) { */
+	/* unsigned long lo, hi; */
+	/* asm volatile ("rdtsc" : "=a"(lo), "=d"(hi) :: "memory"); */
+
+	/* return ((unsigned long long) hi << 32ULL | (unsigned long long) lo); */
+/* } */
 
 /*
  * ibv_wc_status_str
@@ -1928,9 +1935,15 @@ typedef struct {
 } __attribute__((packed)) uhyve_ibv_post_send_t;
 
 int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_wr ** bad_wr) { // !!!
+	/* LOG_INFO("ibv_post_send\n"); */
+
+	unsigned long long tick_start = rdtsc();
+
 	uhyve_ibv_post_send_t uhyve_args;
 	uhyve_args.qp     = qp;
+	unsigned long long tick_gh = rdtsc();
 	uhyve_args.wr     = (struct ibv_send_wr *)  guest_to_host((size_t) wr);
+	tick_gh = rdtsc() - tick_gh;
 	uhyve_args.bad_wr = (struct ibv_send_wr **) guest_to_host((size_t) bad_wr);
 
 	struct ibv_send_wr * curr_wr;
@@ -1961,6 +1974,7 @@ int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_w
 
 	curr_wr = wr;
 	for (int i = 0; i < num_wrs; i++) {
+		/* LOG_INFO("ibv_post_send for wrs, i = %d\n", i); */
 		is_bind_mw = curr_wr->opcode == IBV_WR_BIND_MW;
 		is_tso     = curr_wr->opcode == IBV_WR_TSO;
 
@@ -1978,6 +1992,7 @@ int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_w
 		curr_wr->next = (struct ibv_send_wr *) guest_to_host((size_t) curr_wr->next);
 
 		for (int s = 0; s < curr_wr->num_sge; s++) {
+			/* LOG_INFO("ibv_post_send for sges, s = %d\n", s); */
 			wr__sg_list__addr[i][s] = curr_wr->sg_list[s].addr;
 			curr_wr->sg_list[s].addr = (uint64_t) guest_to_host((size_t) curr_wr->sg_list[s].addr);
 		}
@@ -1985,13 +2000,17 @@ int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_w
 		wr__sg_list[i] = curr_wr->sg_list;
 		curr_wr->sg_list = (struct ibv_sge *) guest_to_host((size_t) curr_wr->sg_list);
 
-		curr_wr = curr_wr->next;
+		curr_wr = wr__next[i];
 
 		/* LOG_INFO("\tsg_list - guest backup address: %p", wr__sg_list[i]); */
 		/* LOG_INFO("\tsg_list - host address:         %p", curr_wr->sg_list); */
 	}
 
+	unsigned long long tick_pre_work = rdtsc() - tick_start;
+
 	uhyve_send(UHYVE_PORT_IBV_POST_SEND, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	unsigned long long tick_call = rdtsc() - tick_start - tick_pre_work;
 
 	if (*bad_wr && *bad_wr == uhyve_args.wr) {
 		*bad_wr = wr;
@@ -2024,6 +2043,12 @@ int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_w
 		curr_wr = curr_wr->next;
 	}
 
+	unsigned long long tick_post_work = rdtsc() - tick_start - tick_pre_work - tick_call;
+
+	LOG_INFO("tick_gh:        %llu\n", tick_gh);
+	LOG_INFO("tick_pre_work:  %llu\n", tick_pre_work);
+	LOG_INFO("tick_call:      %llu\n", tick_call);
+	LOG_INFO("tick_post_work: %llu\n", tick_post_work);
 	return uhyve_args.ret;
 }
 

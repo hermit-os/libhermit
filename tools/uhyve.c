@@ -222,6 +222,15 @@ typedef struct {
 	char **envp;
 } __attribute__ ((packed)) uhyve_cmdval_t;
 
+static inline unsigned long long rdtsc() {
+	unsigned low, high;
+	unsigned long long val;
+	__asm__ volatile ("rdtsc" : "=a" (low), "=d" (high));
+	val = high;
+	val = (val << 32) | low;
+	return val;
+}
+
 
 // DLSYM
 
@@ -1052,7 +1061,8 @@ static inline void check_network(void)
 static int vcpu_loop(void)
 {
 	int ret;
-
+	unsigned long long ticks_case_exec;
+	/* unsigned long long ticks_ioctl; */
 	if (restart) {
 		pthread_barrier_wait(&barrier);
 		if (cpuid == 0)
@@ -1060,7 +1070,12 @@ static int vcpu_loop(void)
 	}
 
 	while (1) {
+		/* ticks_ioctl = rdtsc(); */
 		ret = ioctl(vcpufd, KVM_RUN, NULL);
+		/* if (run->exit_reason == KVM_EXIT_IO && run->io.port == UHYVE_PORT_IBV_POST_SEND) { */
+			/* ticks_ioctl = rdtsc() - ticks_ioctl; */
+			/* printf(" io: %llu ", ticks_ioctl); */
+		/* } */
 
 		if(ret == -1) {
 			switch(errno) {
@@ -1246,6 +1261,25 @@ static int vcpu_loop(void)
 					break;
 			}
 
+			case UHYVE_PORT_IBV_POST_SEND:
+				/* ticks_case_exec = rdtsc(); */
+				call_ibv_post_send(run, guest_mem);
+				/* ticks_case_exec = rdtsc() - ticks_case_exec; */
+				/* printf(" %llu -- ", ticks_case_exec); */
+				break;
+			case UHYVE_PORT_IBV_POST_RECV:
+				call_ibv_post_recv(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_POLL_CQ:
+				call_ibv_poll_cq(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_POST_WQ_RECV:
+				call_ibv_post_wq_recv(run, guest_mem);
+				break;
+			case UHYVE_PORT_IBV_POST_SRQ_RECV:
+				call_ibv_post_srq_recv(run, guest_mem);
+				break;
+
 			case UHYVE_PORT_IBV_WC_STATUS_STR:
 				call_ibv_wc_status_str(run, guest_mem);
 				break;
@@ -1314,9 +1348,6 @@ static int vcpu_loop(void)
 				break;
 			case UHYVE_PORT_IBV_WC_READ_FLOW_TAG:
 				call_ibv_wc_read_flow_tag(run, guest_mem);
-				break;
-			case UHYVE_PORT_IBV_POST_WQ_RECV:
-				call_ibv_post_wq_recv(run, guest_mem);
 				break;
 			case UHYVE_PORT_IBV_GET_DEVICE_LIST:
 				call_ibv_get_device_list(run, guest_mem);
@@ -1417,9 +1448,6 @@ static int vcpu_loop(void)
 			case UHYVE_PORT_IBV_ACK_CQ_EVENTS:
 				call_ibv_ack_cq_events(run, guest_mem);
 				break;
-			case UHYVE_PORT_IBV_POLL_CQ:
-				call_ibv_poll_cq(run, guest_mem);
-				break;
 			case UHYVE_PORT_IBV_REQ_NOTIFY_CQ:
 				call_ibv_req_notify_cq(run, guest_mem);
 				break;
@@ -1440,9 +1468,6 @@ static int vcpu_loop(void)
 				break;
 			case UHYVE_PORT_IBV_DESTROY_SRQ:
 				call_ibv_destroy_srq(run, guest_mem);
-				break;
-			case UHYVE_PORT_IBV_POST_SRQ_RECV:
-				call_ibv_post_srq_recv(run, guest_mem);
 				break;
 			case UHYVE_PORT_IBV_CREATE_QP:
 				call_ibv_create_qp(run, guest_mem);
@@ -1482,12 +1507,6 @@ static int vcpu_loop(void)
 				break;
 			case UHYVE_PORT_IBV_DESTROY_RWQ_IND_TABLE:
 				call_ibv_destroy_rwq_ind_table(run, guest_mem);
-				break;
-			case UHYVE_PORT_IBV_POST_SEND:
-				call_ibv_post_send(run, guest_mem);
-				break;
-			case UHYVE_PORT_IBV_POST_RECV:
-				call_ibv_post_recv(run, guest_mem);
 				break;
 			case UHYVE_PORT_IBV_CREATE_AH:
 				call_ibv_create_ah(run, guest_mem);

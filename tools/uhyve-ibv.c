@@ -31,6 +31,17 @@
 #include "uhyve-ibv.h"
 
 #include <infiniband/verbs.h>		// Linux include
+#include <stdio.h>
+
+
+static inline unsigned long long rdtsc() {
+	unsigned low, high;
+	unsigned long long val;
+	__asm__ volatile ("rdtsc" : "=a" (low), "=d" (high));
+	val = high;
+	val = (val << 32) | low;
+	return val;
+}
 
 /*
  * ibv_wc_status_str
@@ -1240,7 +1251,10 @@ void call_ibv_post_send(struct kvm_run * run, uint8_t * guest_mem) {
 	/* printf("\t  ->sg_list[0].addr deref 1: %u\n",  *((uint8_t *) args->wr->sg_list[0].addr)); */
 
 	use_ib_mem_pool = true;
+	/* unsigned long long ticks_native_call = rdtsc(); */
 	args->ret = ibv_post_send(args->qp, args->wr, args->bad_wr);
+	/* ticks_native_call = rdtsc() - ticks_native_call; */
+	/* printf(" %llu ", ticks_native_call); */
 	use_ib_mem_pool = false;
 }
 

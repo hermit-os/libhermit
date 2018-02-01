@@ -1,0 +1,62 @@
+
+mydestvaddr:   7f5ee247a000
+
+---------------------------------------------------------------------------------------
+ RDMA_Write BW Test
+ Dual-port : OFF		Device : mlx4_0
+ Number of qps : 1		Transport type : IB
+ Connection type : RC		Using SRQ : OFF
+ TX depth : 128
+ CQ Moderation : 100
+ Mtu : 2048[B]
+ Link type : IB
+ Max inline data : 0[B]
+ rdma_cm QPs : OFF
+ Data ex. method : Ethernet
+---------------------------------------------------------------------------------------
+ local address: LID 0x01 QPN 0x7349 PSN 0x5424a4 RKey 0xc0010187 VAddr 0x00007f5ee247a000
+ remote address: LID 0x08 QPN 0x778c PSN 0x410b11 RKey 0xf00101c8 VAddr 0x00007f2635731000
+---------------------------------------------------------------------------------------
+ #bytes     #iterations    BW peak[MB/sec]    BW average[MB/sec]   MsgRate[Mpps]
+ 2          5000             0.23               0.23   		   0.120540
+ 4          5000             0.46               0.46   		   0.120015
+ 8          5000             0.92               0.92   		   0.120822
+ 16         5000             1.86               1.84   		   0.120431
+ 32         5000             3.70               3.69   		   0.120891
+ 64         5000             7.39               7.38   		   0.120933
+ 128        5000             14.82              14.75  		   0.120830
+ 256        5000             29.53              29.46  		   0.120682
+ 512        5000             59.13              59.00  		   0.120826
+ 1024       5000             118.30             117.96 		   0.120786
+ 2048       5000             236.10             234.05 		   0.119835
+ 4096       5000             477.49             474.19 		   0.121392
+ 8192       5000             957.44             950.06 		   0.121608
+ 16384      5000             1906.81            1888.40		   0.120858
+ 32768      5000             3826.93            3804.22		   0.121735
+ 65536      5000             6021.99            6021.81		   0.096349
+ 131072     5000             5142.98            5125.33		   0.041003
+ 262144     5000             4893.16            4892.36		   0.019569
+ 524288     5000             4632.59            4623.38		   0.009247
+ 1048576    5000             4588.44            4588.44		   0.004588
+---------------------------------------------------------------------------------------
+LOG: UHYVE - call_ibv_get_device_list
+LOG: UHYVE - call_ibv_open_device
+LOG: UHYVE - call_ibv_query_port
+LOG: UHYVE - call_ibv_query_device
+LOG: UHYVE - call_ibv_get_device_name
+LOG: UHYVE - call_ibv_get_device_name
+LOG: UHYVE - call_ibv_query_port
+LOG: UHYVE - call_ibv_query_device
+LOG: UHYVE - call_ibv_alloc_pd
+LOG: UHYVE - call_ibv_reg_mr
+LOG: UHYVE - call_ibv_create_cq
+LOG: UHYVE - call_ibv_create_qp
+LOG: UHYVE - call_ibv_modify_qp
+LOG: UHYVE - call_ibv_query_port
+LOG: UHYVE - call_ibv_modify_qp
+LOG: UHYVE - call_ibv_modify_qp
+LOG: UHYVE - call_ibv_destroy_qp
+LOG: UHYVE - call_ibv_destroy_cq
+LOG: UHYVE - call_ibv_dereg_mr
+LOG: UHYVE - call_ibv_dealloc_pd
+LOG: UHYVE - call_ibv_close_device

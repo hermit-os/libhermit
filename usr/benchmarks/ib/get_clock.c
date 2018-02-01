@@ -39,7 +39,7 @@
 /* #define GET_CPU_MHZ_FROM_PROC 1 */
 
 /* For gettimeofday */
-#define _BSD_SOURCE
+/* #define _BSD_SOURCE */
 #include <sys/time.h>
 
 #include <unistd.h>
@@ -113,12 +113,12 @@ static double sample_get_cpu_mhz(void)
 	b = (MEASUREMENTS * sxy - sx * sy) / (MEASUREMENTS * sxx - sx * sx);
 	a = (sy - b * sx) / MEASUREMENTS;
 
-	if (DEBUG)
+	if (DEBUG) {
 		fprintf(stderr, "a = %g\n", a);
-	if (DEBUG)
 		fprintf(stderr, "b = %g\n", b);
-	if (DEBUG)
 		fprintf(stderr, "a / b = %g\n", a / b);
+  }
+
 	r_2 = (MEASUREMENTS * sxy - sx * sy) * (MEASUREMENTS * sxy - sx * sy) /
 		(MEASUREMENTS * sxx - sx * sx) /
 		(MEASUREMENTS * syy - sy * sy);
@@ -130,6 +130,7 @@ static double sample_get_cpu_mhz(void)
 		return 0;
 	}
 
+  /* printf("sample_get_cpu_mhz, MHz: %e\n", b); */
 	return b;
 }
 
@@ -142,11 +143,7 @@ static double proc_get_cpu_mhz(int no_cpu_freq_warn)
 	int print_flag = 0;
 	double delta;
 
-	#if defined(__FreeBSD__)
-	f = popen("/sbin/sysctl hw.clockrate","r");
-	#else
 	f = fopen("/proc/cpuinfo","r");
-	#endif
 
 	if (!f)
 		return 0.0;
@@ -176,11 +173,7 @@ static double proc_get_cpu_mhz(int no_cpu_freq_warn)
 		rc = sscanf(s, "%lf", &m);
 		m /= 1000000;
 		#else
-		#if defined (__FreeBSD__)
-		rc = sscanf(buf, "hw.clockrate: %lf", &m);
-		#else
 		rc = sscanf(buf, "cpu MHz : %lf", &m);
-		#endif
 		#endif
 
 		if (rc != 1)
@@ -201,11 +194,8 @@ static double proc_get_cpu_mhz(int no_cpu_freq_warn)
 		}
 	}
 
-#if defined(__FreeBSD__)
-	pclose(f);
-#else
 	fclose(f);
-#endif
+  /* printf("proc_get_cpu_mhz, MHz: %e\n", mhz); */
 	return mhz;
 }
 #endif
@@ -226,6 +216,9 @@ double get_cpu_mhz(int no_cpu_freq_warn)
 		return 0;
 
 	delta = proc > sample ? proc - sample : sample - proc;
+  /* printf("proc:   %e\n", proc); */
+  /* printf("sample: %e\n", sample); */
+  /* printf("delta:  %e\n", delta); */
 	if (delta / proc > 0.02) {
 		return sample;
 	}

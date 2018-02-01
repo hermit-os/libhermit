@@ -805,8 +805,8 @@ void alloc_ctx(struct pingpong_context *ctx, struct perftest_parameters *user_pa
 	}
 
 	if (user_param->machine == CLIENT || user_param->tst == LAT || user_param->duplex) {
-		ALLOCATE(ctx->sge_list, struct ibv_sge, user_param->num_of_qps * user_param->post_list);
-		ALLOCATE(ctx->wr, struct ibv_send_wr, user_param->num_of_qps * user_param->post_list);
+		ALLOCATE(ctx->sge_list, struct ibv_sge,     user_param->num_of_qps * user_param->post_list);
+		ALLOCATE(ctx->wr,       struct ibv_send_wr, user_param->num_of_qps * user_param->post_list);
 
 		if ((user_param->verb == SEND && user_param->connection_type == UD ) || user_param->connection_type == DC) {
 			ALLOCATE(ctx->ah, struct ibv_ah*, user_param->num_of_qps);
@@ -1443,8 +1443,7 @@ int run_iter_bw(struct pingpong_context *ctx, struct perftest_parameters *user_p
 	}
 
 	/* main loop for posting - iterations*/
-	while (totscnt < tot_iters || totccnt < tot_iters ||
-		(user_param->test_type == DURATION && user_param->state != END_STATE) ) {
+	while (totscnt < tot_iters || totccnt < tot_iters) {
 
 		/* main loop to run over all the qps and post each time n messages */
 		for (index =0; index < num_of_qps ; index++) {
@@ -1460,7 +1459,7 @@ int run_iter_bw(struct pingpong_context *ctx, struct perftest_parameters *user_p
 			}
 
 			/* Loop to post work requests */
-			while ( (ctx->scnt[index] < user_param->iters || user_param->test_type == DURATION) &&
+			while ( ctx->scnt[index] < user_param->iters &&
               ((ctx->scnt[index] - ctx->ccnt[index]) < (user_param->tx_depth)) &&
 					   !((user_param->rate_limit_type == SW_RATE_LIMIT ) && is_sending_burst == 0)) {
 
@@ -1531,7 +1530,7 @@ int run_iter_bw(struct pingpong_context *ctx, struct perftest_parameters *user_p
 			}
 		}
 
-		if (totccnt < tot_iters || (user_param->test_type == DURATION && totccnt < totscnt)) {
+		if (totccnt < tot_iters) {
 			if (user_param->use_event) {
 				if (ctx_notify_events(ctx->channel)) {
 					fprintf(stderr, "Couldn't request CQ notification\n");
@@ -1568,13 +1567,6 @@ int run_iter_bw(struct pingpong_context *ctx, struct perftest_parameters *user_p
 							user_param->tcompleted[user_param->iters*num_of_qps - 1] = get_cycles();
 						else
 							user_param->tcompleted[totccnt-1] = get_cycles();
-					}
-
-					if (user_param->test_type==DURATION && user_param->state == SAMPLE_STATE) {
-						if (user_param->report_per_port) {
-							user_param->iters_per_port[user_param->port_by_qp[wc_id]] += user_param->cq_mod;
-						}
-						user_param->iters += user_param->cq_mod;
 					}
 				}
 
