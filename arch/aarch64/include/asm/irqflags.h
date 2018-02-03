@@ -50,26 +50,26 @@ extern "C" {
 inline static uint8_t is_irq_enabled(void)
 {
 	size_t flags;
-	//asm volatile("pushf; pop %0": "=r"(flags) : : "memory");
-	if (flags & (1 << 9))
-		return 1;
-	return 0;
+	asm volatile("mrs %0, daif" : "=r"(flags) :: "memory");
+	if (flags & 0b111)
+		return 0;
+	return 1;
 }
 
 /** @brief Disable IRQs
  *
- * This inline function just clears out the interrupt bit
+ * This inline function just set the interrupt bits
  */
  static inline void irq_disable(void) {
-         asm volatile("msr daifset, 0b1111" ::: "memory");
+         asm volatile("msr daifset, 0b111" ::: "memory");
  }
 
 /** @brief Enable IRQs
  *
- * This inline function just sets the interrupt bit
+ * This inline function just clear out the interrupt bits
  */
 static inline void irq_enable(void) {
-        asm volatile("msr daifclr, 0b1111" ::: "memory");
+        asm volatile("msr daifclr, 0b111" ::: "memory");
 }
 
 /** @brief Disable IRQs (nested)
