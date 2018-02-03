@@ -26,8 +26,41 @@
  */
 
 #include <hermit/stdlib.h>
+#include <hermit/stdio.h>
+#include <hermit/logging.h>
+#include <asm/processor.h>
+#include <libfdt.h>
+
+void *dtb __attribute__ ((section (".data")));
 
 uint32_t get_cpu_frequency(void)
 {
+	return 0;
+}
+
+int cpu_detection(void)
+{
+	if (!dtb && (fdt_check_header(dtb) != 0)) {
+        LOG_INFO("device tree blob is invalid\n");
+    }
+
+#if 0
+	uint32_t value = 0;
+
+	LOG_INFO("Enable performance counter\n");
+
+	/* Enable Performance Counter */
+	asm volatile("mrs %0, pmcr_el0" : "=r" (value));
+	value |= ARMV8_PMCR_E; /* Enable */
+	value |= ARMV8_PMCR_C; /* Cycle counter reset */
+	value |= ARMV8_PMCR_P; /* Reset all counters */
+	asm volatile("msr pmcr_el0, %0" : : "r" (value));
+
+	/* Enable cycle counter register */
+	asm volatile("mrs %0, pmcntenset_el0" : "=r" (value));
+	value |= ARMV8_PMCNTENSET_EL0_EN;
+	asm volatile("msr pmcntenset_el0, %0" : : "r" (value));
+#endif
+
 	return 0;
 }

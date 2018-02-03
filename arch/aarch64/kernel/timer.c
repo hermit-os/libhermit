@@ -33,18 +33,16 @@
 #include <hermit/errno.h>
 #include <hermit/spinlock.h>
 #include <hermit/logging.h>
-/*#include <asm/irq.h>
-#include <asm/irqflags.h>
-#include <asm/io.h>*/
 
 /*
  * This will keep track of how many ticks the system
  * has been running for
  */
 DEFINE_PER_CORE(uint64_t, timer_ticks, 0);
+static uint32_t freq_hz;  /* frequency in Hz (updates per second) */
 
-#if 0
 extern uint32_t cpu_freq;
+#if 0
 extern int32_t boot_processor;
 
 #ifdef DYNAMIC_TICKS
@@ -52,6 +50,8 @@ DEFINE_PER_CORE(uint64_t, last_rdtsc, 0);
 uint64_t boot_tsc = 0;
 #endif
 #endif
+
+#define MHZ 1000000
 
 void check_ticks(void)
 {
@@ -75,10 +75,6 @@ void check_ticks(void)
 #endif
 }
 
-static void wakeup_handler(struct state *s)
-{
-}
-
 /*
  * Handles the timer. In this case, it's very simple: We
  * increment the 'timer_ticks' variable every time the
@@ -86,7 +82,6 @@ static void wakeup_handler(struct state *s)
  */
 static void timer_handler(struct state *s)
 {
-#if 0
 #ifndef DYNAMIC_TICKS
 	/* Increment our 'tick counter' */
 	set_per_core(timer_ticks, per_core(timer_ticks)+1);
@@ -104,7 +99,6 @@ static void timer_handler(struct state *s)
 	if (timer_ticks % TIMER_FREQ == 0) {
 		LOG_INFO("One second has passed %d\n", CORE_ID);
 	}
-#endif
 #endif
 }
 
@@ -143,73 +137,27 @@ int timer_wait(unsigned int ticks)
 	return 0;
 }
 
-#if 0
-#define LATCH(f)	((CLOCK_TICK_RATE + f/2) / f)
-#define WAIT_SOME_TIME() do { uint64_t start = rdtsc(); mb(); \
-			      while(rdtsc() - start < 1000000) ; \
-			} while (0)
-
-static int pit_init(void)
-{
-	/*
-	 * Port 0x43 is for initializing the PIT:
-	 *
-	 * 0x34 means the following:
-	 * 0b...     (step-by-step binary representation)
-	 * ...  00  - channel 0
-	 * ...  11  - write two values to counter register:
-	 *            first low-, then high-byte
-	 * ... 010  - mode number 2: "rate generator" / frequency divider
-	 * ...   0  - binary counter (the alternative is BCD)
-	 */
-	outportb(0x43, 0x34);
-
-	WAIT_SOME_TIME();
-
-	/* Port 0x40 is for the counter register of channel 0 */
-
-	outportb(0x40, LATCH(TIMER_FREQ) & 0xFF);   /* low byte  */
-
-	WAIT_SOME_TIME();
-
-	outportb(0x40, LATCH(TIMER_FREQ) >> 8);     /* high byte */
-
-	return 0;
-}
-#endif
-
 /*
- * Sets up the system clock by installing the timer handler
- * into IRQ0
+ * Sets up the system clock
  */
 int timer_init(void)
 {
-#if 0
-#ifdef DYNAMIC_TICKS
-	if (boot_tsc)
-	{
-		set_per_core(last_rdtsc, boot_tsc);
-		return 0;
-	}
-#endif
+	LOG_INFO("Set system counter frequency to %d MHz\n", 1);
 
-	/*
-	 * Installs 'timer_handler' for the PIC and APIC timer,
-	 * only one handler will be later used.
-	 */
-	irq_install_handler(32, timer_handler);
-	irq_install_handler(123, timer_handler);
-	irq_install_handler(121, wakeup_handler);
+	set_cntfrq_el0(1000000);
+	freq_hz = get_cntfrq_el0();
 
-#ifdef DYNAMIC_TICKS
-	boot_tsc = has_rdtscp() ? rdtscp(NULL) : rdtsc();
-	set_per_core(last_rdtsc, boot_tsc);
-#endif
+	LOG_INFO("aarch64_timer: frequency %d KHz\n", freq_hz / 1000);
 
-	if (cpu_freq) // do we need to configure the timer?
-		return 0;
+	uint32_t ctl = get_ctl_el0();
+	ctl &= ~0x7;
+	set_ctl_el0(ctl);
 
-	return pit_init();
-#endif
+	ctl = get_ctl_el0();
+	ctl |= 0x1; /* set enable */
+	ctl &= ~2; /* unmask timer interrupt */
+	set_tval_el0(2*freq_hz);
+	set_ctl_el0(ctl);
+
 	return 0;
 }

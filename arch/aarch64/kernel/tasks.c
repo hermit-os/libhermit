@@ -172,7 +172,7 @@ int is_proxy(void)
 
 void wait_for_task(void)
 {
-
+	HALT;
 }
 
 void wakeup_core(uint32_t core_id)

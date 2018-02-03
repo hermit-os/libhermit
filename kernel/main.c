@@ -132,9 +132,9 @@ static int hermit_init(void)
 
 	koutput_init();
 
-	//system_init();
-	//irq_init();
-	//timer_init();
+	system_init();
+	irq_init();
+	timer_init();
 	multitasking_init();
 	memory_init();
 	//signal_init();
@@ -567,10 +567,9 @@ out:
 	return 0;
 }
 
-int foo() {
-	kputs("Hello from foo\n");
-	LOG_INFO("We can't go over any LOG_INFO.\n");
-	kputs("We went over the LOG_INFO() in foo\n");
+int foo(void) {
+	LOG_INFO("Hello from foo\n");
+
 	return 0;
 }
 
@@ -621,8 +620,8 @@ int hermit_main(void)
 		reschedule();
 	#if 0
 		check_workqueues();
-		wait_for_task();
 	#endif
+		wait_for_task();
 	}
 
 	return 0;
