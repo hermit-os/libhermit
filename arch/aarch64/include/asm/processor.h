@@ -43,6 +43,16 @@
 extern "C" {
 #endif
 
+#define ARMV8_PMCR_E			(1 << 0) /* Enable all counters */
+#define ARMV8_PMCR_P			(1 << 1) /* Reset all counters */
+#define ARMV8_PMCR_C			(1 << 2) /* Cycle counter reset */
+
+#define ARMV8_PMUSERENR_EN		(1 << 0) /* EL0 access enable */
+#define ARMV8_PMUSERENR_CR		(1 << 2) /* Cycle counter read enable */
+#define ARMV8_PMUSERENR_ER		(1 << 3) /* Event counter read enable */
+
+#define ARMV8_PMCNTENSET_EL0_EN	(1 << 31) /* Performance Monitors Count Enable Set register */
+
 // determine the cpu features
 int cpu_detection(void);
 
@@ -179,28 +189,24 @@ static inline size_t read_esr_el1(void) {
         return val;
 }
 
-/** @brief Read out time stamp counter
- *
- * The rdtsc instruction puts a 64 bit time stamp value
- * into EDX:EAX.
- *
+/** @brief Read cycle counter
  * @return The 64 bit time stamp value
  */
-inline static uint64_t rdtsc(void) { return 0; }
+inline static uint64_t rdtsc(void)
+{
+	uint64_t result = 0;
+	asm volatile("mrs %0, pmccntr_el0" : "=r" (result));
+	return result;
+}
 
 inline static uint64_t get_rdtsc(void) { return rdtsc(); }
 
-
-/** @brief: print current pstate
- */
-void dump_pstate(void);
-
 /// A one-instruction-do-nothing
-#define NOP
+#define NOP		asm volatile ("nop")
 /// The PAUSE instruction provides a hint to the processor that the code sequence is a spin-wait loop.
-#define PAUSE
+#define PAUSE	asm volatile ("yield")
 /// The HALT instruction stops the processor until the next interrupt arrives
-#define HALT
+#define HALT	asm volatile ("wfi")
 
 /** @brief Flush Translation Lookaside Buffer
  */
@@ -268,6 +274,73 @@ static inline size_t msb(size_t i) {
 	return ret;
 }
 
+static inline uint32_t get_cntfrq_el0(void)
+{
+	uint32_t val;
+	asm volatile("isb; mrs %0, cntfrq_el0; isb" : "=r" (val) :: "memory");
+	return val;
+}
+
+static inline void set_cntfrq_el0(uint32_t value)
+{
+	asm volatile("isb; msr cntfrq_el0, %0; isb" :: "r"(value) : "memory");
+}
+
+static inline uint32_t get_cntkctl_el1(void)
+{
+	uint32_t value;
+	asm volatile("isb; mrs %0, cntkctl_el1; isb" : "=r" (value) :: "memory");
+	return value;
+}
+
+static inline void set_cntkctl(uint32_t value)
+{
+	asm volatile("isb; msr cntkctl_el1, %0; isb" :: "r" (value) : "memory");
+}
+
+static inline uint64_t get_cntpct_el0(void)
+{
+	uint64_t value;
+	asm volatile("isb; mrs %0, cntpct_el0; isb" : "=r" (value) :: "memory");
+	return value;
+}
+
+static inline void set_cval_el0(uint64_t value)
+{
+	asm volatile("isb; msr cntp_cval_el0, %0; isb" :: "r"(value) : "memory");
+}
+
+static inline uint64_t get_cval_el0(void)
+{
+	uint64_t value;
+	asm volatile("isb; mrs %0, cntp_cval_el0; isb" : "=r" (value) :: "memory");
+	return value;
+}
+
+static inline void set_tval_el0(uint64_t value)
+{
+	asm volatile("isb; msr cntp_tval_el0, %0; isb" :: "r"(value) : "memory");
+}
+
+static inline uint64_t get_tval_el0(void)
+{
+	uint64_t value;
+	asm volatile("isb; mrs %0, cntp_tval_el0; isb" : "=r" (value) :: "memory");
+	return value;
+}
+
+static inline void set_ctl_el0(uint32_t value)
+{
+	asm volatile("isb; msr cntp_ctl_el0, %0; isb" :: "r"(value) : "memory");
+}
+
+static inline uint32_t get_ctl_el0(void)
+{
+	uint32_t value;
+	asm volatile("isb; mrs %0, cntp_ctl_el0; isb" : "=r" (value) :: "memory");
+	return value;
+}
+
 /** @brief Init several subsystems
  *
  * This function calls the initialization procedures for:
@@ -279,7 +352,7 @@ static inline size_t msb(size_t i) {
  */
 inline static int system_init(void)
 {
-	//cpu_detection();
+	cpu_detection();
 
 	return 0;
 }
@@ -313,7 +386,12 @@ void register_task(void);
  *
  * @return 0 in any case.
  */
-static inline int system_calibration(void) {return 0;}
+static inline int system_calibration(void)
+{
+	irq_enable();
+
+	return 0;
+}
 
 #ifdef __cplusplus
 }
