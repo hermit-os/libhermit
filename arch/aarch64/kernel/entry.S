@@ -57,8 +57,19 @@ image_size: .quad 0
 possible_isles: .dword 1
 
 start64:
-  /* Enable I caching */
+  /* disable interrupts */
+  msr daifset, #0b111
+
+  /* store x5=dtb */
+  /*adrp    x1, dtb
+  str     x5, [x1, #:lo12:dtb]*/
+
+  /* Enable I caching, Enable Stack Alignment check & Cache enable */
   mrs x0, sctlr_el1
+  orr x0, x0, #(1 << 1)
+  orr x0, x0, #(1 << 2)
+  orr x0, x0, #(1 << 3)
+  orr x0, x0, #(1 << 4)
   orr x0, x0, #(1 << 12)
   msr sctlr_el1, x0
 
@@ -276,7 +287,8 @@ lower_el_aarch32_serror:
 
 .section .data
 .global boot_stack
-boot_stack: .skip (MAX_CORES*KERNEL_STACK_SIZE)
+.balign 0x10
+boot_stack: .skip KERNEL_STACK_SIZE
 .global boot_ist
 boot_ist: .skip KERNEL_STACK_SIZE
 .global msg
