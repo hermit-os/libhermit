@@ -217,10 +217,15 @@ int enable_dynticks(void)
 	return 0;
 }
 
-int irq_handler(void)
+void do_sync (void *regs)
+{
+	kputs("receive sync\n");
+}
+
+void do_irq (void *regs)
 {
 	kputs("receive interrupt\n");
-
+#if 0
     uint32_t esr = read_esr();
     uint32_t ec = esr >> 24;
     uint32_t iss = esr & 0xFFFFFF;
@@ -236,6 +241,5 @@ int irq_handler(void)
 			kputs("Could not handle data abort: address in far_el1 invalid\n");
 		}
     }
-
-	return 0;
+#endif
 }

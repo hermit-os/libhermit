@@ -98,6 +98,13 @@
 /* Number of virtual address bits for 4KB page */
 #define VA_BITS         39
 
+#define END(name) \
+	.size name, .-name
+
+#define ENDPROC(name) \
+	.type name, @function; \
+	END(name)
+
 .section .mboot
 
 .global _start
@@ -163,7 +170,7 @@ start64:
   isb
 
   /* Set exception table */
-  ldr x0, =vector_table_el1
+  ldr x0, =vector_table
   msr vbar_el1, x0
 
   /* Turning on MMU */
@@ -494,108 +501,222 @@ switch_context:
 
   ret
 
+/*
+ * There are no PUSH/POP instruction in ARMv8.
+ * Use STR and LDR for stack accesses.
+ */
+      .macro push, xreg
+      str     \xreg, [sp, #-8]!
+      .endm
 
-asm_irq_handler:
-  /* Save caller-saved registers according to Procedure Call Standard */
-  stp x17, x18, [sp, #-16]!
-  stp x15, x16, [sp, #-16]!
-  stp x13, x14, [sp, #-16]!
-  stp x11, x12, [sp, #-16]!
-  stp x9, x10, [sp, #-16]!
-  stp x7, x8, [sp, #-16]!
-  stp x5, x6, [sp, #-16]!
-  stp x3, x4, [sp, #-16]!
-  stp x1, x2, [sp, #-16]!
-  stp x0, x1, [sp, #-16]!
+      .macro pop, xreg
+      ldr     \xreg, [sp], #8
+      .endm
 
-  bl irq_handler
+      .macro trap_entry, el
+      sub     sp, sp, #32             // room for LR, SP, SPSR, ELR
+      push    x29
+      push    x28
+      push    x27
+      push    x26
+      push    x25
+      push    x24
+      push    x23
+      push    x22
+      push    x21
+      push    x20
+      push    x19
+      push    x18
+      push    x17
+      push    x16
+      push    x15
+      push    x14
+      push    x13
+      push    x12
+      push    x11
+      push    x10
+      push    x9
+      push    x8
+      push    x7
+      push    x6
+      push    x5
+      push    x4
+      push    x3
+      push    x2
+      push    x1
+      push    x0
+      .if     \el == 0
+      mrs     x21, sp_el0
+      .else
+      add     x21, sp, #272
+      .endif
+      mrs     x22, elr_el1
+      mrs     x23, spsr_el1
+      stp     x30, x21, [sp, #240]
+      stp     x22, x23, [sp, #256]
+      .endm
 
-  /* Restore caller-saved registers */
-  ldp x0, x1, [sp], #16
-  ldp x1, x2, [sp], #16
-  ldp x3, x4, [sp], #16
-  ldp x5, x6, [sp], #16
-  ldp x7, x8, [sp], #16
-  ldp x9, x10, [sp], #16
-  ldp x11, x12, [sp], #16
-  ldp x13, x14, [sp], #16
-  ldp x15, x16, [sp], #16
-  ldp x17, x18, [sp], #16
+      .macro trap_exit, el
+      ldp     x21, x22, [sp, #256]    // load ELR, SPSR
+      .if     \el == 0
+      ldr     x23, [sp, #248]         // load return stack pointer
+      .endif
+      pop     x0
+      pop     x1
+      pop     x2
+      pop     x3
+      pop     x4
+      pop     x5
+      pop     x6
+      pop     x7
+      pop     x8
+      pop     x9
+      msr     elr_el1, x21            // set up the return data
+      msr     spsr_el1, x22
+      .if     \el == 0
+      msr     sp_el0, x23
+      .endif
+      pop     x10
+      pop     x11
+      pop     x12
+      pop     x13
+      pop     x14
+      pop     x15
+      pop     x16
+      pop     x17
+      pop     x18
+      pop     x19
+      pop     x20
+      pop     x21
+      pop     x22
+      pop     x23
+      pop     x24
+      pop     x25
+      pop     x26
+      pop     x27
+      pop     x28
+      pop     x29
+      ldr     x30, [sp], #32
+      .endm
 
-  eret
 
+/*
+ * SYNC & IRQ exception handler.
+ */
+      .align 6
+el1_sync:
+      trap_entry 1
+      mov     x0, sp
+      bl      do_sync
+      trap_exit 1
+      eret
+ENDPROC(el1_sync)
 
-// Exception vector table
-// No nested implementation yet
-.balign 0x800
-vector_table_el1:
-/* Current exception level, sp_el0 */
-curr_el_sp0_sync:
-  bl irq_handler
+      .align 6
+el1_irq:
+      trap_entry 1
+      mov     x0, sp
+      bl      do_irq
+      trap_exit 1
+      eret
+ENDPROC(el1_irq)
 
-.balign 0x80
-curr_el_sp0_irq:
-  bl irq_handler
+      .align 6
+el0_sync:
+      trap_entry 0
+      mov     x0, sp
+      bl      do_sync
+      trap_exit 0
+      eret
+ENDPROC(el0_sync)
 
-.balign 0x80
-curr_el_sp0_fiq:
-  bl irq_handler
+      .align 6
+el0_irq:
+      trap_entry 0
+      mov     x0, sp
+      bl      do_irq
+      trap_exit 0
+      eret
+ENDPROC(el0_irq)
 
-.balign 0x80
-curr_el_sp0_serror:
-  bl irq_handler
+/*
+ * Bad Abort numbers
+ */
+#define BAD_SYNC    0
+#define BAD_IRQ     1
+#define BAD_FIQ     2
+#define BAD_ERROR   3
 
-/* Current exception level, sp_elx */
-.balign 0x80
-curr_el_spx_sync:
-  bl irq_handler
+/*
+ * Exception vector entry
+ */
+.macro ventry label
+.align  7
+b       \label
+.endm
 
-.balign 0x80
-curr_el_spx_irq:
-  bl irq_handler
+.macro invalid, reason
+mov     x0, sp
+mov     x1, #\reason
+b       do_bad_mode
+.endm
 
-.balign 0x80
-curr_el_spx_fiq:
-  bl irq_handler
+el0_sync_invalid:
+   invalid BAD_SYNC
+ENDPROC(el0_sync_invalid)
 
-.balign 0x80
-curr_el_spx_serror:
-  bl irq_handler
+el0_irq_invalid:
+   invalid BAD_IRQ
+ENDPROC(el0_irq_invalid)
 
-/* Lower exception level, coming from AArch64 */
-.balign 0x80
-lower_el_aarch64_sync:
-  bl irq_handler
+el0_fiq_invalid:
+   invalid BAD_FIQ
+ENDPROC(el0_fiq_invalid)
 
-.balign 0x80
-lower_el_aarch64_irq:
-  bl irq_handler
+el0_error_invalid:
+   invalid BAD_ERROR
+ENDPROC(el0_error_invalid)
 
-.balign 0x80
-lower_el_aarch64_fiq:
-  bl irq_handler
+el1_sync_invalid:
+   invalid BAD_SYNC
+ENDPROC(el1_sync_invalid)
 
-.balign 0x80
-lower_el_aarch64_serror:
-  bl irq_handler
+el1_irq_invalid:
+   invalid BAD_IRQ
+ENDPROC(el1_irq_invalid)
 
-/* Lower exception level, coming from AArch32 */
-.balign 0x80
-lower_el_aarch32_sync:
-  bl irq_handler
+el1_fiq_invalid:
+   invalid BAD_FIQ
+ENDPROC(el1_fiq_invalid)
 
-.balign 0x80
-lower_el_aarch32_irq:
-  bl irq_handler
+el1_error_invalid:
+   invalid BAD_ERROR
+ENDPROC(el1_error_invalid)
 
-.balign 0x80
-lower_el_aarch32_fiq:
-  bl irq_handler
+vector_table:
+/* Current EL with SP0 */
+ventry el1_sync_invalid         // Synchronous EL1t
+ventry el1_irq_invalid          // IRQ EL1t
+ventry el1_fiq_invalid          // FIQ EL1t
+ventry el1_error_invalid        // Error EL1t
 
-.balign 0x80
-lower_el_aarch32_serror:
-  bl irq_handler
+/* Current EL with SPx */
+ventry el1_sync                 // Synchronous EL1h
+ventry el1_irq                  // IRQ EL1h
+ventry el1_fiq_invalid          // FIQ EL1h
+ventry el1_error_invalid        // Error EL1h
 
+/* Lower EL using AArch64 */
+ventry el0_sync                 // Synchronous 64-bit EL0
+ventry el0_irq                  // IRQ 64-bit EL0
+ventry el0_fiq_invalid          // FIQ 64-bit EL0
+ventry el0_error_invalid        // Error 64-bit EL0
+
+/* Lower EL using AArch32 */
+ventry el0_sync_invalid         // Synchronous 32-bit EL0
+ventry el0_irq_invalid          // IRQ 32-bit EL0
+ventry el0_fiq_invalid          // FIQ 32-bit EL0
+ventry el0_error_invalid        // Error 32-bit EL0
 
 .section .data
 .global boot_stack

@@ -182,3 +182,14 @@ void wakeup_core(uint32_t core_id)
 void shutdown_system(void)
 {
 }
+
+/*
+ * TODO
+ */
+void do_bad_mode (void *regs, int reason)
+{
+	LOG_ERROR("Receive unhandled exception: %d\n", reason);
+	while (1) {
+		HALT;
+	}
+}
