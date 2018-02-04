@@ -66,146 +66,148 @@
 #define GICC_DIR			0x1000
 #define GICC_PRIODROP		GICC_EOIR
 
-#define IRQ_TYPE_LEVEL		0x0
-#define IRQ_TYPE_EDGE		0x1
+#define TIMER_IRQ			27
 
 static size_t gicd_base = GICD_BASE;
 static size_t gicc_base = GICC_BASE;
-static unsigned char cpu_targets[MAX_CORES] = {[0 ... MAX_CORES-1] = 0};
 
 static inline uint32_t gicd_read(size_t off)
 {
-	return *((uint32_t*)(gicd_base + off));
+	uint32_t value;
+	asm volatile("ldr %0, [%1]" : "=&r"(value) : "r"(gicd_base + off));
+    rmb();
+	return value;
 }
 
 static inline void gicd_write(size_t off, uint32_t value)
 {
-	*((uint32_t*)(gicd_base + off)) = value;
+	asm volatile("str %0, [%1]" :: "r"(value), "r"(gicd_base + off));
+    wmb();
 }
 
 static inline uint32_t gicd_read_reg(size_t off, uint32_t reg)
 {
-	return *((uint32_t*)(gicd_base + off + reg));
+	uint32_t value;
+	asm volatile("ldr %0, [%1]" : "=&r"(value) : "r"(gicd_base + off + reg));
+	rmb();
+	return value;
 }
 
 static inline void gicd_write_reg(size_t off, uint32_t reg, uint32_t value)
 {
-	*((uint32_t*)(gicd_base + off + reg)) = value;
-}
-
-static inline void gicd_write_reg_grp(uint32_t reg, uint32_t irq, uint8_t value)
-{
-    uint32_t offset = reg + (irq / 32) * 4;
-    uint32_t shift = irq % 32;
-    uint32_t old = gicd_read(offset);
-
-    old &= ~(1 << shift);
-    old |= value << shift;
-
-    *((uint32_t*)(gicd_base + offset)) = old;
-}
-
-static inline uint8_t gicd_read_reg_grp(uint32_t reg, uint32_t irq)
-{
-	uint32_t offset = reg + (irq / 32) * 4;
-	uint32_t mask = 1 << (irq % 32);
-
-    return (*((uint32_t*)(gicd_base + offset))) & mask ? 1 : 0;
+	asm volatile("str %0, [%1]" :: "r"(value), "r"(gicd_base + off + reg));
+	wmb();
 }
 
 static inline uint32_t gicc_read(size_t off)
 {
-	return *((uint32_t*)(gicc_base + off));
+	uint32_t value;
+	asm volatile("ldr %0, [%1]" : "=&r"(value) : "r"(gicc_base + off));
+	rmb();
+	return value;
 }
 
 static inline void gicc_write(size_t off, uint32_t value)
 {
-	*((uint32_t*)(gicc_base + off)) = value;
+	asm volatile("str %0, [%1]" :: "r"(value), "r"(gicc_base + off));
+    wmb();
 }
 
-void set_irq_type(uint32_t id, uint32_t type)
+static void gic_enable_interrupts(void)
 {
-	gicd_write_reg_grp(GICD_ICFGR, id, 1);
+	// Global enable forwarding interrupts from distributor to cpu interface
+	uint32_t ctlr = gicd_read(GICD_CTLR);
+	ctlr |= 1;
+	gicd_write(GICD_CTLR, ctlr);
+
+	// Global enable signalling of interrupt from the cpu interface
+	ctlr = gicc_read(GICC_CTLR);
+	ctlr |= 1;
+	gicc_write(GICC_CTLR, ctlr);
+}
+
+static void gic_disable_interrupts(void)
+{
+	// Global disable signalling of interrupt from the cpu interface
+	uint32_t ctlr = gicc_read(GICC_CTLR);
+	ctlr = ctlr & ~1;
+	gicc_write(GICC_CTLR, ctlr);
+
+	// Global disable forwarding interrupts from distributor to cpu interface
+	ctlr = gicd_read(GICD_CTLR);
+	ctlr = ctlr & ~1;
+	gicd_write(GICD_CTLR, ctlr);
+}
+
+static void gic_cpu_set_priority(char priority)
+{
+    gicc_write(GICC_PMR, priority & 0x000000FF);
+}
+
+static void gic_set_priority(int irq_number, unsigned char priority)
+{
+    uint32_t value = gicd_read_reg(GICD_IPRIORITYR, irq_number >> 2);
+    value &= ~(0xff << (8 * (irq_number & 0x3))); // clear old priority
+    value |= priority << (8 * (irq_number & 0x3)); // set new priority
+    gicd_write_reg(GICD_IPRIORITYR, irq_number >> 2, value);
+}
+
+static void gic_route_interrupt(int irq_number, unsigned char cpu_set)
+{
+    uint32_t value = gicd_read_reg(GICD_ITARGETSR, irq_number >> 2);
+    value &= ~(0xff << (8 * (irq_number & 0x3))); // clear old target
+    value |= cpu_set << (8 * (irq_number & 0x3)); // set new target
+    gicd_write_reg(GICD_ITARGETSR, irq_number >> 2, value);
+}
+
+static inline void clear_bit_non_atomic(int nr, volatile void *base)
+{
+    volatile uint32_t *tmp = base;
+    tmp[nr >> 5] &= (unsigned long)~(1 << (nr & 0x1f));
+}
+
+static inline void set_bit_non_atomic(int nr, volatile void *base)
+{
+    volatile uint32_t *tmp = base;
+    tmp[nr >> 5] |= (1 << (nr & 0x1f));
+}
+
+static void gic_enable_interrupt(int irq_number, unsigned char cpu_set, unsigned char level_sensitive)
+{
+    int *set_enable_reg;
+    void *cfg_reg;
+
+    // set priority
+    gic_set_priority(irq_number, 0x0);
+
+    // set target cpus for this interrupt
+    gic_route_interrupt(irq_number, cpu_set);
+
+    // set level/edge triggered
+    cfg_reg = (void *)gicd_read(GICD_ICFGR);
+	LOG_INFO("Found GICD_ICFGR at %p\n", cfg_reg);
+    if (level_sensitive) {
+        clear_bit_non_atomic((irq_number * 2) + 1, cfg_reg);
+    } else {
+        set_bit_non_atomic((irq_number * 2) + 1, cfg_reg);
+    }
+    wmb();
+
+    // enable forwarding interrupt from distributor to cpu interface
+    set_enable_reg = (int *)gicd_read(GICD_ISENABLER);
+    set_enable_reg[irq_number >> 5] = 1 << (irq_number & 0x1f);
+    wmb();
 }
 
 int irq_init(void)
 {
-	int smp_idx = 0;
-	uint64_t ctlr;
-	unsigned char my_mask = 0;
-
 	LOG_INFO("Enable interrupt handling\n");
 
-	for (int i = 16; i < 32; i++) { /* check PPIs target */
-		my_mask = gicd_read_reg_grp(GICD_ITARGETSR, i);
-		if (my_mask) {
-			cpu_targets[smp_idx] = my_mask;
-			break;
-		}
-	}
+	gic_disable_interrupts();
+	gic_cpu_set_priority(0xFF);
+	gic_enable_interrupts();
 
-	if (!my_mask) {
-		LOG_INFO("Assuming uniprocessor\n");
-		cpu_targets[smp_idx] = 0;
-	}
-
-	/* set priority mask register for CPU */
-	for (int i = 0; i < 32; i += 4) {
-		gicc_write(GICC_PMR, 0xf0);
-	}
-
-	/* enable CPU interface */
-	ctlr = gicc_read(GICC_CTLR);
-	ctlr |= 1;
-	gicc_write(GICC_CTLR, ctlr);
-
-	LOG_INFO("CPU interface enabled.\n");
-
-	/* Disable the distributor before going further */
-	ctlr = gicd_read(GICD_CTLR);
-	ctlr = ctlr & ~1;
-	gicd_write(GICD_CTLR, ctlr);
-
-	uint32_t int_nr = ((gicd_read(GICD_TYPER) & 0x1f)+1)*32;
-	LOG_INFO("Number of supported interrupts %d\n", int_nr);
-
-	/* set all SPIs to level-sensitive at the start */
-	for (uint32_t i = 32; i<int_nr; i+=16)
-		gicd_write_reg(GICD_ICFGR, i / 4, 0);
-
-	if (my_mask) {
-		my_mask |= my_mask << 8;  /* duplicate pattern (x2) */
-		my_mask |= my_mask << 16; /* duplicate pattern (x4) */
-	}
-
-	/* set priority */
-	for (uint32_t i=32; i<int_nr; i+=4) {
-		if (my_mask) {
-			gicd_write_reg(GICD_ITARGETSR, i, my_mask);
-		}
-
-		gicd_write_reg(GICD_IPRIORITYR, i, 0xc0c0c0c0);
-	}
-
-	/* disable all Shared Peripheral Interrupts (SPI) */
-	for (uint32_t i=32; i<int_nr; i+=32)
-		gicd_write_reg(GICD_ICENABLER, i / 8, 0xffffffff);
-
-	/* disable all Private Peripheral Interrupts (PPI) interrupts */
-	gicd_write_reg(GICD_ICENABLER, 0, 0xffff0000);
-
-	/* enable all Software Generated Interrupts (SGI) interrupts */
-	gicd_write_reg(GICD_ISENABLER, 0, 0x0000ffff);
-
-	/* set priority on SGI/PPI (at least bits [7:4] must be implemented) */
-	for (uint32_t i=0; i<32; i+=4)
-		gicd_write_reg(GICD_IPRIORITYR, i, 0xc0c0c0c0);
-
-	/* enable distributor interface */
-	ctlr |= 1;
-	gicd_write(GICD_CTLR, ctlr);
-
-	set_irq_type(16+11, IRQ_TYPE_EDGE);
+	//gic_enable_interrupt(TIMER_IRQ /* interrupt number */, 0x1 /*cpu_set*/, 0x1 /*level_sensitive*/);
 
 	return 0;
 }
@@ -217,17 +219,18 @@ int enable_dynticks(void)
 
 int irq_handler(void)
 {
-    uint32_t esr = read_esr_el1();
+	kputs("receive interrupt\n");
+
+    uint32_t esr = read_esr();
     uint32_t ec = esr >> 24;
     uint32_t iss = esr & 0xFFFFFF;
 
-	kputs("receive interrupt\n");
 	/* data abort from lower or current level */
     if (ec == 0b100100 || ec == 0b100101) {
 		/* check if value in far_el1 is valid */
 		if (!(iss & (1 << 10))) {
 			/* read far_el1 register, which holds the faulting virtual address */
-            uint64_t far = read_far_el1();
+            uint64_t far = read_far();
 			//page_fault_handler(far);
 		} else {
 			kputs("Could not handle data abort: address in far_el1 invalid\n");

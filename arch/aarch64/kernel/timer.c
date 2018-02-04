@@ -144,20 +144,20 @@ int timer_init(void)
 {
 	LOG_INFO("Set system counter frequency to %d MHz\n", 1);
 
-	set_cntfrq_el0(1000000);
-	freq_hz = get_cntfrq_el0();
+	set_cntfrq(1000000);
+	freq_hz = get_cntfrq();
 
 	LOG_INFO("aarch64_timer: frequency %d KHz\n", freq_hz / 1000);
 
-	uint32_t ctl = get_ctl_el0();
+	uint32_t ctl = get_cntv_ctl();
 	ctl &= ~0x7;
-	set_ctl_el0(ctl);
+	set_cntv_ctl(ctl);
 
-	ctl = get_ctl_el0();
+	ctl = get_cntv_ctl();
 	ctl |= 0x1; /* set enable */
 	ctl &= ~2; /* unmask timer interrupt */
-	set_tval_el0(2*freq_hz);
-	set_ctl_el0(ctl);
+	set_cntv_tval(freq_hz);
+	set_cntv_ctl(ctl);
 
 	return 0;
 }

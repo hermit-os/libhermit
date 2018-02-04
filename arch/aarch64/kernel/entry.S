@@ -26,11 +26,77 @@
  */
 
 /*
- * This is the kernel's entry point. We could either call main here,
- * or we can use this to setup the stack or other nice stuff.
+ * This is the kernel's entry point, which is derived from Xen's Mini-OS.
  */
 
 #include <hermit/config.h>
+
+#define MAIR(attr, mt)  ((attr) << ((mt) * 8))
+
+#define PAGE_SHIFT	12
+#define PAGE_SIZE	(1 << PAGE_SHIFT)
+#define PAGE_MASK	(~(PAGE_SIZE-1))
+
+/* Level 1 table, 1GiB per entry */
+#define L1_SHIFT	30
+#define L1_SIZE		(1 << L1_SHIFT)
+#define L1_OFFSET	(L1_SIZE - 1)
+#define L1_INVAL	L0_INVAL
+#define L1_BLOCK	L0_BLOCK
+#define L1_TABLE	L0_TABLE
+#define L1_MASK		(~(L1_SIZE-1))
+
+/* Level 2 table, 2MiB per entry */
+#define L2_SHIFT	21
+#define L2_SIZE		(1 << L2_SHIFT)
+#define L2_OFFSET	(L2_SIZE - 1)
+#define L2_INVAL	L0_INVAL
+#define L2_BLOCK	L0_BLOCK
+#define L2_TABLE	L0_TABLE
+#define L2_MASK		(~(L2_SIZE-1))
+
+/* Level 3 table, 4KiB per entry */
+#define L3_SHIFT            12
+#define L3_SIZE             (1 << L3_SHIFT)
+#define L3_OFFSET           (L3_SIZE - 1)
+#define L3_INVAL            0x0
+        /* 0x1 is reserved */
+        /* 0x2 also marks an invalid address */
+#define L3_PAGE             0x3
+#define L3_MASK             (~(L3_SIZE-1))
+#define Ln_ENTRIES	(1 << 9)
+#define Ln_ADDR_MASK	(Ln_ENTRIES - 1)
+
+#define ATTR_MASK_L	0xfff
+
+#define PT_PT		0x3
+#define PT_MEM		0x711
+#define TCR_FLAGS	(TCR_IRGN_WBWA | TCR_ORGN_WBWA | TCR_SHARED)
+
+/*
+ * Memory types available.
+ */
+#define MT_DEVICE_nGnRnE    0
+#define MT_DEVICE_nGnRE     1
+#define MT_DEVICE_GRE       2
+#define MT_NORMAL_NC        3
+#define MT_NORMAL           4
+
+/*
+ * TCR flags
+ */
+#define TCR_TxSZ(x)     ((((64) - (x)) << 16) | (((64) - (x)) << 0))
+#define TCR_IRGN_WBWA   (((1) << 8) | ((1) << 24))
+#define TCR_ORGN_WBWA   (((1) << 10) | ((1) << 26))
+#define TCR_SHARED      (((3) << 12) | ((3) << 28))
+#define TCR_TBI0        ((1) << 37)
+#define TCR_TBI1        ((1) << 38)
+#define TCR_ASID16      ((1) << 36)
+#define TCR_IPS_40BIT   ((2) << 32)
+#define TCR_TG1_4K      ((2) << 30)
+
+/* Number of virtual address bits for 4KB page */
+#define VA_BITS         39
 
 .section .mboot
 
@@ -64,55 +130,84 @@ start64:
   /*adrp    x1, dtb
   str     x5, [x1, #:lo12:dtb]*/
 
-  /* Enable I caching, Enable Stack Alignment check & Cache enable */
-  mrs x0, sctlr_el1
-  orr x0, x0, #(1 << 1)
-  orr x0, x0, #(1 << 2)
-  orr x0, x0, #(1 << 3)
-  orr x0, x0, #(1 << 4)
-  orr x0, x0, #(1 << 12)
-  msr sctlr_el1, x0
+  /*
+   * Disable the MMU. We may have entered the kernel with it on and
+   * will need to update the tables later. If this has been set up
+   * with anything other than a VA == PA map then this will fail,
+   * but in this case the code to find where we are running from
+   * would have also failed.
+   */
+  dsb sy
+  mrs x2, sctlr_el1
+  bic x2, x2, #0x1
+  msr sctlr_el1, x2
+  isb
 
-  /* Select sp_el0 as stack pointer */
-  //msr  spsel, #0
+  /* Calculate where we are */
+  bl _calc_offset
+
+  /* Setup CPU for turnning the MMU on. */
+  bl _setup_cpu
+
+  /* Setup the initial page table. */
+  bl _setup_initial_pgtable
+
+  /*
+   * Setup the identity mapping
+   */
+  bl _setup_idmap_pgtable
+
+  /* Load TTBRx */
+  msr     ttbr1_el1, x4
+  msr     ttbr0_el1, x5
+  isb
 
   /* Set exception table */
   ldr x0, =vector_table_el1
   msr vbar_el1, x0
 
+  /* Turning on MMU */
+  dsb sy
+
+  /*
+   * Prepare system control register (SCTRL)
+   *
+   *
+   *   UCI     [26] Enables EL0 access in AArch64 for DC CVAU, DC CIVAC,
+                    DC CVAC and IC IVAU instructions
+   *   EE      [25] Explicit data accesses at EL1 and Stage 1 translation
+                    table walks at EL1 & EL0 are little-endian
+   *   EOE     [24] Explicit data accesses at EL0 are little-endian
+   *   WXN     [19] Regions with write permission are not forced to XN
+   *   nTWE    [18] WFE instructions are executed as normal
+   *   nTWI    [16] WFI instructions are executed as normal
+   *   UCT     [15] Enables EL0 access in AArch64 to the CTR_EL0 register
+   *   DZE     [14] Execution of the DC ZVA instruction is allowed at EL0
+   *   I       [12] Instruction caches enabled at EL0 and EL1
+   *   UMA     [9]  Disable access to the interrupt masks from EL0
+   *   SED     [8]  The SETEND instruction is available
+   *   ITD     [7]  The IT instruction functionality is available
+   *   THEE    [6]  ThumbEE is disabled
+   *   CP15BEN [5]  CP15 barrier operations disabled
+   *   SA0     [4]  Stack Alignment check for EL0 enabled
+   *   SA      [3]  Stack Alignment check enabled
+   *   C       [2]  Data and unified enabled
+   *   A       [1]  Alignment fault checking disabled
+   *   M       [0]  MMU disabled
+   */
+  ldr x0, =0x34d5d905
+  msr sctlr_el1, x0
+
+  ldr     x0, =mmu_on
+  br      x0
+
+mmu_on:
   /* Pointer to stack base  */
   ldr x1, =(boot_stack+KERNEL_STACK_SIZE-0xF)
   mov sp, x1
 
-  /* Return current exception level */
-  bl koutput_init
-  mrs x0, CurrentEl
-  sub x0, x0, #3
-  //msr DAIFClr, #0b1111
-  //mrs x0, DAIF
-  //mrs x0, hcr_el2
-
-  /* Test floating point */
-  //fmov d0, #5.0
-  //fmov d1, #2.0
-  //fdiv d0, d0, d1
-  //fmov x0, d0
-  //mrs x0, fpcr
-  //mrs x0, fpsr
-
   /* Test core ID */
   mrs x0, mpidr_el1
-
-//   /* Enter user space */
-//   ldr x0, =el0_return
-//   msr elr_el1, x0
-//   eret
-// el0_return:
-//
-//   /* Return current exception level */
-//   mrs x0, CurrentEl
-//   sub x0, x0, #3
-//   bl irq_handler
 
   bl hermit_main
 
@@ -120,6 +215,229 @@ start64:
 halt:
   wfe
   b halt
+
+.section .text
+
+_setup_cpu:
+    ic      iallu
+    tlbi    vmalle1is
+    dsb     ish
+
+    /*
+     * Setup memory attribute type tables
+     *
+     * Memory regioin attributes for LPAE:
+     *
+     *   n = AttrIndx[2:0]
+     *                      n       MAIR
+     *   DEVICE_nGnRnE      000     00000000 (0x00)
+     *   DEVICE_nGnRE       001     00000100 (0x04)
+     *   DEVICE_GRE         010     00001100 (0x0c)
+     *   NORMAL_NC          011     01000100 (0x44)
+     *   NORMAL             100     11111111 (0xff)
+     */
+    ldr     x0, =(MAIR(0x00, MT_DEVICE_nGnRnE) | \
+                 MAIR(0x04, MT_DEVICE_nGnRE) | \
+                 MAIR(0x0c, MT_DEVICE_GRE) | \
+                 MAIR(0x44, MT_NORMAL_NC) | \
+                 MAIR(0xff, MT_NORMAL))
+    msr     mair_el1, x0
+
+    /*
+     * Setup translation control register (TCR)
+     */
+    ldr     x0, =(TCR_TxSZ(VA_BITS) | TCR_ASID16 | TCR_TG1_4K \
+                | TCR_FLAGS )
+    mrs     x1, ID_AA64MMFR0_EL1
+    bfi     x0, x1, #32, #3
+    msr     tcr_el1, x0
+
+    /*
+     * Enable FP/ASIMD
+     */
+    mov     x0, #3 << 20
+    msr     cpacr_el1, x0
+
+    /*
+     * Reset mdscr_el1
+     */
+    msr     mdscr_el1, xzr
+
+    ret
+
+_setup_initial_pgtable:
+    ldr     x4, =boot_l1_pgtable
+    ldr     x5, =boot_l2_pgtable
+
+    sub     x4, x4, x22             // x4 := paddr (boot_l1_pgtable)
+    sub     x5, x5, x22             // x5 := paddr (boot_l2_pgtable)
+
+
+    /* Clear level-1 boot page table */
+    mov     x0, x4
+    add     x1, x0, #PAGE_SIZE
+1:  stp     xzr, xzr, [x0], #16
+    stp     xzr, xzr, [x0], #16
+    stp     xzr, xzr, [x0], #16
+    stp     xzr, xzr, [x0], #16
+    cmp     x0, x1
+    b.lo    1b
+
+    /* Clear level-2 boot page table */
+    mov     x0, x5
+    add     x1, x0, #PAGE_SIZE
+1:  stp     xzr, xzr, [x0], #16
+    stp     xzr, xzr, [x0], #16
+    stp     xzr, xzr, [x0], #16
+    stp     xzr, xzr, [x0], #16
+    cmp     x0, x1
+    b.lo    1b
+
+	/* Clear fixmap page table */
+	ldr     x0, =fixmap_pgtable
+	add     x1, x0, #PAGE_SIZE
+2:  stp     xzr, xzr, [x0], #16
+	stp     xzr, xzr, [x0], #16
+	stp     xzr, xzr, [x0], #16
+	stp     xzr, xzr, [x0], #16
+	cmp     x0, x1
+	b.lo    2b
+
+    /* Find the size of the kernel */
+    ldr     x0, =kernel_start
+    ldr     x1, =kernel_end
+    sub     x2, x1, x0
+    /* Get the number of l2 pages to allocate, rounded down */
+    lsr     x2, x2, #L2_SHIFT
+    /* Add 4 MiB for any rounding above and the module data */
+    add     x2, x2, #2                  // x2 := total number of entries
+
+    /* Find the table index */
+    lsr     x3, x0, #L2_SHIFT           // L2_SHIFT = 21
+    and     x3, x3, #Ln_ADDR_MASK       // x3 := index of l2 table
+
+    /* Build the L2 block entries */
+    sub     x6, x0, x22                 // x6 := paddr(_text)
+    lsr     x6, x6, #L2_SHIFT           // L2_SHIFT = 21
+    mov     x7, #PT_MEM
+1:  orr     x7, x7, x6, lsl #L2_SHIFT   // x7 := l2 pgtbl entry content
+
+    /* Store the entry */
+    str     x7, [x5, x3, lsl #3]
+
+    /* Clear the address bits */
+    and     x7, x7, #ATTR_MASK_L
+
+    sub     x2, x2, #1
+    add     x3, x3, #1
+    add     x6, x6, #1
+    cbnz    x2, 1b
+
+    /* Link the l1 -> l2 table */
+    /* Find the table index */
+    lsr     x3, x0, #L1_SHIFT           // L1_SHIFT = 30
+    and     x3, x3, #Ln_ADDR_MASK       // x3 := index of l1 table
+
+
+    /* Build the L1 page table entry */
+    ldr     x7, =PT_PT
+    lsr     x9, x5, #12
+    orr     x7, x7, x9, lsl #12
+
+    /* Store the entry */
+    str     x7, [x4, x3, lsl #3]
+
+	/* Find the table index of the uart device */
+	mov     x0, 0x09000000  /* default address of QEMU */
+	mov		x2, 1	/* only one entry required */
+	ldr     x5, =fixmap_pgtable
+
+	/* Build the L2 block entries */
+    sub     x6, x0, x22                 // x6 := paddr(_text)
+    lsr     x6, x6, #L2_SHIFT           // L2_SHIFT = 21
+    mov     x7, #PT_MEM
+1:  orr     x7, x7, x6, lsl #L2_SHIFT   // x7 := l2 pgtbl entry content
+
+    /* Store the entry */
+    str     x7, [x5, x3, lsl #3]
+
+    /* Clear the address bits */
+    and     x7, x7, #ATTR_MASK_L
+
+    sub     x2, x2, #1
+    add     x3, x3, #1
+    add     x6, x6, #1
+    cbnz    x2, 1b
+
+    /* Link the l1 -> l2 table */
+    /* Find the table index */
+    lsr     x3, x0, #L1_SHIFT           // L1_SHIFT = 30
+    and     x3, x3, #Ln_ADDR_MASK       // x3 := index of l1 table
+
+
+    /* Build the L1 page table entry */
+    ldr     x7, =PT_PT
+    lsr     x9, x5, #12
+    orr     x7, x7, x9, lsl #12
+
+    /* Store the entry */
+    str     x7, [x4, x3, lsl #3]
+
+    ret
+
+_calc_offset:
+    ldr     x22, =_start             // x0 := vaddr(_start)
+    adr     x21, _start              // x21 := paddr(_start)
+    sub     x22, x22, x21            // x22 := phys-offset (vaddr - paddr)
+    ret
+
+_setup_idmap_pgtable:
+    ldr     x5, =idmap_pgtable
+    sub     x5, x5, x22             // x5 := paddr(idmap_pgtable)
+
+    /* Clear identity mapping page table */
+    mov     x0, x5
+    add     x1, x0, #PAGE_SIZE
+1:  stp     xzr, xzr, [x0], #16
+    stp     xzr, xzr, [x0], #16
+    stp     xzr, xzr, [x0], #16
+    stp     xzr, xzr, [x0], #16
+    cmp     x0, x1
+    b.lo    1b
+
+    /* Create the VA = PA map */
+    ldr     x6, =kernel_start           // x0 := vaddr(kernel_start)
+    sub     x6, x6, x22                 // x0 := paddr(kernel_start)
+
+    /* Find the table index */
+    lsr     x0, x6, #L1_SHIFT
+    and     x0, x0, #Ln_ADDR_MASK       // x0 := index of l1 table
+
+    /* Build the L1 block entry */
+    ldr     x1, =PT_MEM
+    lsr     x2, x6, #L1_SHIFT
+    orr     x1, x1, x2, lsl #L1_SHIFT
+
+    /* Store the entry */
+    str     x1, [x5, x0, lsl #3]
+
+	/* Create the VA = PA map */
+    mov     x6, 0x09000000              // x0 := vaddr(0x09000000)
+    sub     x6, x6, x22                 // x0 := paddr(0x09000000)
+
+    /* Find the table index */
+    lsr     x0, x6, #L1_SHIFT
+    and     x0, x0, #Ln_ADDR_MASK       // x0 := index of l1 table
+
+    /* Build the L1 block entry */
+    ldr     x1, =PT_MEM
+    lsr     x2, x6, #L1_SHIFT
+    orr     x1, x1, x2, lsl #L1_SHIFT
+
+    /* Store the entry */
+    str     x1, [x5, x0, lsl #3]
+
+    ret
 
 .global switch_context
 .balign 16
@@ -174,12 +492,6 @@ switch_context:
   ldp x27, x28, [sp], #16
   ldp x29, x30, [sp], #16
 
-  ret
-
-
-.global trigger_interrupt
-trigger_interrupt:
-  svc #128
   ret
 
 
@@ -291,5 +603,15 @@ lower_el_aarch32_serror:
 boot_stack: .skip KERNEL_STACK_SIZE
 .global boot_ist
 boot_ist: .skip KERNEL_STACK_SIZE
-.global msg
-msg: .ascii "\n"
+
+
+.global boot_l1_pgtable, boot_l2_pgtable, fixmap_pgtable
+.align 12 // 4KiB aligned
+boot_l1_pgtable:
+  .space PAGE_SIZE
+boot_l2_pgtable:
+  .space PAGE_SIZE
+fixmap_pgtable:
+  .space PAGE_SIZE
+idmap_pgtable:
+  .space PAGE_SIZE

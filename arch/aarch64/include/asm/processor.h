@@ -85,7 +85,7 @@ static inline void set_tls(size_t addr) {
 /** @brief Read id_aa64mmfr0_el1 register
  * @return id_aa64mmfr0_el1's value
  */
-static inline size_t read_id_aa64mmfr0_el1(void) {
+static inline size_t read_id_aa64mmfr0(void) {
         size_t val;
         asm volatile("mrs %0, id_aa64mmfr0_el1" : "=r"(val) :: "memory");
         return val;
@@ -94,7 +94,7 @@ static inline size_t read_id_aa64mmfr0_el1(void) {
 /** @brief Read sctlr_el1 register
  * @return sctlr_el1's value
  */
-static inline size_t read_sctlr_el1(void) {
+static inline size_t read_sctlr(void) {
         size_t val;
         asm volatile("mrs %0, sctlr_el1" : "=r"(val) :: "memory");
         return val;
@@ -103,14 +103,14 @@ static inline size_t read_sctlr_el1(void) {
 /** @brief Write a value into sctlr_el1 register
  * @param val The value you want to write into sctlr_el1
  */
-static inline void write_sctlr_el1(size_t val) {
+static inline void write_sctlr(size_t val) {
 	asm volatile("msr sctlr_el1, %0" :: "r"(val) : "memory");
 }
 
 /** @brief Read tcr_el1 register
  * @return tcr_el1's value
  */
-static inline size_t read_tcr_el1(void) {
+static inline size_t read_tcr(void) {
         size_t val;
         asm volatile("mrs %0, tcr_el1" : "=r"(val) :: "memory");
         return val;
@@ -119,14 +119,14 @@ static inline size_t read_tcr_el1(void) {
 /** @brief Write a value into tcr_el1 register
  * @param val The value you want to write into tcr_el1
  */
-static inline void write_tcr_el1(size_t val) {
+static inline void write_tcr(size_t val) {
 	asm volatile("msr tcr_el1, %0" :: "r"(val) : "memory");
 }
 
 /** @brief Read mair_el1 register
  * @return mair_el1's value
  */
-static inline size_t read_mair_el1(void) {
+static inline size_t read_mair(void) {
         size_t val;
         asm volatile("mrs %0, mair_el1" : "=r"(val) :: "memory");
         return val;
@@ -135,14 +135,14 @@ static inline size_t read_mair_el1(void) {
 /** @brief Write a value into mair_el1 register
  * @param val The value you want to write into mair_el1
  */
-static inline void write_mair_el1(size_t val) {
+static inline void write_mair(size_t val) {
 	asm volatile("msr mair_el1, %0" :: "r"(val) : "memory");
 }
 
 /** @brief Read ttbr0_el1 register
  * @return ttbr0_el1's value
  */
-static inline size_t read_ttbr0_el1(void) {
+static inline size_t read_ttbr0(void) {
         size_t val;
         asm volatile("mrs %0, ttbr0_el1" : "=r"(val) :: "memory");
         return val;
@@ -151,14 +151,14 @@ static inline size_t read_ttbr0_el1(void) {
 /** @brief Write a value into ttbr0_el1 register
  * @param val The value you want to write into ttbr0_el1
  */
-static inline void write_ttbr0_el1(size_t val) {
+static inline void write_ttbr0(size_t val) {
 	asm volatile("msr ttbr0_el1, %0" :: "r"(val) : "memory");
 }
 
 /** @brief Read ttbr1_el1 register
  * @return ttbr1_el1's value
  */
-static inline size_t read_ttbr1_el1(void) {
+static inline size_t read_ttbr1(void) {
         size_t val;
         asm volatile("mrs %0, ttbr1_el1" : "=r"(val) :: "memory");
         return val;
@@ -167,14 +167,14 @@ static inline size_t read_ttbr1_el1(void) {
 /** @brief Write a value into ttbr1_el1 register
  * @param val The value you want to write into ttbr1_el1
  */
-static inline void write_ttbr1_el1(size_t val) {
+static inline void write_ttbr1(size_t val) {
 	asm volatile("msr ttbr1_el1, %0" :: "r"(val) : "memory");
 }
 
 /** @brief Read far_el1 register
  * @return faulting virtual address
  */
-static inline size_t read_far_el1(void) {
+static inline size_t read_far(void) {
         size_t val = 0;
         asm volatile("mrs %0, far_el1" : "=r"(val) :: "memory");
         return val;
@@ -183,7 +183,7 @@ static inline size_t read_far_el1(void) {
 /** @brief Read esr_el1 register
  * @return esr_el1's (Exception Syndrome Register) value
  */
-static inline size_t read_esr_el1(void) {
+static inline size_t read_esr(void) {
         size_t val;
         asm volatile("mrs %0, esr_el1" : "=r"(val) :: "memory");
         return val;
@@ -274,19 +274,19 @@ static inline size_t msb(size_t i) {
 	return ret;
 }
 
-static inline uint32_t get_cntfrq_el0(void)
+static inline uint32_t get_cntfrq(void)
 {
 	uint32_t val;
 	asm volatile("isb; mrs %0, cntfrq_el0; isb" : "=r" (val) :: "memory");
 	return val;
 }
 
-static inline void set_cntfrq_el0(uint32_t value)
+static inline void set_cntfrq(uint32_t value)
 {
 	asm volatile("isb; msr cntfrq_el0, %0; isb" :: "r"(value) : "memory");
 }
 
-static inline uint32_t get_cntkctl_el1(void)
+static inline uint32_t get_cntkctl(void)
 {
 	uint32_t value;
 	asm volatile("isb; mrs %0, cntkctl_el1; isb" : "=r" (value) :: "memory");
@@ -298,46 +298,82 @@ static inline void set_cntkctl(uint32_t value)
 	asm volatile("isb; msr cntkctl_el1, %0; isb" :: "r" (value) : "memory");
 }
 
-static inline uint64_t get_cntpct_el0(void)
+static inline uint64_t get_cntpct(void)
 {
 	uint64_t value;
 	asm volatile("isb; mrs %0, cntpct_el0; isb" : "=r" (value) :: "memory");
 	return value;
 }
 
-static inline void set_cval_el0(uint64_t value)
+static inline void set_cntp_cval(uint64_t value)
 {
 	asm volatile("isb; msr cntp_cval_el0, %0; isb" :: "r"(value) : "memory");
 }
 
-static inline uint64_t get_cval_el0(void)
+static inline uint64_t get_cntp_cval(void)
 {
 	uint64_t value;
 	asm volatile("isb; mrs %0, cntp_cval_el0; isb" : "=r" (value) :: "memory");
 	return value;
 }
 
-static inline void set_tval_el0(uint64_t value)
+static inline void set_cntp_tval(uint64_t value)
 {
 	asm volatile("isb; msr cntp_tval_el0, %0; isb" :: "r"(value) : "memory");
 }
 
-static inline uint64_t get_tval_el0(void)
+static inline uint64_t get_cntp_tval(void)
 {
 	uint64_t value;
 	asm volatile("isb; mrs %0, cntp_tval_el0; isb" : "=r" (value) :: "memory");
 	return value;
 }
 
-static inline void set_ctl_el0(uint32_t value)
+static inline void set_cntp_ctl(uint32_t value)
 {
 	asm volatile("isb; msr cntp_ctl_el0, %0; isb" :: "r"(value) : "memory");
 }
 
-static inline uint32_t get_ctl_el0(void)
+static inline uint32_t get_cntp_ctl(void)
 {
 	uint32_t value;
 	asm volatile("isb; mrs %0, cntp_ctl_el0; isb" : "=r" (value) :: "memory");
+	return value;
+}
+
+static inline void set_cntv_cval(uint64_t value)
+{
+	asm volatile("isb; msr cntv_cval_el0, %0; isb" :: "r"(value) : "memory");
+}
+
+static inline uint64_t get_cntv_cval(void)
+{
+	uint64_t value;
+	asm volatile("isb; mrs %0, cntv_cval_el0; isb" : "=r" (value) :: "memory");
+	return value;
+}
+
+static inline void set_cntv_tval(uint64_t value)
+{
+	asm volatile("isb; msr cntv_tval_el0, %0; isb" :: "r"(value) : "memory");
+}
+
+static inline uint64_t get_cntv_tval(void)
+{
+	uint64_t value;
+	asm volatile("isb; mrs %0, cntv_tval_el0; isb" : "=r" (value) :: "memory");
+	return value;
+}
+
+static inline void set_cntv_ctl(uint32_t value)
+{
+	asm volatile("isb; msr cntv_ctl_el0, %0; isb" :: "r"(value) : "memory");
+}
+
+static inline uint32_t get_cntv_ctl(void)
+{
+	uint32_t value;
+	asm volatile("isb; mrs %0, cntv_ctl_el0; isb" : "=r" (value) :: "memory");
 	return value;
 }
 
