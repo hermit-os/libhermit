@@ -98,12 +98,19 @@
 /* Number of virtual address bits for 4KB page */
 #define VA_BITS         39
 
+#define ALIGN   .align 4
+
 #define END(name) \
 	.size name, .-name
 
 #define ENDPROC(name) \
 	.type name, @function; \
 	END(name)
+
+#define ENTRY(name) \
+	.globl name; \
+	ALIGN; \
+	name:
 
 .section .mboot
 
@@ -505,15 +512,15 @@ switch_context:
  * There are no PUSH/POP instruction in ARMv8.
  * Use STR and LDR for stack accesses.
  */
-      .macro push, xreg
-      str     \xreg, [sp, #-8]!
-      .endm
+.macro push, xreg
+str     \xreg, [sp, #-8]!
+.endm
 
-      .macro pop, xreg
-      ldr     \xreg, [sp], #8
-      .endm
+.macro pop, xreg
+ldr     \xreg, [sp], #8
+.endm
 
-      .macro trap_entry, el
+.macro trap_entry, el
       sub     sp, sp, #32             // room for LR, SP, SPSR, ELR
       push    x29
       push    x28
@@ -545,22 +552,22 @@ switch_context:
       push    x2
       push    x1
       push    x0
-      .if     \el == 0
+.if     \el == 0
       mrs     x21, sp_el0
-      .else
+.else
       add     x21, sp, #272
-      .endif
+.endif
       mrs     x22, elr_el1
       mrs     x23, spsr_el1
       stp     x30, x21, [sp, #240]
       stp     x22, x23, [sp, #256]
-      .endm
+.endm
 
-      .macro trap_exit, el
+.macro trap_exit, el
       ldp     x21, x22, [sp, #256]    // load ELR, SPSR
-      .if     \el == 0
+.if     \el == 0
       ldr     x23, [sp, #248]         // load return stack pointer
-      .endif
+.endif
       pop     x0
       pop     x1
       pop     x2
@@ -573,9 +580,9 @@ switch_context:
       pop     x9
       msr     elr_el1, x21            // set up the return data
       msr     spsr_el1, x22
-      .if     \el == 0
+.if     \el == 0
       msr     sp_el0, x23
-      .endif
+.endif
       pop     x10
       pop     x11
       pop     x12
@@ -596,14 +603,14 @@ switch_context:
       pop     x27
       pop     x28
       pop     x29
-      ldr     x30, [sp], #32
-      .endm
+	  ldr     x30, [sp], #32
+.endm
 
 
 /*
  * SYNC & IRQ exception handler.
  */
-      .align 6
+.align 6
 el1_sync:
       trap_entry 1
       mov     x0, sp
@@ -612,7 +619,7 @@ el1_sync:
       eret
 ENDPROC(el1_sync)
 
-      .align 6
+.align 6
 el1_irq:
       trap_entry 1
       mov     x0, sp
@@ -621,7 +628,7 @@ el1_irq:
       eret
 ENDPROC(el1_irq)
 
-      .align 6
+.align 6
 el0_sync:
       trap_entry 0
       mov     x0, sp
@@ -630,7 +637,7 @@ el0_sync:
       eret
 ENDPROC(el0_sync)
 
-      .align 6
+.align 6
 el0_irq:
       trap_entry 0
       mov     x0, sp
@@ -693,7 +700,8 @@ el1_error_invalid:
    invalid BAD_ERROR
 ENDPROC(el1_error_invalid)
 
-vector_table:
+.align  11
+ENTRY(vector_table)
 /* Current EL with SP0 */
 ventry el1_sync_invalid         // Synchronous EL1t
 ventry el1_irq_invalid          // IRQ EL1t
@@ -717,6 +725,7 @@ ventry el0_sync_invalid         // Synchronous 32-bit EL0
 ventry el0_irq_invalid          // IRQ 32-bit EL0
 ventry el0_fiq_invalid          // FIQ 32-bit EL0
 ventry el0_error_invalid        // Error 32-bit EL0
+END(vector_table)
 
 .section .data
 .global boot_stack
