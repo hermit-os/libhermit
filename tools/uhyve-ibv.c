@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Annika Wierichs, RWTH Aachen University
+ * Copyright (c) 2018, Annika Wierichs, RWTH Aachen University
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,14 +23,20 @@
  * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * TODO: Documentation
- *
  */
+
+/*
+ * This is the host side verbs interface for HermitCore. Each function calls its
+ * native verbs API counterpart. These functions may be called when their
+ * respective KVM I/O port has been addressed by HermitCore. The guest physical
+ * address of an arguments struct holding function parameters and the return value
+ * may be retrieved from the port.
+ */
+
 
 #include "uhyve-ibv.h"
 
-#include <infiniband/verbs.h>		// Linux include
+#include <infiniband/verbs.h> // Linux native verbs header.
 #include <stdio.h>
 
 
@@ -1024,7 +1030,7 @@ void call_ibv_destroy_srq(struct kvm_run * run, uint8_t * guest_mem) {
  */
 
 void call_ibv_post_srq_recv(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("LOG: UHYVE - call_ibv_post_srq_recv\n");
+	printf("sh_r");
 	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
 	uhyve_ibv_post_srq_recv_t * args = (uhyve_ibv_post_srq_recv_t *) (guest_mem + data);
 
@@ -1233,12 +1239,13 @@ void call_ibv_destroy_rwq_ind_table(struct kvm_run * run, uint8_t * guest_mem) {
  * ibv_post_send
  */
 
+// TODO: Cleanup
 void call_ibv_post_send(struct kvm_run * run, uint8_t * guest_mem) {
-	/* printf("LOG: UHYVE - call_ibv_post_send\n"); */
-	/* printf("s"); */
+	printf("s");
 	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
 	uhyve_ibv_post_send_t * args = (uhyve_ibv_post_send_t *) (guest_mem + data);
 
+	// TODO: Leaving this for debugging purposes.
 	/* printf("\tqp->context:                 %p\n",  args->qp->context); */
 	/* printf("\tqp->state:                   %d\n",  args->qp->state); */
 	/* printf("\twr->id:                      %lu\n", args->wr->wr_id); */
@@ -1264,7 +1271,7 @@ void call_ibv_post_send(struct kvm_run * run, uint8_t * guest_mem) {
  */
 
 void call_ibv_post_recv(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("LOG: UHYVE - call_ibv_post_recv\n");
+	printf("r");
 	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
 	uhyve_ibv_post_recv_t * args = (uhyve_ibv_post_recv_t *) (guest_mem + data);
 

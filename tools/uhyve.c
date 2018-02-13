@@ -1244,16 +1244,12 @@ static int vcpu_loop(void)
 					break;
 				}
 
-			// InfiniBand
-
-			/* case UHYVE_PORT_KERNEL_IBV_LOG: { */
-					/* unsigned data = *((unsigned*)((size_t)run+run->io.data_offset)); */
-					/* char* str = (char*) (guest_mem + data); */
-					/* printf("KERNEL IBV LOG: %s\n", str); */
-					/* break; */
-				/* } */
+			/*
+			 * Verbs API KVM I/O ports
+			 */
 
 			case UHYVE_PORT_SET_IB_POOL_ADDR: {
+					// This I/O port is only used once at startup to synchronize the address of the IB memory pool.
 					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
 					uint64_t * temp = (uint64_t*)(guest_mem + data);
 					ib_pool_addr = (uint8_t*) *temp;
