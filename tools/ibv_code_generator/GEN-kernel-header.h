@@ -89,5 +89,5 @@ int ibv_fork_init();
 const char * ibv_node_type_str(enum ibv_node_type node_type);
 const char * ibv_port_state_str(enum ibv_port_state port_state);
 const char * ibv_event_type_str(enum ibv_event_type event);
-int ibv_resolve_eth_l2_from_gid(struct ibv_context * context, struct ibv_ah_attr * attr, uint8_t [6] eth_mac, uint16_t * vid);
+int ibv_resolve_eth_l2_from_gid(struct ibv_context * context, struct ibv_ah_attr * attr, uint8_t eth_mac[6], uint16_t * vid);
 int ibv_is_qpt_supported(uint32_t caps, enum ibv_qp_type qpt);

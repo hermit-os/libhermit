@@ -1373,7 +1373,7 @@ void call_ibv_resolve_eth_l2_from_gid(struct kvm_run * run, uint8_t * guest_mem)
 	uhyve_ibv_resolve_eth_l2_from_gid_t * args = (uhyve_ibv_resolve_eth_l2_from_gid_t *) (guest_mem + data);
 
 	use_ib_mem_pool = true;
-	args->ret = ibv_resolve_eth_l2_from_gid(args->context, args->attr, args->eth_mac, args->vid);
+	args->ret = ibv_resolve_eth_l2_from_gid(args->context, args->attr, args->eth_mac[6], args->vid);
 	use_ib_mem_pool = false;
 }
 

@@ -1,3 +1,4 @@
+ annika.wierichs@rwth-aachen.de
 /*
  * Copyright (c) 2004, 2005 Topspin Communications.  All rights reserved.
  * Copyright (c) 2004, 2011-2012 Intel Corporation.  All rights reserved.

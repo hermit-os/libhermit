@@ -182,6 +182,7 @@ void ibv_end_poll(struct ibv_cq_ex * cq) {
 	uhyve_args.cq = cq;
 
 	uhyve_send(UHYVE_PORT_IBV_END_POLL, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
 }
 
 
@@ -495,10 +496,16 @@ typedef struct {
 int ibv_post_wq_recv(struct ibv_wq * wq, struct ibv_recv_wr * recv_wr, struct ibv_recv_wr ** bad_recv_wr) {
 	uhyve_ibv_post_wq_recv_t uhyve_args;
 	uhyve_args.wq = wq;
-	uhyve_args.recv_wr = recv_wr;
-	// TODO: Take care of ** parameter.
+	uhyve_args.recv_wr = (struct ibv_recv_wr *) guest_to_host((size_t) recv_wr);
+	uhyve_args.bad_recv_wr = (struct ibv_recv_wr **) guest_to_host((size_t) bad_recv_wr); // TODO: Check ** param here.
+
+	// TODO: Take care of pointer conversions in recv_wr.
+	// TODO: Take care of pointer conversions in bad_recv_wr.
 
 	uhyve_send(UHYVE_PORT_IBV_POST_WQ_RECV, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	// TODO: Take care of reverse pointer conversions in recv_wr.
+	// TODO: Take care of reverse pointer conversions in bad_recv_wr.
 
 	return uhyve_args.ret;
 }
@@ -517,7 +524,7 @@ typedef struct {
 
 struct ibv_device ** ibv_get_device_list(int * num_devices) {
 	uhyve_ibv_get_device_list_t uhyve_args;
-	uhyve_args.num_devices = num_devices;
+	uhyve_args.num_devices = (int *) guest_to_host((size_t) num_devices);
 
 	uhyve_send(UHYVE_PORT_IBV_GET_DEVICE_LIST, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -536,9 +543,10 @@ typedef struct {
 
 void ibv_free_device_list(struct ibv_device ** list) {
 	uhyve_ibv_free_device_list_t uhyve_args;
-	// TODO: Take care of ** parameter.
+	uhyve_args.list = list;
 
 	uhyve_send(UHYVE_PORT_IBV_FREE_DEVICE_LIST, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
 }
 
 
@@ -663,6 +671,7 @@ void ibv_ack_async_event(struct ibv_async_event * event) {
 	uhyve_args.event = (struct ibv_async_event *) guest_to_host((size_t) event);
 
 	uhyve_send(UHYVE_PORT_IBV_ACK_ASYNC_EVENT, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
 }
 
 
@@ -733,7 +742,7 @@ int ibv_query_gid(struct ibv_context * context, uint8_t port_num, int index, uni
 	uhyve_args.context = context;
 	uhyve_args.port_num = port_num;
 	uhyve_args.index = index;
-	uhyve_args.gid = gid;
+	uhyve_args.gid = (union ibv_gid *) guest_to_host((size_t) gid);
 
 	uhyve_send(UHYVE_PORT_IBV_QUERY_GID, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -760,7 +769,7 @@ int ibv_query_pkey(struct ibv_context * context, uint8_t port_num, int index, __
 	uhyve_args.context = context;
 	uhyve_args.port_num = port_num;
 	uhyve_args.index = index;
-	uhyve_args.pkey = pkey;
+	uhyve_args.pkey = (__be16 *) guest_to_host((size_t) pkey);
 
 	uhyve_send(UHYVE_PORT_IBV_QUERY_PKEY, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -871,7 +880,11 @@ struct ibv_xrcd * ibv_open_xrcd(struct ibv_context * context, struct ibv_xrcd_in
 	uhyve_args.context = context;
 	uhyve_args.xrcd_init_attr = (struct ibv_xrcd_init_attr *) guest_to_host((size_t) xrcd_init_attr);
 
+	// TODO: Take care of pointer conversions in xrcd_init_attr.
+
 	uhyve_send(UHYVE_PORT_IBV_OPEN_XRCD, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	// TODO: Take care of reverse pointer conversions in xrcd_init_attr.
 
 	return uhyve_args.ret;
 }
@@ -915,7 +928,7 @@ typedef struct {
 struct ibv_mr * ibv_reg_mr(struct ibv_pd * pd, void * addr, int length, int access) {
 	uhyve_ibv_reg_mr_t uhyve_args;
 	uhyve_args.pd = pd;
-	uhyve_args.addr = addr;
+	uhyve_args.addr = (void *) guest_to_host((size_t) addr);
 	uhyve_args.length = length;
 	uhyve_args.access = access;
 
@@ -946,7 +959,7 @@ int ibv_rereg_mr(struct ibv_mr * mr, int flags, struct ibv_pd * pd, void * addr,
 	uhyve_args.mr = mr;
 	uhyve_args.flags = flags;
 	uhyve_args.pd = pd;
-	uhyve_args.addr = addr;
+	uhyve_args.addr = (void *) guest_to_host((size_t) addr);
 	uhyve_args.length = length;
 	uhyve_args.access = access;
 
@@ -1128,7 +1141,7 @@ struct ibv_cq * ibv_create_cq(struct ibv_context * context, int cqe, void * cq_c
 	uhyve_ibv_create_cq_t uhyve_args;
 	uhyve_args.context = context;
 	uhyve_args.cqe = cqe;
-	uhyve_args.cq_context = cq_context;
+	uhyve_args.cq_context = (void *) guest_to_host((size_t) cq_context);
 	uhyve_args.channel = channel;
 	uhyve_args.comp_vector = comp_vector;
 
@@ -1221,8 +1234,8 @@ typedef struct {
 int ibv_get_cq_event(struct ibv_comp_channel * channel, struct ibv_cq ** cq, void ** cq_context) {
 	uhyve_ibv_get_cq_event_t uhyve_args;
 	uhyve_args.channel = channel;
-	// TODO: Take care of ** parameter.
-	// TODO: Take care of ** parameter.
+	uhyve_args.cq = cq;
+	uhyve_args.cq_context = (void **) guest_to_host((size_t) cq_context); // TODO: Check ** param here.
 
 	uhyve_send(UHYVE_PORT_IBV_GET_CQ_EVENT, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1246,6 +1259,7 @@ void ibv_ack_cq_events(struct ibv_cq * cq, unsigned int nevents) {
 	uhyve_args.nevents = nevents;
 
 	uhyve_send(UHYVE_PORT_IBV_ACK_CQ_EVENTS, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
 }
 
 
@@ -1406,7 +1420,7 @@ typedef struct {
 int ibv_get_srq_num(struct ibv_srq * srq, uint32_t * srq_num) {
 	uhyve_ibv_get_srq_num_t uhyve_args;
 	uhyve_args.srq = srq;
-	uhyve_args.srq_num = srq_num;
+	uhyve_args.srq_num = (uint32_t *) guest_to_host((size_t) srq_num);
 
 	uhyve_send(UHYVE_PORT_IBV_GET_SRQ_NUM, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -1451,10 +1465,16 @@ typedef struct {
 int ibv_post_srq_recv(struct ibv_srq * srq, struct ibv_recv_wr * recv_wr, struct ibv_recv_wr ** bad_recv_wr) {
 	uhyve_ibv_post_srq_recv_t uhyve_args;
 	uhyve_args.srq = srq;
-	uhyve_args.recv_wr = recv_wr;
-	// TODO: Take care of ** parameter.
+	uhyve_args.recv_wr = (struct ibv_recv_wr *) guest_to_host((size_t) recv_wr);
+	uhyve_args.bad_recv_wr = (struct ibv_recv_wr **) guest_to_host((size_t) bad_recv_wr); // TODO: Check ** param here.
+
+	// TODO: Take care of pointer conversions in recv_wr.
+	// TODO: Take care of pointer conversions in bad_recv_wr.
 
 	uhyve_send(UHYVE_PORT_IBV_POST_SRQ_RECV, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	// TODO: Take care of reverse pointer conversions in recv_wr.
+	// TODO: Take care of reverse pointer conversions in bad_recv_wr.
 
 	return uhyve_args.ret;
 }
@@ -1545,7 +1565,7 @@ typedef struct {
 int ibv_query_device_ex(struct ibv_context * context, const struct ibv_query_device_ex_input * input, struct ibv_device_attr_ex * attr) {
 	uhyve_ibv_query_device_ex_t uhyve_args;
 	uhyve_args.context = context;
-	uhyve_args.input = input;
+	uhyve_args.input = (const struct ibv_query_device_ex_input *) guest_to_host((size_t) input);
 	uhyve_args.attr = (struct ibv_device_attr_ex *) guest_to_host((size_t) attr);
 
 	uhyve_send(UHYVE_PORT_IBV_QUERY_DEVICE_EX, (unsigned) virt_to_phys((size_t) &uhyve_args));
@@ -1734,7 +1754,11 @@ struct ibv_rwq_ind_table * ibv_create_rwq_ind_table(struct ibv_context * context
 	uhyve_args.context = context;
 	uhyve_args.init_attr = (struct ibv_rwq_ind_table_init_attr *) guest_to_host((size_t) init_attr);
 
+	// TODO: Take care of pointer conversions in init_attr.
+
 	uhyve_send(UHYVE_PORT_IBV_CREATE_RWQ_IND_TABLE, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	// TODO: Take care of reverse pointer conversions in init_attr.
 
 	return uhyve_args.ret;
 }
@@ -1777,10 +1801,16 @@ typedef struct {
 int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_wr ** bad_wr) {
 	uhyve_ibv_post_send_t uhyve_args;
 	uhyve_args.qp = qp;
-	uhyve_args.wr = wr;
-	// TODO: Take care of ** parameter.
+	uhyve_args.wr = (struct ibv_send_wr *) guest_to_host((size_t) wr);
+	uhyve_args.bad_wr = (struct ibv_send_wr **) guest_to_host((size_t) bad_wr); // TODO: Check ** param here.
+
+	// TODO: Take care of pointer conversions in wr.
+	// TODO: Take care of pointer conversions in bad_wr.
 
 	uhyve_send(UHYVE_PORT_IBV_POST_SEND, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	// TODO: Take care of reverse pointer conversions in wr.
+	// TODO: Take care of reverse pointer conversions in bad_wr.
 
 	return uhyve_args.ret;
 }
@@ -1802,10 +1832,16 @@ typedef struct {
 int ibv_post_recv(struct ibv_qp * qp, struct ibv_recv_wr * wr, struct ibv_recv_wr ** bad_wr) {
 	uhyve_ibv_post_recv_t uhyve_args;
 	uhyve_args.qp = qp;
-	uhyve_args.wr = wr;
-	// TODO: Take care of ** parameter.
+	uhyve_args.wr = (struct ibv_recv_wr *) guest_to_host((size_t) wr);
+	uhyve_args.bad_wr = (struct ibv_recv_wr **) guest_to_host((size_t) bad_wr); // TODO: Check ** param here.
+
+	// TODO: Take care of pointer conversions in wr.
+	// TODO: Take care of pointer conversions in bad_wr.
 
 	uhyve_send(UHYVE_PORT_IBV_POST_RECV, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	// TODO: Take care of reverse pointer conversions in wr.
+	// TODO: Take care of reverse pointer conversions in bad_wr.
 
 	return uhyve_args.ret;
 }
@@ -1927,7 +1963,7 @@ typedef struct {
 int ibv_attach_mcast(struct ibv_qp * qp, const union ibv_gid * gid, uint16_t lid) {
 	uhyve_ibv_attach_mcast_t uhyve_args;
 	uhyve_args.qp = qp;
-	uhyve_args.gid = gid;
+	uhyve_args.gid = (const union ibv_gid *) guest_to_host((size_t) gid);
 	uhyve_args.lid = lid;
 
 	uhyve_send(UHYVE_PORT_IBV_ATTACH_MCAST, (unsigned) virt_to_phys((size_t) &uhyve_args));
@@ -1952,7 +1988,7 @@ typedef struct {
 int ibv_detach_mcast(struct ibv_qp * qp, const union ibv_gid * gid, uint16_t lid) {
 	uhyve_ibv_detach_mcast_t uhyve_args;
 	uhyve_args.qp = qp;
-	uhyve_args.gid = gid;
+	uhyve_args.gid = (const union ibv_gid *) guest_to_host((size_t) gid);
 	uhyve_args.lid = lid;
 
 	uhyve_send(UHYVE_PORT_IBV_DETACH_MCAST, (unsigned) virt_to_phys((size_t) &uhyve_args));
@@ -2050,18 +2086,18 @@ typedef struct {
 	// Parameters:
 	struct ibv_context * context;
 	struct ibv_ah_attr * attr;
-	uint8_t [6] eth_mac;
+	uint8_t eth_mac[6];
 	uint16_t * vid;
 	// Return value:
 	int ret;
 } __attribute__((packed)) uhyve_ibv_resolve_eth_l2_from_gid_t;
 
-int ibv_resolve_eth_l2_from_gid(struct ibv_context * context, struct ibv_ah_attr * attr, uint8_t [6] eth_mac, uint16_t * vid) {
+int ibv_resolve_eth_l2_from_gid(struct ibv_context * context, struct ibv_ah_attr * attr, uint8_t eth_mac[6], uint16_t * vid) {
 	uhyve_ibv_resolve_eth_l2_from_gid_t uhyve_args;
 	uhyve_args.context = context;
 	uhyve_args.attr = (struct ibv_ah_attr *) guest_to_host((size_t) attr);
-	uhyve_args.eth_mac = eth_mac;
-	uhyve_args.vid = vid;
+	uhyve_args.eth_mac[6] = eth_mac[6];
+	uhyve_args.vid = (uint16_t *) guest_to_host((size_t) vid);
 
 	uhyve_send(UHYVE_PORT_IBV_RESOLVE_ETH_L2_FROM_GID, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
