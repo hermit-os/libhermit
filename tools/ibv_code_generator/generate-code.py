@@ -28,11 +28,6 @@ TODO, docs
 """
 
 # TODO: Add ibv_resolve_eth_l2_from_gid function back in. Not linking right now.
-# TODO: int * num devices --> guest to host
-# TODO: void * as well
-
-from __future__ import print_function
-from parser import generate_struct_conversions
 
 
 # Path of the input file containing function prototypes.
@@ -48,9 +43,6 @@ UHYVE_HOST_FCNS_GEN_PATH  = "GEN-tools-uhyve-ibv.c"
 
 # Starting number of the sequence used for IBV ports.
 PORT_NUMBER_START = 0x610
-
-#  VERBS_HEADER_PATH = "verbs-0.h"
-#  UHYVE_IBV_HEADER_STRUCTS_GEN_PATH = "GEN-tools-uhyve-ibv-structs.h"
 
 restricted_resources = ["struct ibv_send_wr",
                         "struct ibv_recv_wr",
@@ -117,7 +109,8 @@ app_owned_resources = restricted_resources + \
                        "struct ibv_rwq_ind_table_init_attr",
                        "struct ibv_xrcd_init_attr",
 
-                       # Universal deep resources (contain valid ib_mem_pool pointers):
+                       # Universal deep resources
+                       # (contain valid pointers to lib owned resources, e.g. ibv_context):
                        "struct ibv_wq_init_attr",
                        "struct ibv_qp_init_attr",
                        "struct ibv_qp_init_attr_ex",
@@ -129,9 +122,7 @@ app_owned_resources = restricted_resources + \
 
 
 # int ibv_resolve_eth_l2_from_gid(uint8_t [6] eth_mac,uint16_t * vid)
-# struct ibv_device * dev
-# int * num_devices
-# int ret
+# struct ibv_device ** dev
 # char[NUM]
 
 # ----------------------------------------------------------------------------
@@ -139,7 +130,21 @@ app_owned_resources = restricted_resources + \
 # ----------------------------------------------------------------------------
 
 class Resource:
+  """This class represents a verbs resource."""
   def __init__(self, string, is_ret=False):
+    """Initialize resource properties.
+
+    Members using ibv_context as an example:
+    full_expression   struct ibv_context * ctx
+    type              struct ibv_context *
+    name                                   ctx
+    struct_name              ibv_context
+    type_wo_asterisk  struct ibv_context
+
+    Args
+      string: Full string of the resource (like full expression but spaces may be omitted).
+      is_ret: Resource without name (like type member) as is the case for return types is expected.
+    """
     if "**" in string:
       string.replace("**", " ** ")
     elif "*" in string:

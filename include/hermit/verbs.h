@@ -34,7 +34,8 @@
  * SOFTWARE.
  */
 
-/* This header file contains all necessary verbs resource definitions and API
+/*
+ * This header file contains all necessary verbs resource definitions and API
  * function declarations. Functions are defined in ibv.c.
  *
  * Comment blocks from the original header have been removed, refer to the
