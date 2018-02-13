@@ -30,6 +30,13 @@
  * structs for all verbs API functions and it declarares all functions that call
  * the native verbs API functions (refer to uhyve-ibv.c) and may be called from
  * uhyve's VCPU loop.
+ *
+ * Careful: The Python code generator's function prototypes file contains one
+ * deviation from the original verbs API. In ibv_post_recv, the parameters 'wr'
+ * and 'bad_wr' have been renamed to 'recv_wr' and 'bad_recv_wr' respectively so
+ * that they now conform to the parameter names for ibv_post_srq_recv and
+ * ibv_post_wq_recv. This makes code generation easier as these functions all
+ * require the same conversion routines.
  */
 
 
@@ -757,8 +764,8 @@ typedef struct {
 typedef struct {
 	// Parameters:
 	struct ibv_qp * qp;
-	struct ibv_recv_wr * wr;
-	struct ibv_recv_wr ** bad_wr;
+	struct ibv_recv_wr * recv_wr;
+	struct ibv_recv_wr ** bad_recv_wr;
 	// Return value:
 	int ret;
 } __attribute__((packed)) uhyve_ibv_post_recv_t;

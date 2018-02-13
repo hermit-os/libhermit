@@ -1496,7 +1496,7 @@ int ibv_destroy_wq(struct ibv_wq * wq);
 struct ibv_rwq_ind_table * ibv_create_rwq_ind_table(struct ibv_context * context, struct ibv_rwq_ind_table_init_attr * init_attr);
 int ibv_destroy_rwq_ind_table(struct ibv_rwq_ind_table * rwq_ind_table);
 int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_wr ** bad_wr);
-int ibv_post_recv(struct ibv_qp * qp, struct ibv_recv_wr * wr, struct ibv_recv_wr ** bad_wr);
+int ibv_post_recv(struct ibv_qp * qp, struct ibv_recv_wr * recv_wr, struct ibv_recv_wr ** bad_recv_wr);
 struct ibv_ah * ibv_create_ah(struct ibv_pd * pd, struct ibv_ah_attr * attr);
 int ibv_init_ah_from_wc(struct ibv_context * context, uint8_t port_num, struct ibv_wc * wc, struct ibv_grh * grh, struct ibv_ah_attr * ah_attr);
 struct ibv_ah * ibv_create_ah_from_wc(struct ibv_pd * pd, struct ibv_wc * wc, struct ibv_grh * grh, uint8_t port_num);

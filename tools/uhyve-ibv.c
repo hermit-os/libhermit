@@ -1276,7 +1276,7 @@ void call_ibv_post_recv(struct kvm_run * run, uint8_t * guest_mem) {
 	uhyve_ibv_post_recv_t * args = (uhyve_ibv_post_recv_t *) (guest_mem + data);
 
 	use_ib_mem_pool = true;
-	args->ret = ibv_post_recv(args->qp, args->wr, args->bad_wr);
+	args->ret = ibv_post_recv(args->qp, args->recv_wr, args->bad_recv_wr);
 	use_ib_mem_pool = false;
 }
 

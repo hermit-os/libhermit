@@ -49,13 +49,14 @@ restricted_resources = ["struct ibv_send_wr",
                         "struct ibv_sge",
                         "struct ibv_xrcd_init_attr",
                         "struct ibv_rwq_ind_table_init_attr",
+
+                        # Deep resources that are not used as parameters to any functions
                         "struct ibv_mw_bind_info",
                         "struct ibv_rx_hash_conf"]
 
 lib_owned_resources = ["struct ibv_pd",
                        "struct ibv_cq",
                        "struct ibv_cq_ex",
-                       "struct verbs_context",
                        "struct ibv_device",
                        "struct ibv_context",
                        "struct ibv_context_ops",
@@ -333,18 +334,24 @@ def generate_hermit_function_definition(fnc):
       code += "\tuhyve_args.{0} = {0};\n".format(param.name)
   code += "\n"
 
-  for param in fnc.params:
-    if param.is_restricted():
-      code += "\t// TODO: Take care of pointer conversions in " + param.name + ".\n"
-      code += "\n" if param is fnc.params[-1] else ""
+  if fnc.is_restricted():
+    code += snippet.generate(fnc.name, snippet.BACKUP_AND_CONVERT)
+
+  #  for param in fnc.params:
+    #  if param.is_restricted():
+      #  code += "\t// TODO: Take care of pointer conversions in " + param.name + ".\n"
+      #  code += "\n" if param is fnc.params[-1] else ""
 
   code += ("\tuhyve_send({0}, (unsigned) virt_to_phys((size_t) &uhyve_args));\n\n"
            .format(fnc.port_name))
 
-  for param in fnc.params:
-    if param.is_restricted():
-      code += "\t// TODO: Take care of reverse pointer conversions in " + param.name + ".\n"
-      code += "\n" if param is fnc.params[-1] else ""
+  #  for param in fnc.params:
+    #  if param.is_restricted():
+      #  code += "\t// TODO: Take care of reverse pointer conversions in " + param.name + ".\n"
+      #  code += "\n" if param is fnc.params[-1] else ""
+
+  if fnc.is_restricted():
+    code += snippet.generate(fnc.name, snippet.REVERT)
 
   if not fnc.ret.is_void():
     code += "\treturn uhyve_args.ret;\n"

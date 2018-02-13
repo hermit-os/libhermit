@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Annika Wierichs, RWTH Aachen University
+ * Copyright (c) 2018, Annika Wierichs, RWTH Aachen University
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,10 @@
  */
 
 /*
- * DOC TODO
+ * This file implements the verbs API functions. Each function performs necessary
+ * pointer conversions for its parameters, writes its arguments struct to uhyve's
+ * KVM I/O port that belongs to the function, and reverts changes to the parameters
+ * before returning. Functions requiring non-trivial conversions are listed first.
  */
 
 
@@ -47,6 +50,428 @@
 
 	/* return ((unsigned long long) hi << 32ULL | (unsigned long long) lo); */
 /* } */
+
+
+
+/*
+ * ibv_post_send
+ */
+
+typedef struct {
+	// Parameters:
+	struct ibv_qp      * qp;
+	struct ibv_send_wr * wr;
+	struct ibv_send_wr ** bad_wr;
+	// Return value:
+	int ret;
+} __attribute__((packed)) uhyve_ibv_post_send_t;
+
+int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_wr ** bad_wr) { // !!!
+	unsigned long long tick_start = rdtsc();
+
+	uhyve_ibv_post_send_t uhyve_args;
+	uhyve_args.qp     = qp;
+	unsigned long long tick_gh = rdtsc();
+	uhyve_args.wr     = (struct ibv_send_wr *)  guest_to_host((size_t) wr);
+	tick_gh = rdtsc() - tick_gh;
+	uhyve_args.bad_wr = (struct ibv_send_wr **) guest_to_host((size_t) bad_wr);
+
+	struct ibv_send_wr * curr_wr;
+	int num_wrs;
+	int num_sges_max;
+	int is_bind_mw, is_tso;
+
+	// Number of work requests in linked list and SGEs in each WR
+	num_wrs = 0;
+	num_sges_max = 0;
+	for (curr_wr = wr; curr_wr; curr_wr = curr_wr->next) {
+		num_wrs++;
+		if (num_sges_max < curr_wr->num_sge) {
+			num_sges_max = curr_wr->num_sge;
+		}
+	}
+
+	// Backup arrays for original guest memory pointers
+	struct ibv_send_wr * wr__next                    [num_wrs];
+	struct ibv_sge *     wr__sg_list                 [num_wrs];
+	uint64_t             wr__sg_list__addr           [num_wrs][num_sges_max];
+	uint64_t             wr__bind_mw__bind_info__addr[num_wrs];
+	void *               wr__tso__hdr                [num_wrs];
+
+	curr_wr = wr;
+	for (int w = 0; w < num_wrs; w++) {
+		/* LOG_INFO("ibv_post_send for wrs, w = %d\n", w); */
+		is_bind_mw = curr_wr->opcode == IBV_WR_BIND_MW;
+		is_tso     = curr_wr->opcode == IBV_WR_TSO;
+
+		// union: bind_mw and tso
+		if (is_bind_mw) {
+			wr__bind_mw__bind_info__addr[w] = curr_wr->bind_mw.bind_info.addr;
+			curr_wr->bind_mw.bind_info.addr = (uint64_t) guest_to_host((size_t) curr_wr->bind_mw.bind_info.addr);
+		} else if (is_tso) {
+			wr__tso__hdr[w] = curr_wr->tso.hdr;
+			curr_wr->tso.hdr = (void *) guest_to_host((size_t) curr_wr->tso.hdr);
+		}
+
+		// Next pointer and SGE array
+		wr__next[w] = curr_wr->next;
+		curr_wr->next = (struct ibv_send_wr *) guest_to_host((size_t) curr_wr->next);
+
+		for (int s = 0; s < curr_wr->num_sge; s++) {
+			/* LOG_INFO("ibv_post_send for sges, s = %d\n", s); */
+			wr__sg_list__addr[w][s] = curr_wr->sg_list[s].addr;
+			curr_wr->sg_list[s].addr = (uint64_t) guest_to_host((size_t) curr_wr->sg_list[s].addr);
+		}
+
+		wr__sg_list[w] = curr_wr->sg_list;
+		curr_wr->sg_list = (struct ibv_sge *) guest_to_host((size_t) curr_wr->sg_list);
+
+		curr_wr = wr__next[w];
+	}
+
+	unsigned long long tick_pre_work = rdtsc() - tick_start;
+
+	uhyve_send(UHYVE_PORT_IBV_POST_SEND, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	unsigned long long tick_call = rdtsc() - tick_start - tick_pre_work;
+
+	if (*bad_wr && *bad_wr == uhyve_args.wr) {
+		*bad_wr = wr;
+	}
+
+	curr_wr = wr;
+	for (int w = 0; w < num_wrs; w++) {
+		is_bind_mw = curr_wr->opcode == IBV_WR_BIND_MW;
+		is_tso     = curr_wr->opcode == IBV_WR_TSO;
+
+		// union: bind_mw and tso
+		if (is_bind_mw) {
+			 curr_wr->bind_mw.bind_info.addr = wr__bind_mw__bind_info__addr[w];
+		} else if (is_tso) {
+			 curr_wr->tso.hdr = wr__tso__hdr[w];
+		}
+
+		// Bad request
+		if (*bad_wr && *bad_wr == curr_wr->next) {
+			*bad_wr = wr__next[w];
+		}
+
+		// Next pointer and SGE array
+		curr_wr->next = wr__next[w];
+		curr_wr->sg_list = wr__sg_list[w];
+		for (int s = 0; s < curr_wr->num_sge; s++) {
+			curr_wr->sg_list[s].addr = wr__sg_list__addr[w][s];
+		}
+
+		curr_wr = curr_wr->next;
+	}
+
+	unsigned long long tick_post_work = rdtsc() - tick_start - tick_pre_work - tick_call;
+
+	LOG_INFO("tick_gh:        %llu\n", tick_gh);
+	LOG_INFO("tick_pre_work:  %llu\n", tick_pre_work);
+	LOG_INFO("tick_call:      %llu\n", tick_call);
+	LOG_INFO("tick_post_work: %llu\n", tick_post_work);
+	return uhyve_args.ret;
+}
+
+
+/*
+ * ibv_post_wq_recv
+ */
+
+typedef struct {
+	// Parameters:
+	struct ibv_wq * wq;
+	struct ibv_recv_wr * recv_wr;
+	struct ibv_recv_wr ** bad_recv_wr;
+	// Return value:
+	int ret;
+} __attribute__((packed)) uhyve_ibv_post_wq_recv_t;
+
+int ibv_post_wq_recv(struct ibv_wq * wq, struct ibv_recv_wr * recv_wr, struct ibv_recv_wr ** bad_recv_wr) { // !!!
+	uhyve_ibv_post_wq_recv_t uhyve_args;
+	uhyve_args.wq          = wq;
+	uhyve_args.recv_wr     = (struct ibv_recv_wr *)  guest_to_host((size_t) recv_wr);
+	uhyve_args.bad_recv_wr = (struct ibv_recv_wr **) guest_to_host((size_t) bad_recv_wr);
+
+	struct ibv_recv_wr * curr_wr;
+	int num_sges_max;
+	int num_wrs;
+
+	// Number of work requests in linked list and SGEs in each WR
+	num_wrs = 0;
+	num_sges_max = 0;
+	for (curr_wr = recv_wr; curr_wr; curr_wr = curr_wr->next) {
+		num_wrs++;
+		if (num_sges_max < curr_wr->num_sge) {
+			num_sges_max = curr_wr->num_sge;
+		}
+	}
+
+	// Backup arrays for original guest memory pointers
+	struct ibv_recv_wr * wr__next         [num_wrs];
+	struct ibv_sge *     wr__sg_list      [num_wrs];
+	uint64_t             wr__sg_list__addr[num_wrs][num_sges_max];
+
+	curr_wr = recv_wr;
+	for (int w = 0; w < num_wrs; w++) {
+		// Next pointer
+		wr__next[w] = curr_wr->next;
+		curr_wr->next = (struct ibv_recv_wr *) guest_to_host((size_t) curr_wr->next);
+
+		// SGE array
+		for (int s = 0; s < curr_wr->num_sge; s++) {
+			wr__sg_list__addr[w][s] = curr_wr->sg_list[s].addr;
+			curr_wr->sg_list[s].addr = (uint64_t) guest_to_host((size_t) curr_wr->sg_list[s].addr);
+		}
+
+		wr__sg_list[w] = curr_wr->sg_list;
+		curr_wr->sg_list = (struct ibv_sge *) guest_to_host((size_t) curr_wr->sg_list);
+
+		curr_wr = wr__next[w];
+	}
+
+	uhyve_send(UHYVE_PORT_IBV_POST_WQ_RECV, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	if (*bad_recv_wr && *bad_recv_wr == uhyve_args.recv_wr) {
+		*bad_recv_wr = recv_wr;
+	}
+
+	curr_wr = recv_wr;
+	for (int w = 0; w < num_wrs; w++) {
+		if (*bad_recv_wr && *bad_recv_wr == curr_wr->next) {
+			*bad_recv_wr = wr__next[w];
+		}
+
+		curr_wr->next    = wr__next[w];
+		curr_wr->sg_list = wr__sg_list[w];
+		for (int s = 0; s < curr_wr->num_sge; s++) {
+			curr_wr->sg_list[s].addr = wr__sg_list__addr[w][s];
+		}
+
+		curr_wr = curr_wr->next;
+	}
+
+	return uhyve_args.ret;
+}
+
+
+/*
+ * ibv_post_srq_recv
+ */
+
+typedef struct {
+	// Parameters:
+	struct ibv_srq * srq;
+	struct ibv_recv_wr * recv_wr;
+	struct ibv_recv_wr ** bad_recv_wr;
+	// Return value:
+	int ret;
+} __attribute__((packed)) uhyve_ibv_post_srq_recv_t;
+
+int ibv_post_srq_recv(struct ibv_srq * srq, struct ibv_recv_wr * recv_wr, struct ibv_recv_wr ** bad_recv_wr) { // !!!
+	uhyve_ibv_post_srq_recv_t uhyve_args;
+	uhyve_args.srq         = srq;
+	uhyve_args.recv_wr     = (struct ibv_recv_wr *)  guest_to_host((size_t) recv_wr);
+	uhyve_args.bad_recv_wr = (struct ibv_recv_wr **) guest_to_host((size_t) bad_recv_wr);
+
+	struct ibv_recv_wr * curr_wr;
+	int num_sges_max;
+	int num_wrs;
+
+	// Number of work requests in linked list and SGEs in each WR
+	num_wrs = 0;
+	num_sges_max = 0;
+	for (curr_wr = recv_wr; curr_wr; curr_wr = curr_wr->next) {
+		num_wrs++;
+		if (num_sges_max < curr_wr->num_sge) {
+			num_sges_max = curr_wr->num_sge;
+		}
+	}
+
+	// Backup arrays for original guest memory pointers
+	struct ibv_recv_wr * wr__next         [num_wrs];
+	struct ibv_sge *     wr__sg_list      [num_wrs];
+	uint64_t             wr__sg_list__addr[num_wrs][num_sges_max];
+
+	curr_wr = recv_wr;
+	for (int w = 0; w < num_wrs; w++) {
+		// Next pointer
+		wr__next[w] = curr_wr->next;
+		curr_wr->next = (struct ibv_recv_wr *) guest_to_host((size_t) curr_wr->next);
+
+		// SGE array
+		for (int s = 0; s < curr_wr->num_sge; s++) {
+			wr__sg_list__addr[w][s] = curr_wr->sg_list[s].addr;
+			curr_wr->sg_list[s].addr = (uint64_t) guest_to_host((size_t) curr_wr->sg_list[s].addr);
+		}
+
+		wr__sg_list[w] = curr_wr->sg_list;
+		curr_wr->sg_list = (struct ibv_sge *) guest_to_host((size_t) curr_wr->sg_list);
+
+		curr_wr = wr__next[w];
+	}
+
+	uhyve_send(UHYVE_PORT_IBV_POST_SRQ_RECV, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	if (*bad_recv_wr && *bad_recv_wr == uhyve_args.recv_wr) {
+		*bad_recv_wr = recv_wr;
+	}
+
+	curr_wr = recv_wr;
+	for (int w = 0; w < num_wrs; w++) {
+		if (*bad_recv_wr && *bad_recv_wr == curr_wr->next) {
+			*bad_recv_wr = wr__next[w];
+		}
+
+		curr_wr->next    = wr__next[w];
+		curr_wr->sg_list = wr__sg_list[w];
+		for (int s = 0; s < curr_wr->num_sge; s++) {
+			curr_wr->sg_list[s].addr = wr__sg_list__addr[w][s];
+		}
+
+		curr_wr = curr_wr->next;
+	}
+
+	return uhyve_args.ret;
+}
+
+
+/*
+ * ibv_post_recv
+ */
+
+typedef struct {
+	// Parameters:
+	struct ibv_qp * qp;
+	struct ibv_recv_wr * recv_wr;
+	struct ibv_recv_wr ** bad_recv_wr;
+	// Return value:
+	int ret;
+} __attribute__((packed)) uhyve_ibv_post_recv_t;
+
+int ibv_post_recv(struct ibv_qp * qp, struct ibv_recv_wr * recv_wr, struct ibv_recv_wr ** bad_recv_wr) {
+	uhyve_ibv_post_recv_t uhyve_args;
+	uhyve_args.qp     = qp;
+	uhyve_args.recv_wr     = (struct ibv_recv_wr *)  guest_to_host((size_t) recv_wr);
+	uhyve_args.bad_recv_wr = (struct ibv_recv_wr **) guest_to_host((size_t) bad_recv_wr);
+
+	struct ibv_recv_wr * curr_wr;
+	int num_sges_max;
+	int num_wrs;
+
+	// Number of work requests in linked list and SGEs in each recv_wr
+	num_wrs = 0;
+	num_sges_max = 0;
+	for (curr_wr = recv_wr; curr_wr; curr_wr = curr_wr->next) {
+		num_wrs++;
+		if (num_sges_max < curr_wr->num_sge) {
+			num_sges_max = curr_wr->num_sge;
+		}
+	}
+
+	// Backup arrays for original guest memory pointers
+	struct ibv_recv_wr * wr__next         [num_wrs];
+	struct ibv_sge *     wr__sg_list      [num_wrs];
+	uint64_t             wr__sg_list__addr[num_wrs][num_sges_max];
+
+	curr_wr = recv_wr;
+	for (int w = 0; w < num_wrs; w++) {
+		// Next pointer
+		wr__next[w] = curr_wr->next;
+		curr_wr->next = (struct ibv_recv_wr *) guest_to_host((size_t) curr_wr->next);
+
+		// SGE array
+		for (int s = 0; s < curr_wr->num_sge; s++) {
+			wr__sg_list__addr[w][s] = curr_wr->sg_list[s].addr;
+			curr_wr->sg_list[s].addr = (uint64_t) guest_to_host((size_t) curr_wr->sg_list[s].addr);
+		}
+
+		wr__sg_list[w] = curr_wr->sg_list;
+		curr_wr->sg_list = (struct ibv_sge *) guest_to_host((size_t) curr_wr->sg_list);
+
+		curr_wr = wr__next[w];
+	}
+
+	uhyve_send(UHYVE_PORT_IBV_POST_RECV, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	if (*bad_recv_wr && *bad_recv_wr == uhyve_args.recv_wr) {
+		*bad_recv_wr = recv_wr;
+	}
+
+	curr_wr = recv_wr;
+	for (int w = 0; w < num_wrs; w++) {
+		if (*bad_recv_wr && *bad_recv_wr == curr_wr->next) {
+			*bad_recv_wr = wr__next[w];
+		}
+
+		curr_wr->next    = wr__next[w];
+		curr_wr->sg_list = wr__sg_list[w];
+		for (int s = 0; s < curr_wr->num_sge; s++) {
+			curr_wr->sg_list[s].addr = wr__sg_list__addr[w][s];
+		}
+
+		curr_wr = curr_wr->next;
+	}
+
+	return uhyve_args.ret;
+}
+
+
+/*
+ * ibv_create_rwq_ind_table
+ */
+
+typedef struct {
+	// Parameters:
+	struct ibv_context * context;
+	struct ibv_rwq_ind_table_init_attr * init_attr;
+	// Return value:
+	struct ibv_rwq_ind_table * ret;
+} __attribute__((packed)) uhyve_ibv_create_rwq_ind_table_t;
+
+struct ibv_rwq_ind_table * ibv_create_rwq_ind_table(struct ibv_context * context, struct ibv_rwq_ind_table_init_attr * init_attr) { // !!!
+	uhyve_ibv_create_rwq_ind_table_t uhyve_args;
+	uhyve_args.context = context;
+	uhyve_args.init_attr = (struct ibv_rwq_ind_table_init_attr *) guest_to_host((size_t) init_attr);
+
+	struct ibv_wq ** init_attr__ind_tbl = init_attr->ind_tbl;
+	init_attr->ind_tbl = (struct ibv_wq **) guest_to_host((size_t) init_attr->ind_tbl);
+	// TODO: Entries of the list should be universal references residing in the IB memory pool.
+	// Confirm this.
+
+	uhyve_send(UHYVE_PORT_IBV_CREATE_RWQ_IND_TABLE, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	init_attr->ind_tbl = init_attr__ind_tbl;
+
+	return uhyve_args.ret;
+}
+
+
+/*
+ * ibv_open_xrcd
+ */
+
+typedef struct {
+	// Parameters:
+	struct ibv_context * context;
+	struct ibv_xrcd_init_attr * xrcd_init_attr;
+	// Return value:
+	struct ibv_xrcd * ret;
+} __attribute__((packed)) uhyve_ibv_open_xrcd_t;
+
+struct ibv_xrcd * ibv_open_xrcd(struct ibv_context * context, struct ibv_xrcd_init_attr * xrcd_init_attr) {
+	// TODO: This will probably not work as xrcd_init_attr->fd is a file descriptor opened in HermitCore.
+	// Possibly comment this function out?
+	uhyve_ibv_open_xrcd_t uhyve_args;
+	uhyve_args.context = context;
+	uhyve_args.xrcd_init_attr = (struct ibv_xrcd_init_attr *) guest_to_host((size_t) xrcd_init_attr);
+
+	uhyve_send(UHYVE_PORT_IBV_OPEN_XRCD, (unsigned) virt_to_phys((size_t) &uhyve_args));
+
+	return uhyve_args.ret;
+}
 
 
 /*
@@ -531,87 +956,6 @@ uint32_t ibv_wc_read_flow_tag(struct ibv_cq_ex * cq) {
 
 
 /*
- * ibv_post_wq_recv
- */
-
-typedef struct {
-	// Parameters:
-	struct ibv_wq * wq;
-	struct ibv_recv_wr * recv_wr;
-	struct ibv_recv_wr ** bad_recv_wr;
-	// Return value:
-	int ret;
-} __attribute__((packed)) uhyve_ibv_post_wq_recv_t;
-
-int ibv_post_wq_recv(struct ibv_wq * wq, struct ibv_recv_wr * recv_wr, struct ibv_recv_wr ** bad_recv_wr) { // !!!
-	uhyve_ibv_post_wq_recv_t uhyve_args;
-	uhyve_args.wq          = wq;
-	uhyve_args.recv_wr     = (struct ibv_recv_wr *)  guest_to_host((size_t) recv_wr);
-	uhyve_args.bad_recv_wr = (struct ibv_recv_wr **) guest_to_host((size_t) bad_recv_wr);
-
-	struct ibv_recv_wr * curr_wr;
-	int num_sges_max;
-	int num_wrs;
-
-	// Number of work requests in linked list and SGEs in each WR
-	num_wrs = 0;
-	num_sges_max = 0;
-	for (curr_wr = wr; curr_wr; curr_wr = curr_wr->next) {
-		num_wrs++;
-		if (num_sges_max < curr_wr->num_sge) {
-			num_sges_max = curr_wr->num_sge;
-		}
-	}
-
-	// Backup arrays for original guest memory pointers
-	struct ibv_recv_wr * wr__next         [num_wrs];
-	struct ibv_sge *     wr__sg_list      [num_wrs];
-	uint64_t             wr__sg_list__addr[num_wrs][num_sges_max];
-
-	curr_wr = wr;
-	for (int w = 0; w < num_wrs; w++) {
-		// Next pointer
-		wr__next[w] = curr_wr->next;
-		curr_wr->next = (struct ibv_recv_wr *) guest_to_host((size_t) curr_wr->next);
-
-		// SGE array
-		for (int s = 0; s < curr_wr->num_sge; s++) {
-			wr__sg_list__addr[w][s] = curr_wr->sg_list[s].addr;
-			curr_wr->sg_list[s].addr = (uint64_t) guest_to_host((size_t) curr_wr->sg_list[s].addr);
-		}
-
-		wr__sg_list[w] = curr_wr->sg_list;
-		curr_wr->sg_list = (struct ibv_sge *) guest_to_host((size_t) curr_wr->sg_list);
-
-		curr_wr = wr__next[w];
-	}
-
-	uhyve_send(UHYVE_PORT_IBV_POST_WQ_RECV, (unsigned) virt_to_phys((size_t) &uhyve_args));
-
-	if (*bad_wr && *bad_wr == uhyve_args.wr) {
-		*bad_wr = wr;
-	}
-
-	curr_wr = wr;
-	for (int w = 0; w < num_wrs; w++) {
-		if (*bad_wr && *bad_wr == curr_wr->next) {
-			*bad_wr = wr__next[w];
-		}
-
-		curr_wr->next    = wr__next[w];
-		curr_wr->sg_list = wr__sg_list[w];
-		for (int s = 0; s < curr_wr->num_sge; s++) {
-			curr_wr->sg_list[s].addr = wr__sg_list__addr[w][s];
-		}
-
-		curr_wr = curr_wr->next;
-	}
-
-	return uhyve_args.ret;
-}
-
-
-/*
  * ibv_get_device_list
  */
 
@@ -956,31 +1300,6 @@ int ibv_destroy_flow(struct ibv_flow * flow_id) {
 	uhyve_args.flow_id = flow_id;
 
 	uhyve_send(UHYVE_PORT_IBV_DESTROY_FLOW, (unsigned) virt_to_phys((size_t) &uhyve_args));
-
-	return uhyve_args.ret;
-}
-
-
-/*
- * ibv_open_xrcd
- */
-
-typedef struct {
-	// Parameters:
-	struct ibv_context * context;
-	struct ibv_xrcd_init_attr * xrcd_init_attr;
-	// Return value:
-	struct ibv_xrcd * ret;
-} __attribute__((packed)) uhyve_ibv_open_xrcd_t;
-
-struct ibv_xrcd * ibv_open_xrcd(struct ibv_context * context, struct ibv_xrcd_init_attr * xrcd_init_attr) {
-	// TODO: This will probably not work as xrcd_init_attr->fd is a file
-	// descriptor opened in HermitCore.
-	uhyve_ibv_open_xrcd_t uhyve_args;
-	uhyve_args.context = context;
-	uhyve_args.xrcd_init_attr = (struct ibv_xrcd_init_attr *) guest_to_host((size_t) xrcd_init_attr);
-
-	uhyve_send(UHYVE_PORT_IBV_OPEN_XRCD, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	return uhyve_args.ret;
 }
@@ -1551,87 +1870,6 @@ int ibv_destroy_srq(struct ibv_srq * srq) {
 
 
 /*
- * ibv_post_srq_recv
- */
-
-typedef struct {
-	// Parameters:
-	struct ibv_srq * srq;
-	struct ibv_recv_wr * recv_wr;
-	struct ibv_recv_wr ** bad_recv_wr;
-	// Return value:
-	int ret;
-} __attribute__((packed)) uhyve_ibv_post_srq_recv_t;
-
-int ibv_post_srq_recv(struct ibv_srq * srq, struct ibv_recv_wr * recv_wr, struct ibv_recv_wr ** bad_recv_wr) { // !!!
-	uhyve_ibv_post_srq_recv_t uhyve_args;
-	uhyve_args.srq         = srq;
-	uhyve_args.recv_wr     = (struct ibv_recv_wr *)  guest_to_host((size_t) recv_wr);
-	uhyve_args.bad_recv_wr = (struct ibv_recv_wr **) guest_to_host((size_t) bad_recv_wr);
-
-	struct ibv_recv_wr * curr_wr;
-	int num_sges_max;
-	int num_wrs;
-
-	// Number of work requests in linked list and SGEs in each WR
-	num_wrs = 0;
-	num_sges_max = 0;
-	for (curr_wr = recv_wr; curr_wr; curr_wr = curr_wr->next) {
-		num_wrs++;
-		if (num_sges_max < curr_wr->num_sge) {
-			num_sges_max = curr_wr->num_sge;
-		}
-	}
-
-	// Backup arrays for original guest memory pointers
-	struct ibv_recv_wr * wr__next         [num_wrs];
-	struct ibv_sge *     wr__sg_list      [num_wrs];
-	uint64_t             wr__sg_list__addr[num_wrs][num_sges_max];
-
-	curr_wr = recv_wr;
-	for (int w = 0; w < num_wrs; w++) {
-		// Next pointer
-		wr__next[w] = curr_wr->next;
-		curr_wr->next = (struct ibv_recv_wr *) guest_to_host((size_t) curr_wr->next);
-
-		// SGE array
-		for (int s = 0; s < curr_wr->num_sge; s++) {
-			wr__sg_list__addr[w][s] = curr_wr->sg_list[s].addr;
-			curr_wr->sg_list[s].addr = (uint64_t) guest_to_host((size_t) curr_wr->sg_list[s].addr);
-		}
-
-		wr__sg_list[w] = curr_wr->sg_list;
-		curr_wr->sg_list = (struct ibv_sge *) guest_to_host((size_t) curr_wr->sg_list);
-
-		curr_wr = wr__next[w];
-	}
-
-	uhyve_send(UHYVE_PORT_IBV_POST_SRQ_RECV, (unsigned) virt_to_phys((size_t) &uhyve_args));
-
-	if (*bad_recv_wr && *bad_recv_wr == uhyve_args.recv_wr) {
-		*bad_recv_wr = recv_wr;
-	}
-
-	curr_wr = recv_wr;
-	for (int w = 0; w < num_wrs; w++) {
-		if (*bad_recv_wr && *bad_recv_wr == curr_wr->next) {
-			*bad_recv_wr = wr__next[w];
-		}
-
-		curr_wr->next    = wr__next[w];
-		curr_wr->sg_list = wr__sg_list[w];
-		for (int s = 0; s < curr_wr->num_sge; s++) {
-			curr_wr->sg_list[s].addr = wr__sg_list__addr[w][s];
-		}
-
-		curr_wr = curr_wr->next;
-	}
-
-	return uhyve_args.ret;
-}
-
-
-/*
  * ibv_create_qp
  */
 
@@ -1894,35 +2132,6 @@ int ibv_destroy_wq(struct ibv_wq * wq) {
 
 
 /*
- * ibv_create_rwq_ind_table
- */
-
-typedef struct {
-	// Parameters:
-	struct ibv_context * context;
-	struct ibv_rwq_ind_table_init_attr * init_attr;
-	// Return value:
-	struct ibv_rwq_ind_table * ret;
-} __attribute__((packed)) uhyve_ibv_create_rwq_ind_table_t;
-
-struct ibv_rwq_ind_table * ibv_create_rwq_ind_table(struct ibv_context * context, struct ibv_rwq_ind_table_init_attr * init_attr) { // !!!
-	uhyve_ibv_create_rwq_ind_table_t uhyve_args;
-	uhyve_args.context = context;
-	uhyve_args.init_attr = (struct ibv_rwq_ind_table_init_attr *) guest_to_host((size_t) init_attr);
-
-	struct ibv_wq ** init_attr__ind_tbl = init_attr->ind_tbl;
-	init_attr->ind_tbl = (struct ibv_wq **) guest_to_host((size_t) init_attr->ind_tbl);
-	// TODO: entries of the list should be in ib mem pool, correct?
-
-	uhyve_send(UHYVE_PORT_IBV_CREATE_RWQ_IND_TABLE, (unsigned) virt_to_phys((size_t) &uhyve_args));
-
-	init_attr->ind_tbl = init_attr__ind_tbl;
-
-	return uhyve_args.ret;
-}
-
-
-/*
  * ibv_destroy_rwq_ind_table
  */
 
@@ -1938,213 +2147,6 @@ int ibv_destroy_rwq_ind_table(struct ibv_rwq_ind_table * rwq_ind_table) {
 	uhyve_args.rwq_ind_table = rwq_ind_table;
 
 	uhyve_send(UHYVE_PORT_IBV_DESTROY_RWQ_IND_TABLE, (unsigned) virt_to_phys((size_t) &uhyve_args));
-
-	return uhyve_args.ret;
-}
-
-
-/*
- * ibv_post_send
- */
-
-typedef struct {
-	// Parameters:
-	struct ibv_qp      * qp;
-	struct ibv_send_wr * wr;
-	struct ibv_send_wr ** bad_wr;
-	// Return value:
-	int ret;
-} __attribute__((packed)) uhyve_ibv_post_send_t;
-
-int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_wr ** bad_wr) { // !!!
-	unsigned long long tick_start = rdtsc();
-
-	uhyve_ibv_post_send_t uhyve_args;
-	uhyve_args.qp     = qp;
-	unsigned long long tick_gh = rdtsc();
-	uhyve_args.wr     = (struct ibv_send_wr *)  guest_to_host((size_t) wr);
-	tick_gh = rdtsc() - tick_gh;
-	uhyve_args.bad_wr = (struct ibv_send_wr **) guest_to_host((size_t) bad_wr);
-
-	struct ibv_send_wr * curr_wr;
-	int num_wrs;
-	int num_sges_max;
-	int is_bind_mw, is_tso;
-
-	// Number of work requests in linked list and SGEs in each WR
-	num_wrs = 0;
-	num_sges_max = 0;
-	for (curr_wr = wr; curr_wr; curr_wr = curr_wr->next) {
-		num_wrs++;
-		if (num_sges_max < curr_wr->num_sge) {
-			num_sges_max = curr_wr->num_sge;
-		}
-	}
-
-	// Backup arrays for original guest memory pointers
-	struct ibv_send_wr * wr__next                    [num_wrs];
-	struct ibv_sge *     wr__sg_list                 [num_wrs];
-	uint64_t             wr__sg_list__addr           [num_wrs][num_sges_max];
-	uint64_t             wr__bind_mw__bind_info__addr[num_wrs];
-	void *               wr__tso__hdr                [num_wrs];
-
-	curr_wr = wr;
-	for (int w = 0; w < num_wrs; w++) {
-		/* LOG_INFO("ibv_post_send for wrs, w = %d\n", w); */
-		is_bind_mw = curr_wr->opcode == IBV_WR_BIND_MW;
-		is_tso     = curr_wr->opcode == IBV_WR_TSO;
-
-		// union: bind_mw and tso
-		if (is_bind_mw) {
-			wr__bind_mw__bind_info__addr[w] = curr_wr->bind_mw.bind_info.addr;
-			curr_wr->bind_mw.bind_info.addr = (uint64_t) guest_to_host((size_t) curr_wr->bind_mw.bind_info.addr);
-		} else if (is_tso) {
-			wr__tso__hdr[w] = curr_wr->tso.hdr;
-			curr_wr->tso.hdr = (void *) guest_to_host((size_t) curr_wr->tso.hdr);
-		}
-
-		// Next pointer and SGE array
-		wr__next[w] = curr_wr->next;
-		curr_wr->next = (struct ibv_send_wr *) guest_to_host((size_t) curr_wr->next);
-
-		for (int s = 0; s < curr_wr->num_sge; s++) {
-			/* LOG_INFO("ibv_post_send for sges, s = %d\n", s); */
-			wr__sg_list__addr[w][s] = curr_wr->sg_list[s].addr;
-			curr_wr->sg_list[s].addr = (uint64_t) guest_to_host((size_t) curr_wr->sg_list[s].addr);
-		}
-
-		wr__sg_list[w] = curr_wr->sg_list;
-		curr_wr->sg_list = (struct ibv_sge *) guest_to_host((size_t) curr_wr->sg_list);
-
-		curr_wr = wr__next[w];
-
-		/* LOG_INFO("\tsg_list - guest backup address: %p", wr__sg_list[w]); */
-		/* LOG_INFO("\tsg_list - host address:         %p", curr_wr->sg_list); */
-	}
-
-	unsigned long long tick_pre_work = rdtsc() - tick_start;
-
-	uhyve_send(UHYVE_PORT_IBV_POST_SEND, (unsigned) virt_to_phys((size_t) &uhyve_args));
-
-	unsigned long long tick_call = rdtsc() - tick_start - tick_pre_work;
-
-	if (*bad_wr && *bad_wr == uhyve_args.wr) {
-		*bad_wr = wr;
-	}
-
-	curr_wr = wr;
-	for (int w = 0; w < num_wrs; w++) {
-		is_bind_mw = curr_wr->opcode == IBV_WR_BIND_MW;
-		is_tso     = curr_wr->opcode == IBV_WR_TSO;
-
-		// union: bind_mw and tso
-		if (is_bind_mw) {
-			 curr_wr->bind_mw.bind_info.addr = wr__bind_mw__bind_info__addr[w];
-		} else if (is_tso) {
-			 curr_wr->tso.hdr = wr__tso__hdr[w];
-		}
-
-		// Bad request
-		if (*bad_wr && *bad_wr == curr_wr->next) {
-			*bad_wr = wr__next[w];
-		}
-
-		// Next pointer and SGE array
-		curr_wr->next = wr__next[w];
-		curr_wr->sg_list = wr__sg_list[w];
-		for (int s = 0; s < curr_wr->num_sge; s++) {
-			curr_wr->sg_list[s].addr = wr__sg_list__addr[w][s];
-		}
-
-		curr_wr = curr_wr->next;
-	}
-
-	unsigned long long tick_post_work = rdtsc() - tick_start - tick_pre_work - tick_call;
-
-	LOG_INFO("tick_gh:        %llu\n", tick_gh);
-	LOG_INFO("tick_pre_work:  %llu\n", tick_pre_work);
-	LOG_INFO("tick_call:      %llu\n", tick_call);
-	LOG_INFO("tick_post_work: %llu\n", tick_post_work);
-	return uhyve_args.ret;
-}
-
-
-/*
- * ibv_post_recv
- */
-
-typedef struct {
-	// Parameters:
-	struct ibv_qp * qp;
-	struct ibv_recv_wr * wr;
-	struct ibv_recv_wr ** bad_wr;
-	// Return value:
-	int ret;
-} __attribute__((packed)) uhyve_ibv_post_recv_t;
-
-int ibv_post_recv(struct ibv_qp * qp, struct ibv_recv_wr * wr, struct ibv_recv_wr ** bad_wr) {
-	uhyve_ibv_post_recv_t uhyve_args;
-	uhyve_args.qp     = qp;
-	uhyve_args.wr     = (struct ibv_recv_wr *)  guest_to_host((size_t) wr);
-	uhyve_args.bad_wr = (struct ibv_recv_wr **) guest_to_host((size_t) bad_wr);
-
-	struct ibv_recv_wr * curr_wr;
-	int num_sges_max;
-	int num_wrs;
-
-	// Number of work requests in linked list and SGEs in each WR
-	num_wrs = 0;
-	num_sges_max = 0;
-	for (curr_wr = wr; curr_wr; curr_wr = curr_wr->next) {
-		num_wrs++;
-		if (num_sges_max < curr_wr->num_sge) {
-			num_sges_max = curr_wr->num_sge;
-		}
-	}
-
-	// Backup arrays for original guest memory pointers
-	struct ibv_recv_wr * wr__next         [num_wrs];
-	struct ibv_sge *     wr__sg_list      [num_wrs];
-	uint64_t             wr__sg_list__addr[num_wrs][num_sges_max];
-
-	curr_wr = wr;
-	for (int w = 0; w < num_wrs; w++) {
-		// Next pointer
-		wr__next[w] = curr_wr->next;
-		curr_wr->next = (struct ibv_recv_wr *) guest_to_host((size_t) curr_wr->next);
-
-		// SGE array
-		for (int s = 0; s < curr_wr->num_sge; s++) {
-			wr__sg_list__addr[w][s] = curr_wr->sg_list[s].addr;
-			curr_wr->sg_list[s].addr = (uint64_t) guest_to_host((size_t) curr_wr->sg_list[s].addr);
-		}
-
-		wr__sg_list[w] = curr_wr->sg_list;
-		curr_wr->sg_list = (struct ibv_sge *) guest_to_host((size_t) curr_wr->sg_list);
-
-		curr_wr = wr__next[w];
-	}
-
-	uhyve_send(UHYVE_PORT_IBV_POST_RECV, (unsigned) virt_to_phys((size_t) &uhyve_args));
-
-	if (*bad_wr && *bad_wr == uhyve_args.wr) {
-		*bad_wr = wr;
-	}
-
-	curr_wr = wr;
-	for (int w = 0; w < num_wrs; w++) {
-		if (*bad_wr && *bad_wr == curr_wr->next) {
-			*bad_wr = wr__next[w];
-		}
-
-		curr_wr->next    = wr__next[w];
-		curr_wr->sg_list = wr__sg_list[w];
-		for (int s = 0; s < curr_wr->num_sge; s++) {
-			curr_wr->sg_list[s].addr = wr__sg_list__addr[w][s];
-		}
-
-		curr_wr = curr_wr->next;
-	}
 
 	return uhyve_args.ret;
 }
