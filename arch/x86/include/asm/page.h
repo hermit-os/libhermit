@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2010, Stefan Lankes, RWTH Aachen University
- *               2014, Steffen Vogel, RWTH Aachen University
+ * Copyright (c) 2010, Stefan Lankes,   RWTH Aachen University
+ *               2014, Steffen Vogel,   RWTH Aachen University
+ *               2018, Annika Wierichs, RWTH Aachen University
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +33,9 @@
  * @brief Paging related functions
  *
  * This file contains the several functions to manage the page tables
+ *
+ * @author Annika Wierichs <annika.wierichs@rwth-aachen.de>
+ * Extended with phys_to_virt and guest_to_host functions in 2018.
  */
 
 #include <hermit/stddef.h>
@@ -166,6 +170,15 @@ size_t virt_to_phys(size_t vir);
  * @return Virtual address
  */
 size_t phys_to_virt(size_t phy);
+
+/** @brief Converts a HermitCore guest virtual address to a host virtual address
+ *
+ * A non mapped virtual address causes a pagefault!
+ *
+ * @param addr HermitCore guest virtual address to convert
+ * @return Host virtual address
+ */
+size_t guest_to_host(size_t addr);
 
 /** @brief Initialize paging subsystem
  *

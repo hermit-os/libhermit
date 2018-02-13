@@ -369,6 +369,9 @@ that is required is that you include
 `CMakeLists.txt`. It doesn't have to reside inside the HermitCore repository.
 Other than that, it should behave like normal CMake.
 
+### InfiniBand / verbs Support
+
+TODO
 
 ## Profiling
 

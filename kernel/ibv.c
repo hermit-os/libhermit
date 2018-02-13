@@ -36,15 +36,9 @@
 #include <hermit/stdlib.h>
 #include <hermit/logging.h>
 
-#include <hermit/ibv.h>
+#include <hermit/verbs.h>
 
 #include <asm/processor.h>
-
-extern uint8_t * host_logical_addr;
-
-size_t guest_to_host(size_t address) {
-	return address ? virt_to_phys(address) + (size_t) host_logical_addr : address;
-}
 
 /* inline static unsigned long long rdtsc(void) { */
 	/* unsigned long lo, hi; */
@@ -2416,15 +2410,4 @@ int ibv_is_qpt_supported(uint32_t caps, enum ibv_qp_type qpt) {
 	uhyve_send(UHYVE_PORT_IBV_IS_QPT_SUPPORTED, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	return uhyve_args.ret;
-}
-
-
-/*
- * IBV KERNEL LOG
- */
-
-void kernel_ibv_log() {
-	char log_message[128];
-	ksprintf(log_message, "%p", host_logical_addr);
-	uhyve_send(UHYVE_PORT_KERNEL_IBV_LOG, (unsigned) virt_to_phys((size_t) log_message));
 }

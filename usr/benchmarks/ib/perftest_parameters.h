@@ -54,7 +54,6 @@
 #ifndef PERFTEST_PARAMETERS_H
 #define PERFTEST_PARAMETERS_H
 
-#include <hermit/ibv.h>
 #include <hermit/verbs.h>
 
 #include <unistd.h>

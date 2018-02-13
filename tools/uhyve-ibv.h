@@ -121,7 +121,7 @@ typedef enum {
 	// UHYVE_PORT_IBV_RESOLVE_ETH_L2_FROM_GID  = 0x66B,
 	UHYVE_PORT_IBV_IS_QPT_SUPPORTED         = 0x66C,
 
-	UHYVE_PORT_KERNEL_IBV_LOG               = 0x66F,
+	// UHYVE_PORT_KERNEL_IBV_LOG               = 0x66F,
 } uhyve_ibv_t;
 
 

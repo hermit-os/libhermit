@@ -41,7 +41,6 @@
 
 #include <netinet/in.h>
 
-#include <hermit/ibv.h>
 #include <hermit/verbs.h>
 
 #include "perftest_resources.h"

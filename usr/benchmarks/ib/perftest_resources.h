@@ -51,7 +51,6 @@
 #ifndef PERFTEST_RESOURCES_H
 #define PERFTEST_RESOURCES_H
 
-#include <hermit/ibv.h>
 #include <hermit/verbs.h>
 
 #include <stdint.h>

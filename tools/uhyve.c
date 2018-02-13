@@ -1246,12 +1246,12 @@ static int vcpu_loop(void)
 
 			// InfiniBand
 
-			case UHYVE_PORT_KERNEL_IBV_LOG: {
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-					char* str = (char*) (guest_mem + data);
-					printf("KERNEL IBV LOG: %s\n", str);
-					break;
-				}
+			/* case UHYVE_PORT_KERNEL_IBV_LOG: { */
+					/* unsigned data = *((unsigned*)((size_t)run+run->io.data_offset)); */
+					/* char* str = (char*) (guest_mem + data); */
+					/* printf("KERNEL IBV LOG: %s\n", str); */
+					/* break; */
+				/* } */
 
 			case UHYVE_PORT_SET_IB_POOL_ADDR: {
 					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
