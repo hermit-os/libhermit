@@ -712,8 +712,8 @@ typedef struct {
 typedef struct {
 	// Parameters:
 	struct ibv_qp * qp;
-	struct ibv_recv_wr * wr;
-	struct ibv_recv_wr ** bad_wr;
+	struct ibv_recv_wr * recv_wr;
+	struct ibv_recv_wr ** bad_recv_wr;
 	// Return value:
 	int ret;
 } __attribute__((packed)) uhyve_ibv_post_recv_t;

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Copyright (c) 2017, Annika Wierichs, RWTH Aachen University
+"""Copyright (c) 2018, Annika Wierichs, RWTH Aachen University
 
 All rights reserved.
 Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 TODO, docs
 """
 
-# TODO: Add ibv_resolve_eth_l2_from_gid function back in. Not linking right now.
+import custom_snippets
+
+# TODO: ibv_resolve_eth_l2_from_gid function does not work.
+# TODO: ibv_open_xrcd function might not work. Confirm.
 
 
 # Path of the input file containing function prototypes.
@@ -46,11 +49,11 @@ PORT_NUMBER_START = 0x610
 
 restricted_resources = ["struct ibv_send_wr",
                         "struct ibv_recv_wr",
-                        "struct ibv_sge",
                         "struct ibv_xrcd_init_attr",
                         "struct ibv_rwq_ind_table_init_attr",
 
-                        # Deep resources that are not used as parameters to any functions
+                        # Deep resources that are not used as direct function parameters
+                        "struct ibv_sge",
                         "struct ibv_mw_bind_info",
                         "struct ibv_rx_hash_conf"]
 
@@ -334,24 +337,14 @@ def generate_hermit_function_definition(fnc):
       code += "\tuhyve_args.{0} = {0};\n".format(param.name)
   code += "\n"
 
-  if fnc.is_restricted():
-    code += snippet.generate(fnc.name, snippet.BACKUP_AND_CONVERT)
-
-  #  for param in fnc.params:
-    #  if param.is_restricted():
-      #  code += "\t// TODO: Take care of pointer conversions in " + param.name + ".\n"
-      #  code += "\n" if param is fnc.params[-1] else ""
+  if fnc.name in custom_snippets.supported_functions:
+    code += custom_snippets.generate(fnc.name, custom_snippets.CONVERT)
 
   code += ("\tuhyve_send({0}, (unsigned) virt_to_phys((size_t) &uhyve_args));\n\n"
            .format(fnc.port_name))
 
-  #  for param in fnc.params:
-    #  if param.is_restricted():
-      #  code += "\t// TODO: Take care of reverse pointer conversions in " + param.name + ".\n"
-      #  code += "\n" if param is fnc.params[-1] else ""
-
-  if fnc.is_restricted():
-    code += snippet.generate(fnc.name, snippet.REVERT)
+  if fnc.name in custom_snippets.supported_functions:
+    code += custom_snippets.generate(fnc.name, custom_snippets.REVERT)
 
   if not fnc.ret.is_void():
     code += "\treturn uhyve_args.ret;\n"
