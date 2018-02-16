@@ -1241,7 +1241,7 @@ void call_ibv_destroy_rwq_ind_table(struct kvm_run * run, uint8_t * guest_mem) {
 
 // TODO: Cleanup
 void call_ibv_post_send(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("s");
+	/* printf("s"); */
 	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
 	uhyve_ibv_post_send_t * args = (uhyve_ibv_post_send_t *) (guest_mem + data);
 

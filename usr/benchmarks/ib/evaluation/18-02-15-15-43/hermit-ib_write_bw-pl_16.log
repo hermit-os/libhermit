@@ -1,0 +1,65 @@
+---------------------------------------------------------------------------------------
+Post List requested - CQ moderation will be the size of the post list
+
+mydestvaddr:   7fb15960a000
+
+---------------------------------------------------------------------------------------
+ RDMA_Write Post List BW Test
+ Dual-port : OFF		Device : mlx4_0
+ Number of qps : 1		Transport type : IB
+ Connection type : RC		Using SRQ : OFF
+ TX depth : 128
+ Post List : 16
+ CQ Moderation : 16
+ Mtu : 2048[B]
+ Link type : IB
+ Max inline data : 0[B]
+ rdma_cm QPs : OFF
+ Data ex. method : Ethernet
+---------------------------------------------------------------------------------------
+ local address: LID 0x06 QPN 0x0a94 PSN 0x5424a4 RKey 0x60010102 VAddr 0x00007fb15960a000
+ remote address: LID 0x03 QPN 0x0a94 PSN 0x2df17e RKey 0x60010102 VAddr 0x00007f0c6baae000
+---------------------------------------------------------------------------------------
+ #bytes     #iterations    BW peak[MB/sec]    BW average[MB/sec]   MsgRate[Mpps]
+ 2          5000             inf                4.20   		   2.202231
+ 4          5000             inf                8.44   		   2.213705
+ 8          5000             inf                16.99  		   2.226547
+ 16         5000             inf                33.02  		   2.163775
+ 32         5000             inf                67.86  		   2.223707
+ 64         5000             inf                135.62 		   2.221932
+ 128        5000             inf                271.57 		   2.224720
+ 256        5000             inf                543.92 		   2.227878
+ 512        5000             inf                1080.83		   2.213540
+ 1024       5000             inf                2173.06		   2.225212
+ 2048       5000             inf                4315.21		   2.209387
+ 4096       5000             inf                5900.64		   1.510563
+ 8192       5000             inf                5938.25		   0.760095
+ 16384      5000             inf                5991.13		   0.383432
+ 32768      5000             inf                5982.65		   0.191445
+ 65536      5000             inf                5989.67		   0.095835
+ 131072     5000             inf                5993.30		   0.047946
+ 262144     5000             inf                5978.11		   0.023912
+ 524288     5000             inf                5978.63		   0.011957
+ 1048576    5000             inf                5942.08		   0.005942
+---------------------------------------------------------------------------------------
+LOG: UHYVE - call_ibv_get_device_list
+LOG: UHYVE - call_ibv_open_device
+LOG: UHYVE - call_ibv_query_port
+LOG: UHYVE - call_ibv_query_device
+LOG: UHYVE - call_ibv_get_device_name
+LOG: UHYVE - call_ibv_get_device_name
+LOG: UHYVE - call_ibv_query_port
+LOG: UHYVE - call_ibv_query_device
+LOG: UHYVE - call_ibv_alloc_pd
+LOG: UHYVE - call_ibv_reg_mr
+LOG: UHYVE - call_ibv_create_cq
+LOG: UHYVE - call_ibv_create_qp
+LOG: UHYVE - call_ibv_modify_qp
+LOG: UHYVE - call_ibv_query_port
+LOG: UHYVE - call_ibv_modify_qp
+LOG: UHYVE - call_ibv_modify_qp
+LOG: UHYVE - call_ibv_destroy_qp
+LOG: UHYVE - call_ibv_destroy_cq
+LOG: UHYVE - call_ibv_dereg_mr
+LOG: UHYVE - call_ibv_dealloc_pd
+LOG: UHYVE - call_ibv_close_device

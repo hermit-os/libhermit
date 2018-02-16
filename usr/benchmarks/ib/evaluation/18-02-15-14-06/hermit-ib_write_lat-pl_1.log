@@ -1,0 +1,56 @@
+
+mydestvaddr:   7fd22d545000
+
+---------------------------------------------------------------------------------------
+ RDMA_Write Latency Test
+ Dual-port : OFF		Device : mlx4_0
+ Number of qps : 1		Transport type : IB
+ Connection type : RC		Using SRQ : OFF
+ TX depth : 1
+ Mtu : 2048[B]
+ Link type : IB
+ Max inline data : 220[B]
+ rdma_cm QPs : OFF
+ Data ex. method : Ethernet
+---------------------------------------------------------------------------------------
+ local address: LID 0x06 QPN 0x0a6c PSN 0xddb16e RKey 0x20010101 VAddr 0x00007fd22d545000
+ remote address: LID 0x03 QPN 0x0a6c PSN 0xca97db RKey 0x20010101 VAddr 0x00007fbda01da000
+---------------------------------------------------------------------------------------
+ #bytes #iterations    t_min[usec]    t_max[usec]  t_typical[usec]    t_avg[usec]    t_stdev[usec]   99% percentile[usec]   99.9% percentile[usec] 
+ 2       1000          4.32           8.25         4.37     	       4.39        	0.17   		5.46    		8.25   
+ 4       1000          4.30           8.97         4.35     	       4.37        	0.16   		5.41    		8.97   
+ 8       1000          4.29           8.56         4.34     	       4.36        	0.16   		5.65    		8.56   
+ 16      1000          4.30           7.27         4.34     	       4.37        	0.16   		4.85    		7.27   
+ 32      1000          4.32           7.25         4.37     	       4.39        	0.16   		5.43    		7.25   
+ 64      1000          4.33           7.58         4.36     	       4.38        	0.18   		5.65    		7.58   
+ 128     1000          4.34           7.50         4.39     	       4.41        	0.17   		5.46    		7.50   
+ 256     1000          4.27           8.06         4.32     	       4.35        	0.18   		5.42    		8.06   
+ 512     1000          4.27           7.12         4.32     	       4.34        	0.19   		5.48    		7.12   
+ 1024    1000          4.27           7.79         4.32     	       4.35        	0.19   		5.53    		7.79   
+ 2048    1000          4.27           7.74         4.32     	       4.36        	0.25   		5.91    		7.74   
+ 4096    1000          4.34           9.21         4.44     	       4.55        	0.40   		7.22    		9.21   
+ 8192    1000          4.96           10.29        5.17     	       5.27        	0.39   		7.83    		10.29  
+ 16384   1000          6.24           11.16        6.61     	       6.62        	0.36   		8.18    		11.16  
+ 32768   1000          9.12           14.38        9.30     	       9.36        	0.44   		13.04   		14.38  
+ 65536   1000          14.59          19.78        14.85    	       14.89       	0.37   		16.04   		19.78  
+ 131072  1000          24.95          30.98        26.15    	       26.18       	0.43   		27.29   		30.98  
+ 262144  1000          46.34          55.41        47.30    	       47.34       	0.48   		50.94   		55.41  
+ 524288  1000          88.45          98.13        89.61    	       89.62       	0.68   		93.64   		98.13  
+ 1048576 1000          172.19         181.21       173.84   	       173.83      	0.59   		175.12  		181.21 
+---------------------------------------------------------------------------------------
+LOG: UHYVE - call_ibv_get_device_list
+LOG: UHYVE - call_ibv_open_device
+LOG: UHYVE - call_ibv_query_port
+LOG: UHYVE - call_ibv_query_device
+LOG: UHYVE - call_ibv_get_device_name
+LOG: UHYVE - call_ibv_get_device_name
+LOG: UHYVE - call_ibv_query_port
+LOG: UHYVE - call_ibv_query_device
+LOG: UHYVE - call_ibv_alloc_pd
+LOG: UHYVE - call_ibv_reg_mr
+LOG: UHYVE - call_ibv_create_cq
+LOG: UHYVE - call_ibv_create_qp
+LOG: UHYVE - call_ibv_modify_qp
+LOG: UHYVE - call_ibv_query_port
+LOG: UHYVE - call_ibv_modify_qp
+LOG: UHYVE - call_ibv_modify_qp

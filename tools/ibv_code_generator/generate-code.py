@@ -47,12 +47,14 @@ UHYVE_HOST_FCNS_GEN_PATH  = "GEN-tools-uhyve-ibv.c"
 # Starting number of the sequence used for IBV ports.
 PORT_NUMBER_START = 0x610
 
+
 restricted_resources = ["struct ibv_send_wr",
                         "struct ibv_recv_wr",
                         "struct ibv_xrcd_init_attr",
                         "struct ibv_rwq_ind_table_init_attr",
 
-                        # Deep resources that are not used as direct function parameters
+                        # Deep resources that are not used as function parameters but are part of
+                        # other resources that are used as parameters:
                         "struct ibv_sge",
                         "struct ibv_mw_bind_info",
                         "struct ibv_rx_hash_conf"]
@@ -126,7 +128,6 @@ app_owned_resources = restricted_resources + \
 
 
 # int ibv_resolve_eth_l2_from_gid(uint8_t [6] eth_mac,uint16_t * vid)
-# struct ibv_device ** dev
 # char[NUM]
 
 # ----------------------------------------------------------------------------
@@ -139,15 +140,15 @@ class Resource:
     """Initialize resource properties.
 
     Members using ibv_context as an example:
-    full_expression   struct ibv_context * ctx
-    type              struct ibv_context *
-    name                                   ctx
-    struct_name              ibv_context
-    type_wo_asterisk  struct ibv_context
+    full_expression:  struct ibv_context * ctx
+    type:             struct ibv_context *
+    name:                                  ctx
+    struct_name:             ibv_context
+    type_wo_asterisk: struct ibv_context
 
     Args
-      string: Full string of the resource (like full expression but spaces may be omitted).
-      is_ret: Resource without name (like type member) as is the case for return types is expected.
+      string: Full string of the resource (like full expr. but spaces around '*' may be omitted).
+      is_ret: If True, a resource w/o name (like type) as is the case for return types is expected.
     """
     if "**" in string:
       string.replace("**", " ** ")
@@ -175,7 +176,7 @@ class Resource:
   def is_ptr_ptr(self):
     return "**" in self.full_expression
 
-  def is_char_arr(self):
+  def is_char_arr(self): # TODO: do something about these?
     return self.is_ptr() and "char" in self.components
 
   def is_void(self):
@@ -189,7 +190,6 @@ class Resource:
 
   def is_restricted(self):
     return self.type_wo_asterisk in restricted_resources
-
 
 class Function:
   def __init__(self, string):

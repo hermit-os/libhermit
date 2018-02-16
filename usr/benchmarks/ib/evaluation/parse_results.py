@@ -34,9 +34,11 @@ lat_metrics = ['num_bytes',
                'percentile_99_9']
 
 labels = {metric: '' for metric in bw_metrics[2:] + lat_metrics[2:] }
+
 labels[bw_metrics [2]] = 'Peak Bandwidth [MB/sec]'
 labels[bw_metrics [3]] = 'Average Bandwidth [MB/sec]'
 labels[bw_metrics [4]] = 'Message Rate [Mpps]'
+
 labels[lat_metrics[2]] = 'Min. Latency [${\mu}sec$]'
 labels[lat_metrics[3]] = 'Max. Latency [${\mu}sec$]'
 labels[lat_metrics[4]] = 'Typical Latency [${\mu}sec$]'
@@ -65,6 +67,11 @@ def parse_results(directory):
   for machine in MACHINE_TYPES:
     for bm in BENCHMARKS:
       for num_wrs in num_wrs_list:
+
+        print('Benchmark: ' + machine + ' --- ' + bm + ' WRs: ' + num_wrs)
+
+        #  if bm.endswith("lat") and not num_wrs == '1':
+          #  continue
 
         read_line = False
         file_name = machine + '-' + bm + '-pl_' + num_wrs + '.log'
@@ -95,10 +102,17 @@ def plot_results(results, directory):
   """
   num_wrs_list = [opt.split()[-1] for opt in OPTIONS]
 
+  line_color = {'native':
+                {num_wrs: (float(200 - r*40)/256, 0, 0)
+                 for r, num_wrs in zip(range(len(num_wrs_list)), num_wrs_list)},
+                'hermit':
+                {num_wrs: (0, float(170 - g*40)/256, 0)
+                 for g, num_wrs in zip(range(len(num_wrs_list)), num_wrs_list)}}
+
   for bm in BENCHMARKS:
     for metric in (bw_metrics[2:] if 'bw' in bm else lat_metrics[2:]):
 
-      file_name = bm + '-' + metric + '.pdf'
+      file_name = bm + '-' + metric + ('-MULTI' if len(num_wrs_list) > 1 else '') +  '.pdf'
       file_path = os.path.join(directory, file_name)
 
       fig, ax = plt.subplots(figsize=(10, 5))
@@ -120,14 +134,16 @@ def plot_results(results, directory):
       # Plot, save and then clear figure
       for num_wrs in num_wrs_list:
         label_end = ' (' + num_wrs + ' work request' + \
-                    (')' if num_wrs is '1' else 's)')
+                    (')' if num_wrs is '1' else 's)') if len(num_wrs_list) > 1 else ""
         ax.plot(results['native'][bm][num_wrs]['num_bytes'],
                 results['native'][bm][num_wrs][metric],
-                'go-', label = 'Native' + label_end, linewidth = 2, markersize = 6)
+                'o-', color = line_color['native'][num_wrs], label = 'Native' + label_end,
+                linewidth = 2, markersize = 6)
         label = 'HermitCore (' + num_wrs + ' work requests)'
         ax.plot(results['hermit'][bm][num_wrs]['num_bytes'],
                 results['hermit'][bm][num_wrs][metric],
-                'ro-', label = 'HermitCore' + label_end, linewidth = 2, markersize = 6)
+                'o-', color = line_color['hermit'][num_wrs], label = 'HermitCore' + label_end,
+                linewidth = 2, markersize = 6)
 
       plt.legend(fontsize = 10, ncol = 3, loc = 'lower right',
                  bbox_to_anchor = [1, 1.05])

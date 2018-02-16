@@ -1,19 +1,29 @@
 import os
 
+BENCHMARKS = ['ib_write_bw',
+              'ib_write_lat',
+              'ib_read_bw',
+              'ib_read_lat']
 
-#  BENCHMARKS = ['ib_write_bw',
-              #  'ib_write_lat',
+#  BENCHMARKS = ['ib_write_lat',
               #  'ib_read_bw',
               #  'ib_read_lat']
-BENCHMARKS = ['ib_write_bw']
-OPTIONS   = ['-a --post_list 1',
-             '-a --post_list 4',
-             '-a --post_list 16']
+OPTIONS   = ['-a --post_list 1']
 
-TIMESTAMP = '18-02-01-18-46' # TODO: temporary while testing plots
+#  BENCHMARKS = ['ib_write_bw']
+#  OPTIONS   = ['-a --post_list 4',
+             #  '-a --post_list 16']
 
-NATIVE_SERVER_IP = '137.226.133.151'
+#  OPTIONS   = ['-a --post_list 1',
+             #  '-a --post_list 4',
+             #  '-a --post_list 16']
 
+#  TIMESTAMP = '18-02-15-14-30' # TODO: temporary while testing plots
+TIMESTAMP = 'final2' # TODO: temporary while testing plots
+
+NATIVE_SERVER_IP = '137.226.133.153'
+
+NATIVE_PERFTEST_PATH = '/home/wierichs/perftest/tests/bin'
 HERMIT_PATH = '/home/wierichs'
 
 HERMIT_SERVER_IP      = '10.0.5.3'
@@ -33,7 +43,8 @@ HERMIT_RUN_SERVER = 'HERMIT_ISLE=uhyve \
                      HERMIT_IP="'      + HERMIT_SERVER_IP      + '" \
                      HERMIT_GATEWAY="' + HERMIT_SERVER_GATEWAY + '" \
                      HERMIT_MASK="'    + HERMIT_MASK           + '" \
-                     HERMIT_NETIF='    + HERMIT_SERVER_TAPDEV  + ' ' + \
+                     HERMIT_NETIF='    + HERMIT_SERVER_TAPDEV  + ' \
+                     numactl --physcpubind 10 ' + \
                      os.path.join(HERMIT_PATH, 'hermit/bin/proxy') + ' ' + \
                      os.path.join(HERMIT_PATH, 'hermit/x86_64-hermit/extra/benchmarks/')
 
@@ -44,6 +55,7 @@ HERMIT_RUN_CLIENT = 'HERMIT_ISLE=uhyve \
                      HERMIT_IP="'      + HERMIT_CLIENT_IP      + '" \
                      HERMIT_GATEWAY="' + HERMIT_CLIENT_GATEWAY + '" \
                      HERMIT_MASK="'    + HERMIT_MASK           + '" \
-                     HERMIT_NETIF='    + HERMIT_CLIENT_TAPDEV  + ' ' + \
+                     HERMIT_NETIF='    + HERMIT_CLIENT_TAPDEV  + ' \
+                     numactl --physcpubind 10 ' + \
                      os.path.join(HERMIT_PATH, 'hermit/bin/proxy') + ' ' + \
                      os.path.join(HERMIT_PATH, 'hermit/x86_64-hermit/extra/benchmarks/')

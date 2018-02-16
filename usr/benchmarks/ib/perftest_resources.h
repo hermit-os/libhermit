@@ -126,9 +126,6 @@
  ******************************************************************************/
 
 struct pingpong_context {
-	// struct rdma_event_channel *cm_channel;
-	// struct rdma_cm_id *cm_id_control;
-	// struct rdma_cm_id *cm_id;
 	struct ibv_context      *context;
 	struct ibv_comp_channel *channel;
 	struct ibv_pd           *pd;
