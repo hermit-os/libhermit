@@ -9,8 +9,9 @@ from matplotlib import pyplot as plt
 from config import BENCHMARKS, TIMESTAMP, OPTIONS
 
 matplotlib.rcParams['font.family'] = 'serif'
+matplotlib.rcParams['font.size'] = 15
 matplotlib.rcParams['mathtext.default'] = 'regular'
-matplotlib.rcParams['xtick.major.pad'] = '8' # TODO: do this separately
+matplotlib.rcParams['xtick.major.pad'] = '12' # TODO: do this separately
 
 #  matplotlib.rcParams['font.sans-serif'] = ['Tahoma']
 #  matplotlib.rcParams['figure.figsize'] = 30, 10
@@ -112,7 +113,7 @@ def plot_results(results, directory):
   for bm in BENCHMARKS:
     for metric in (bw_metrics[2:] if 'bw' in bm else lat_metrics[2:]):
 
-      file_name = bm + '-' + metric + ('-MULTI' if len(num_wrs_list) > 1 else '') +  '.pdf'
+      file_name = 'plot_' + bm + '-' + metric + ('-MULTI' if len(num_wrs_list) > 1 else '') +  '.pdf'
       file_path = os.path.join(directory, file_name)
 
       fig, ax = plt.subplots(figsize=(10, 5))
@@ -125,18 +126,21 @@ def plot_results(results, directory):
 
       # Axis ticks and scale (x: log2 / y: log2 for latency)
       ax.set_xscale('log', basex=2)
-      ax.set_xticks(np.power(2, range(
-          1, len(results['native'][bm][num_wrs_list[0]]['num_bytes']) + 1)))
+      num_data_points = len(results['hermit'][bm][num_wrs_list[0]]['num_bytes'])
+      ax.set_xticks(np.power(2, range(1, num_data_points + 1)))
       if 'lat' in bm:
+        ax.set_ylim(bottom = 0.5, top = 256)
+        #  y_ticks = np.power(2, range(-1, 8))
+        #  ax.set_yticks(y_ticks, [(str(int(tick)) if tick >= 1 else str(tick)) for tick in y_ticks])
         ax.set_yscale('log', basey=2)
         ax.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
 
       # Plot, save and then clear figure
       for num_wrs in num_wrs_list:
-        label_end = ' (' + num_wrs + ' work request' + \
+        label_end = ' (' + num_wrs + ' WR' + \
                     (')' if num_wrs is '1' else 's)') if len(num_wrs_list) > 1 else ""
-        ax.plot(results['native'][bm][num_wrs]['num_bytes'],
-                results['native'][bm][num_wrs][metric],
+        ax.plot(results['native'][bm][num_wrs]['num_bytes'][:20],
+                results['native'][bm][num_wrs][metric][:20],
                 'o-', color = line_color['native'][num_wrs], label = 'Native' + label_end,
                 linewidth = 2, markersize = 6)
         label = 'HermitCore (' + num_wrs + ' work requests)'
@@ -145,7 +149,7 @@ def plot_results(results, directory):
                 'o-', color = line_color['hermit'][num_wrs], label = 'HermitCore' + label_end,
                 linewidth = 2, markersize = 6)
 
-      plt.legend(fontsize = 10, ncol = 3, loc = 'lower right',
+      plt.legend(fontsize = 12, ncol = 3, loc = 'lower right',
                  bbox_to_anchor = [1, 1.05])
 
       plt.savefig(file_path, bbox_inches = 'tight')

@@ -987,7 +987,7 @@ typedef struct {
 
 void ibv_free_device_list(struct ibv_device ** list) {
 	uhyve_ibv_free_device_list_t uhyve_args;
-	// TODO: Take care of ** parameter.
+	uhyve_args.list = list;
 
 	uhyve_send(UHYVE_PORT_IBV_FREE_DEVICE_LIST, (unsigned) virt_to_phys((size_t) &uhyve_args));
 }
@@ -1560,10 +1560,10 @@ typedef struct {
 
 struct ibv_cq * ibv_create_cq(struct ibv_context * context, int cqe, void * cq_context, struct ibv_comp_channel * channel, int comp_vector) {
 	uhyve_ibv_create_cq_t uhyve_args;
-	uhyve_args.context = context;
-	uhyve_args.cqe = cqe;
-	uhyve_args.cq_context = cq_context;
-	uhyve_args.channel = channel;
+	uhyve_args.context     = context;
+	uhyve_args.cqe         = cqe;
+	uhyve_args.cq_context  = cq_context;
+	uhyve_args.channel     = channel;
 	uhyve_args.comp_vector = comp_vector;
 
 	uhyve_send(UHYVE_PORT_IBV_CREATE_CQ, (unsigned) virt_to_phys((size_t) &uhyve_args));
@@ -1654,9 +1654,9 @@ typedef struct {
 
 int ibv_get_cq_event(struct ibv_comp_channel * channel, struct ibv_cq ** cq, void ** cq_context) {
 	uhyve_ibv_get_cq_event_t uhyve_args;
-	uhyve_args.channel = channel;
-	// TODO: Take care of ** parameter.
-	// TODO: Take care of ** parameter.
+	uhyve_args.channel    = channel;
+	uhyve_args.cq         = (struct ibv_cq **) guest_to_host((size_t) cq);         // created in user space
+	uhyve_args.cq_context = (void **)          guest_to_host((size_t) cq_context); // created in user space
 
 	uhyve_send(UHYVE_PORT_IBV_GET_CQ_EVENT, (unsigned) virt_to_phys((size_t) &uhyve_args));
 

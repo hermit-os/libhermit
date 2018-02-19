@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2006 Cisco Systems.  All rights reserved.
+ * Copyright (c) 2006 Cisco Systems.                All rights reserved.
+ *               2018 Annika Wierichs, RWTH Aachen. All rights reserved.
  *
  * This software is available to you under a choice of one of two
  * licenses.  You may choose to be licensed under the terms of the GNU
@@ -30,10 +31,17 @@
  * SOFTWARE.
  */
 
-#include <hermit/ibv.h>
+#ifndef IBV_PINGPONG_H
+#define IBV_PINGPONG_H
+
+#define PAGE_SIZE 4092
+
 #include <hermit/verbs.h>
 
 enum ibv_mtu pp_mtu_to_enum(int mtu);
-int pp_get_port_info(struct ibv_context *context, int port, struct ibv_port_attr *attr);
-// void wire_gid_to_gid(const char *wgid, union ibv_gid *gid);
-// void gid_to_wire_gid(const union ibv_gid *gid, char wgid[]);
+int pp_get_port_info(struct ibv_context *context, int port,
+		     struct ibv_port_attr *attr);
+void wire_gid_to_gid(const char *wgid, union ibv_gid *gid);
+void gid_to_wire_gid(const union ibv_gid *gid, char wgid[]);
+
+#endif /* IBV_PINGPONG_H */

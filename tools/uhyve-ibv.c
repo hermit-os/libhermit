@@ -879,7 +879,7 @@ void call_ibv_destroy_cq(struct kvm_run * run, uint8_t * guest_mem) {
  */
 
 void call_ibv_get_cq_event(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("LOG: UHYVE - call_ibv_get_cq_event\n");
+	printf("get_cq_event ");
 	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
 	uhyve_ibv_get_cq_event_t * args = (uhyve_ibv_get_cq_event_t *) (guest_mem + data);
 
@@ -925,7 +925,7 @@ void call_ibv_poll_cq(struct kvm_run * run, uint8_t * guest_mem) {
  */
 
 void call_ibv_req_notify_cq(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("LOG: UHYVE - call_ibv_req_notify_cq\n");
+	printf("req_notify_cq ");
 	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
 	uhyve_ibv_req_notify_cq_t * args = (uhyve_ibv_req_notify_cq_t *) (guest_mem + data);
 

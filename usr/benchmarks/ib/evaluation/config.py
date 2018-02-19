@@ -4,16 +4,16 @@ BENCHMARKS = ['ib_write_bw',
               'ib_write_lat',
               'ib_read_bw',
               'ib_read_lat']
+OPTIONS   = ['-a --post_list 1']
 
 #  BENCHMARKS = ['ib_write_lat',
               #  'ib_read_bw',
               #  'ib_read_lat']
-OPTIONS   = ['-a --post_list 1']
 
-#  BENCHMARKS = ['ib_write_bw']
 #  OPTIONS   = ['-a --post_list 4',
              #  '-a --post_list 16']
 
+#  BENCHMARKS = ['ib_write_bw']
 #  OPTIONS   = ['-a --post_list 1',
              #  '-a --post_list 4',
              #  '-a --post_list 16']

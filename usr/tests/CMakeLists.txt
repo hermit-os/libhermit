@@ -10,10 +10,8 @@ add_executable(hello++ hello++.cpp)
 add_executable(hellof hellof.f90)
 add_executable(pi pi.go)
 
-add_executable(ib-test ib-test.c)
 #add_executable(ib-pingpong ib/pingpong.c ib/pingpong.h ib/pingpong-ud.c)
-add_executable(ib-pingpong ib/pingpong.c ib/pingpong-ud.c)
-#target_link_libraries(ib-test ibverbs)
+add_executable(ib-rc-pingpong ib/pingpong.c ib/rc_pingpong.c)
 
 add_executable(test-malloc test-malloc.c)
 add_executable(test-malloc-mt test-malloc-mt.c)
