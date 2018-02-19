@@ -49,20 +49,6 @@ static inline unsigned long long rdtsc() {
 	return val;
 }
 
-/*
- * ibv_wc_status_str
- */
-
-void call_ibv_wc_status_str(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("LOG: UHYVE - call_ibv_wc_status_str\n");
-	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
-	uhyve_ibv_wc_status_str_t * args = (uhyve_ibv_wc_status_str_t *) (guest_mem + data);
-
-	use_ib_mem_pool = true;
-	args->ret = ibv_wc_status_str(args->status);
-	use_ib_mem_pool = false;
-}
-
 
 /*
  * ibv_rate_to_mult
@@ -1382,51 +1368,6 @@ void call_ibv_fork_init(struct kvm_run * run, uint8_t * guest_mem) {
 
 	use_ib_mem_pool = true;
 	args->ret = ibv_fork_init();
-	use_ib_mem_pool = false;
-}
-
-
-/*
- * ibv_node_type_str
- */
-
-void call_ibv_node_type_str(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("LOG: UHYVE - call_ibv_node_type_str\n");
-	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
-	uhyve_ibv_node_type_str_t * args = (uhyve_ibv_node_type_str_t *) (guest_mem + data);
-
-	use_ib_mem_pool = true;
-	args->ret = ibv_node_type_str(args->node_type);
-	use_ib_mem_pool = false;
-}
-
-
-/*
- * ibv_port_state_str
- */
-
-void call_ibv_port_state_str(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("LOG: UHYVE - call_ibv_port_state_str\n");
-	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
-	uhyve_ibv_port_state_str_t * args = (uhyve_ibv_port_state_str_t *) (guest_mem + data);
-
-	use_ib_mem_pool = true;
-	args->ret = ibv_port_state_str(args->port_state);
-	use_ib_mem_pool = false;
-}
-
-
-/*
- * ibv_event_type_str
- */
-
-void call_ibv_event_type_str(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("LOG: UHYVE - call_ibv_event_type_str\n");
-	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
-	uhyve_ibv_event_type_str_t * args = (uhyve_ibv_event_type_str_t *) (guest_mem + data);
-
-	use_ib_mem_pool = true;
-	args->ret = ibv_event_type_str(args->event);
 	use_ib_mem_pool = false;
 }
 

@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2006 Cisco Systems.                All rights reserved.
- *               2018 Annika Wierichs, RWTH Aachen. All rights reserved.
+ * Copyright (c) 2006 Cisco Systems.
+ *               2018 Annika Wierichs, RWTH Aachen.
+ * All rights reserved.
  *
  * This software is available to you under a choice of one of two
  * licenses.  You may choose to be licensed under the terms of the GNU

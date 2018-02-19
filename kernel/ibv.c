@@ -29,7 +29,22 @@
  * This file implements the verbs API functions. Each function performs necessary
  * pointer conversions for its parameters, writes its arguments struct to uhyve's
  * KVM I/O port that belongs to the function, and reverts changes to the parameters
- * before returning. Functions requiring non-trivial conversions are listed first.
+ * before returning.
+ *
+ * Functions requiring non-trivial conversions are listed first:
+ * - ibv_post_send
+ * - ibv_post_wq_recv
+ * - ibv_post_srq_recv
+ * - ibv_post_recv
+ * - ibv_create_rwq_ind_table
+ * - ibv_open_xrcd
+ *
+ * A few trivial functions that match enum values with a const char* string are not
+ * forwarded to uhyve and entirely implemented in HermitCore; they are listed second:
+ * - ibv_wc_status_str
+ * - ibv_node_type_str
+ * - ibv_port_state_str
+ * - ibv_event_type_str
  */
 
 
@@ -50,7 +65,6 @@
 
 	/* return ((unsigned long long) hi << 32ULL | (unsigned long long) lo); */
 /* } */
-
 
 
 /*
@@ -478,20 +492,115 @@ struct ibv_xrcd * ibv_open_xrcd(struct ibv_context * context, struct ibv_xrcd_in
  * ibv_wc_status_str
  */
 
-typedef struct {
-	// Parameters:
-	enum ibv_wc_status status;
-	// Return value:
-	const char * ret;
-} __attribute__((packed)) uhyve_ibv_wc_status_str_t;
-
 const char * ibv_wc_status_str(enum ibv_wc_status status) {
-	uhyve_ibv_wc_status_str_t uhyve_args;
-	uhyve_args.status = status;
+	static const char *const wc_status_str[] = {
+		[IBV_WC_SUCCESS]            = "success",
+		[IBV_WC_LOC_LEN_ERR]        = "local length error",
+		[IBV_WC_LOC_QP_OP_ERR]      = "local QP operation error",
+		[IBV_WC_LOC_EEC_OP_ERR]     = "local EE context operation error",
+		[IBV_WC_LOC_PROT_ERR]       = "local protection error",
+		[IBV_WC_WR_FLUSH_ERR]       = "Work Request Flushed Error",
+		[IBV_WC_MW_BIND_ERR]        = "memory management operation error",
+		[IBV_WC_BAD_RESP_ERR]       = "bad response error",
+		[IBV_WC_LOC_ACCESS_ERR]     = "local access error",
+		[IBV_WC_REM_INV_REQ_ERR]    = "remote invalid request error",
+		[IBV_WC_REM_ACCESS_ERR]     = "remote access error",
+		[IBV_WC_REM_OP_ERR]         = "remote operation error",
+		[IBV_WC_RETRY_EXC_ERR]      = "transport retry counter exceeded",
+		[IBV_WC_RNR_RETRY_EXC_ERR]  = "RNR retry counter exceeded",
+		[IBV_WC_LOC_RDD_VIOL_ERR]   = "local RDD violation error",
+		[IBV_WC_REM_INV_RD_REQ_ERR] = "remote invalid RD request",
+		[IBV_WC_REM_ABORT_ERR]      = "aborted error",
+		[IBV_WC_INV_EECN_ERR]       = "invalid EE context number",
+		[IBV_WC_INV_EEC_STATE_ERR]  = "invalid EE context state",
+		[IBV_WC_FATAL_ERR]          = "fatal error",
+		[IBV_WC_RESP_TIMEOUT_ERR]   = "response timeout error",
+		[IBV_WC_GENERAL_ERR]        = "general error",
+		[IBV_WC_TM_ERR]             = "TM error",
+		[IBV_WC_TM_RNDV_INCOMPLETE] = "TM software rendezvous",
+	};
 
-	uhyve_send(UHYVE_PORT_IBV_WC_STATUS_STR, (unsigned) virt_to_phys((size_t) &uhyve_args));
+	if (status < IBV_WC_SUCCESS || status > IBV_WC_TM_RNDV_INCOMPLETE)
+		return "unknown";
 
-	return uhyve_args.ret;
+	return wc_status_str[status];
+}
+
+
+/*
+ * ibv_node_type_str
+ */
+
+const char * ibv_node_type_str(enum ibv_node_type node_type) {
+	static const char *const node_type_str[] = {
+		[IBV_NODE_CA]        = "InfiniBand channel adapter",
+		[IBV_NODE_SWITCH]    = "InfiniBand switch",
+		[IBV_NODE_ROUTER]    = "InfiniBand router",
+		[IBV_NODE_RNIC]      = "iWARP NIC",
+		[IBV_NODE_USNIC]     = "usNIC",
+		[IBV_NODE_USNIC_UDP] = "usNIC UDP",
+	};
+
+	if (node_type < IBV_NODE_CA || node_type > IBV_NODE_USNIC_UDP)
+		return "unknown";
+
+	return node_type_str[node_type];
+}
+
+
+/*
+ * ibv_port_state_str
+ */
+
+const char * ibv_port_state_str(enum ibv_port_state port_state) {
+	static const char *const port_state_str[] = {
+		[IBV_PORT_NOP]          = "no state change (NOP)",
+		[IBV_PORT_DOWN]         = "down",
+		[IBV_PORT_INIT]         = "init",
+		[IBV_PORT_ARMED]        = "armed",
+		[IBV_PORT_ACTIVE]       = "active",
+		[IBV_PORT_ACTIVE_DEFER] = "active defer"
+	};
+
+	if (port_state < IBV_PORT_NOP || port_state > IBV_PORT_ACTIVE_DEFER)
+		return "unknown";
+
+	return port_state_str[port_state];
+}
+
+
+/*
+ * ibv_event_type_str
+ */
+
+const char * ibv_event_type_str(enum ibv_event_type event) {
+	static const char *const event_type_str[] = {
+		[IBV_EVENT_CQ_ERR]              = "CQ error",
+		[IBV_EVENT_QP_FATAL]            = "local work queue catastrophic error",
+		[IBV_EVENT_QP_REQ_ERR]          = "invalid request local work queue error",
+		[IBV_EVENT_QP_ACCESS_ERR]       = "local access violation work queue error",
+		[IBV_EVENT_COMM_EST]            = "communication established",
+		[IBV_EVENT_SQ_DRAINED]          = "send queue drained",
+		[IBV_EVENT_PATH_MIG]            = "path migrated",
+		[IBV_EVENT_PATH_MIG_ERR]        = "path migration request error",
+		[IBV_EVENT_DEVICE_FATAL]        = "local catastrophic error",
+		[IBV_EVENT_PORT_ACTIVE]         = "port active",
+		[IBV_EVENT_PORT_ERR]            = "port error",
+		[IBV_EVENT_LID_CHANGE]          = "LID change",
+		[IBV_EVENT_PKEY_CHANGE]         = "P_Key change",
+		[IBV_EVENT_SM_CHANGE]           = "SM change",
+		[IBV_EVENT_SRQ_ERR]             = "SRQ catastrophic error",
+		[IBV_EVENT_SRQ_LIMIT_REACHED]   = "SRQ limit reached",
+		[IBV_EVENT_QP_LAST_WQE_REACHED] = "last WQE reached",
+		[IBV_EVENT_CLIENT_REREGISTER]   = "client reregistration",
+		[IBV_EVENT_GID_CHANGE]          = "GID table change",
+		[IBV_EVENT_WQ_FATAL]            = "WQ fatal"
+	};
+
+	if (event < IBV_EVENT_CQ_ERR || event > IBV_EVENT_GID_CHANGE)
+		return "unknown";
+
+	return event_type_str[event];
 }
 
 
@@ -1840,7 +1949,7 @@ typedef struct {
 int ibv_get_srq_num(struct ibv_srq * srq, uint32_t * srq_num) {
 	uhyve_ibv_get_srq_num_t uhyve_args;
 	uhyve_args.srq = srq;
-	uhyve_args.srq_num = srq_num;
+	uhyve_args.srq_num = (uint32_t *) guest_to_host((size_t) srq_num);
 
 	uhyve_send(UHYVE_PORT_IBV_GET_SRQ_NUM, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
@@ -2315,69 +2424,6 @@ int ibv_fork_init() {
 	uhyve_ibv_fork_init_t uhyve_args;
 
 	uhyve_send(UHYVE_PORT_IBV_FORK_INIT, (unsigned) virt_to_phys((size_t) &uhyve_args));
-
-	return uhyve_args.ret;
-}
-
-
-/*
- * ibv_node_type_str
- */
-
-typedef struct {
-	// Parameters:
-	enum ibv_node_type node_type;
-	// Return value:
-	const char * ret;
-} __attribute__((packed)) uhyve_ibv_node_type_str_t;
-
-const char * ibv_node_type_str(enum ibv_node_type node_type) {
-	uhyve_ibv_node_type_str_t uhyve_args;
-	uhyve_args.node_type = node_type;
-
-	uhyve_send(UHYVE_PORT_IBV_NODE_TYPE_STR, (unsigned) virt_to_phys((size_t) &uhyve_args));
-
-	return uhyve_args.ret;
-}
-
-
-/*
- * ibv_port_state_str
- */
-
-typedef struct {
-	// Parameters:
-	enum ibv_port_state port_state;
-	// Return value:
-	const char * ret;
-} __attribute__((packed)) uhyve_ibv_port_state_str_t;
-
-const char * ibv_port_state_str(enum ibv_port_state port_state) {
-	uhyve_ibv_port_state_str_t uhyve_args;
-	uhyve_args.port_state = port_state;
-
-	uhyve_send(UHYVE_PORT_IBV_PORT_STATE_STR, (unsigned) virt_to_phys((size_t) &uhyve_args));
-
-	return uhyve_args.ret;
-}
-
-
-/*
- * ibv_event_type_str
- */
-
-typedef struct {
-	// Parameters:
-	enum ibv_event_type event;
-	// Return value:
-	const char * ret;
-} __attribute__((packed)) uhyve_ibv_event_type_str_t;
-
-const char * ibv_event_type_str(enum ibv_event_type event) {
-	uhyve_ibv_event_type_str_t uhyve_args;
-	uhyve_args.event = event;
-
-	uhyve_send(UHYVE_PORT_IBV_EVENT_TYPE_STR, (unsigned) virt_to_phys((size_t) &uhyve_args));
 
 	return uhyve_args.ret;
 }

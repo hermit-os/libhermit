@@ -1276,9 +1276,6 @@ static int vcpu_loop(void)
 				call_ibv_post_srq_recv(run, guest_mem);
 				break;
 
-			case UHYVE_PORT_IBV_WC_STATUS_STR:
-				call_ibv_wc_status_str(run, guest_mem);
-				break;
 			case UHYVE_PORT_IBV_RATE_TO_MULT:
 				call_ibv_rate_to_mult(run, guest_mem);
 				break;
@@ -1524,15 +1521,6 @@ static int vcpu_loop(void)
 				break;
 			case UHYVE_PORT_IBV_FORK_INIT:
 				call_ibv_fork_init(run, guest_mem);
-				break;
-			case UHYVE_PORT_IBV_NODE_TYPE_STR:
-				call_ibv_node_type_str(run, guest_mem);
-				break;
-			case UHYVE_PORT_IBV_PORT_STATE_STR:
-				call_ibv_port_state_str(run, guest_mem);
-				break;
-			case UHYVE_PORT_IBV_EVENT_TYPE_STR:
-				call_ibv_event_type_str(run, guest_mem);
 				break;
 			/* case UHYVE_PORT_IBV_RESOLVE_ETH_L2_FROM_GID: */
 				/* call_ibv_resolve_eth_l2_from_gid(run, guest_mem); */

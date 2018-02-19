@@ -10,8 +10,18 @@ add_executable(hello++ hello++.cpp)
 add_executable(hellof hellof.f90)
 add_executable(pi pi.go)
 
-#add_executable(ib-pingpong ib/pingpong.c ib/pingpong.h ib/pingpong-ud.c)
+# InfiniBand Pingpongs
+
+# Reliable Connected
 add_executable(ib-rc-pingpong ib/pingpong.c ib/rc_pingpong.c)
+# Unrealiable Datagram
+add_executable(ib-ud-pingpong ib/pingpong.c ib/ud_pingpong.c)
+# Unreliable Connected
+add_executable(ib-uc-pingpong ib/pingpong.c ib/uc_pingpong.c)
+# Shared Receive Queue
+add_executable(ib-srq-pingpong ib/pingpong.c ib/srq_pingpong.c)
+# Shared Receive Queue, eXtended Reliable Connected
+add_executable(ib-xsrq-pingpong ib/pingpong.c ib/xsrq_pingpong.c)
 
 add_executable(test-malloc test-malloc.c)
 add_executable(test-malloc-mt test-malloc-mt.c)
