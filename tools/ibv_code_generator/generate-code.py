@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Copyright (c) 2018, Annika Wierichs, RWTH Aachen University
-
 All rights reserved.
+
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
    * Redistributions of source code must retain the above copyright
@@ -23,14 +23,14 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
 ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-TODO, docs
 """
 
 import custom_snippets
 
 # TODO: ibv_resolve_eth_l2_from_gid function does not work.
-# TODO: ibv_open_xrcd function might not work. Confirm.
+# TODO: A few trivial functions (those ending in '_str') are currently implemented in HermitCore and
+#       do not forward the function call via uhyve_send. The generator does not yet take this into
+#       account. Refer to kernel/ibv.c -> ibv_wc_status_str() as an example.
 
 
 # Path of the input file containing function prototypes.
@@ -126,9 +126,6 @@ app_owned_resources = restricted_resources + \
                        "struct ibv_cq_init_attr_ex",
                        "struct ibv_async_event"]
 
-
-# int ibv_resolve_eth_l2_from_gid(uint8_t [6] eth_mac,uint16_t * vid)
-# char[NUM]
 
 # ----------------------------------------------------------------------------
 # CLASSES
@@ -362,7 +359,7 @@ def generate_uhyve_function(fnc):
   """
   code  = generate_pretty_comment(fnc.name)
   code += "void call_{0}(struct kvm_run * run, uint8_t * guest_mem) {{\n".format(fnc.name)
-  code += "\tprintf(\"LOG: UHYVE - call_{0}\\n\");\n".format(fnc.name)
+  code += "\tprintf(\"LOG: UHYVE - call_{0}\\n\");\n".format(fnc.name)  # TODO: Delete later.
   code += "\tunsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));\n"
   code += "\t{0} * args = ({0} *) (guest_mem + data);\n\n".format(fnc.args_struct_name)
   code += "\tuse_ib_mem_pool = true;\n"

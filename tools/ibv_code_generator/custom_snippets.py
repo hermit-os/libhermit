@@ -49,7 +49,10 @@ CONVERT = 2
 REVERT = 1
 
 #
-#  ibv_post_recv, ibv_post_srq_recv, ibv_post_wq_recv
+# ibv_post_recv, ibv_post_srq_recv, ibv_post_wq_recv
+#
+# (These functions may use the same backup/convert/revert routines in HermitCore since their
+#  prototypes are equal.)
 #
 
 post_recv_convert = \
@@ -114,7 +117,7 @@ post_recv_revert = \
 """
 
 #
-#  ibv_post_send
+# ibv_post_send
 #
 
 post_send_convert = \
@@ -206,7 +209,7 @@ post_send_revert = \
 """
 
 #
-#  ibv_create_rwq_ind_table
+# ibv_create_rwq_ind_table
 #
 
 create_rwq_ind_table_convert = \

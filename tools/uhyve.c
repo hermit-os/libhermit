@@ -30,6 +30,7 @@
  * 25.2.2017: add SMP support to enable more than one core
  * 24.4.2017: add checkpoint/restore support,
  *            remove memory limit
+ * 26.2.2018: add support for RDMA verbs API
  */
 
  #define _GNU_SOURCE

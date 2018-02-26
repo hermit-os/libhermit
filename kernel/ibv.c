@@ -59,17 +59,12 @@
 
 #include <asm/processor.h>
 
-/* inline static unsigned long long rdtsc(void) { */
-	/* unsigned long lo, hi; */
-	/* asm volatile ("rdtsc" : "=a"(lo), "=d"(hi) :: "memory"); */
-
-	/* return ((unsigned long long) hi << 32ULL | (unsigned long long) lo); */
-/* } */
-
 
 /*
  * ibv_post_send
  */
+
+// TODO: Remove CPU cycle measurements (rdtsc()) and logs if not needed anymore.
 
 typedef struct {
 	// Parameters:
@@ -80,14 +75,14 @@ typedef struct {
 	int ret;
 } __attribute__((packed)) uhyve_ibv_post_send_t;
 
-int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_wr ** bad_wr) { // !!!
-	unsigned long long tick_start = rdtsc();
+int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_wr ** bad_wr) {
+	/* unsigned long long tick_start = rdtsc(); */
 
 	uhyve_ibv_post_send_t uhyve_args;
 	uhyve_args.qp     = qp;
-	unsigned long long tick_gh = rdtsc();
+	/* unsigned long long tick_gh = rdtsc(); */
 	uhyve_args.wr     = (struct ibv_send_wr *)  guest_to_host((size_t) wr);
-	tick_gh = rdtsc() - tick_gh;
+	/* tick_gh = rdtsc() - tick_gh; */
 	uhyve_args.bad_wr = (struct ibv_send_wr **) guest_to_host((size_t) bad_wr);
 
 	struct ibv_send_wr * curr_wr;
@@ -114,7 +109,6 @@ int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_w
 
 	curr_wr = wr;
 	for (int w = 0; w < num_wrs; w++) {
-		/* LOG_INFO("ibv_post_send for wrs, w = %d\n", w); */
 		is_bind_mw = curr_wr->opcode == IBV_WR_BIND_MW;
 		is_tso     = curr_wr->opcode == IBV_WR_TSO;
 
@@ -132,7 +126,6 @@ int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_w
 		curr_wr->next = (struct ibv_send_wr *) guest_to_host((size_t) curr_wr->next);
 
 		for (int s = 0; s < curr_wr->num_sge; s++) {
-			/* LOG_INFO("ibv_post_send for sges, s = %d\n", s); */
 			wr__sg_list__addr[w][s] = curr_wr->sg_list[s].addr;
 			curr_wr->sg_list[s].addr = (uint64_t) guest_to_host((size_t) curr_wr->sg_list[s].addr);
 		}
@@ -143,11 +136,9 @@ int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_w
 		curr_wr = wr__next[w];
 	}
 
-	unsigned long long tick_pre_work = rdtsc() - tick_start;
-
+	/* unsigned long long tick_pre_work = rdtsc() - tick_start; */
 	uhyve_send(UHYVE_PORT_IBV_POST_SEND, (unsigned) virt_to_phys((size_t) &uhyve_args));
-
-	unsigned long long tick_call = rdtsc() - tick_start - tick_pre_work;
+	/* unsigned long long tick_call = rdtsc() - tick_start - tick_pre_work; */
 
 	if (*bad_wr && *bad_wr == uhyve_args.wr) {
 		*bad_wr = wr;
@@ -180,12 +171,13 @@ int ibv_post_send(struct ibv_qp * qp, struct ibv_send_wr * wr, struct ibv_send_w
 		curr_wr = curr_wr->next;
 	}
 
-	unsigned long long tick_post_work = rdtsc() - tick_start - tick_pre_work - tick_call;
+	/* unsigned long long tick_post_work = rdtsc() - tick_start - tick_pre_work - tick_call; */
 
-	LOG_INFO("tick_gh:        %llu\n", tick_gh);
-	LOG_INFO("tick_pre_work:  %llu\n", tick_pre_work);
-	LOG_INFO("tick_call:      %llu\n", tick_call);
-	LOG_INFO("tick_post_work: %llu\n", tick_post_work);
+	// TODO: Remove these prints.
+	/* LOG_INFO("tick_gh:        %llu\n", tick_gh); */
+	/* LOG_INFO("tick_pre_work:  %llu\n", tick_pre_work); */
+	/* LOG_INFO("tick_call:      %llu\n", tick_call); */
+	/* LOG_INFO("tick_post_work: %llu\n", tick_post_work); */
 	return uhyve_args.ret;
 }
 
@@ -203,7 +195,7 @@ typedef struct {
 	int ret;
 } __attribute__((packed)) uhyve_ibv_post_wq_recv_t;
 
-int ibv_post_wq_recv(struct ibv_wq * wq, struct ibv_recv_wr * recv_wr, struct ibv_recv_wr ** bad_recv_wr) { // !!!
+int ibv_post_wq_recv(struct ibv_wq * wq, struct ibv_recv_wr * recv_wr, struct ibv_recv_wr ** bad_recv_wr) {
 	uhyve_ibv_post_wq_recv_t uhyve_args;
 	uhyve_args.wq          = wq;
 	uhyve_args.recv_wr     = (struct ibv_recv_wr *)  guest_to_host((size_t) recv_wr);
@@ -284,7 +276,7 @@ typedef struct {
 	int ret;
 } __attribute__((packed)) uhyve_ibv_post_srq_recv_t;
 
-int ibv_post_srq_recv(struct ibv_srq * srq, struct ibv_recv_wr * recv_wr, struct ibv_recv_wr ** bad_recv_wr) { // !!!
+int ibv_post_srq_recv(struct ibv_srq * srq, struct ibv_recv_wr * recv_wr, struct ibv_recv_wr ** bad_recv_wr) {
 	uhyve_ibv_post_srq_recv_t uhyve_args;
 	uhyve_args.srq         = srq;
 	uhyve_args.recv_wr     = (struct ibv_recv_wr *)  guest_to_host((size_t) recv_wr);
@@ -445,7 +437,7 @@ typedef struct {
 	struct ibv_rwq_ind_table * ret;
 } __attribute__((packed)) uhyve_ibv_create_rwq_ind_table_t;
 
-struct ibv_rwq_ind_table * ibv_create_rwq_ind_table(struct ibv_context * context, struct ibv_rwq_ind_table_init_attr * init_attr) { // !!!
+struct ibv_rwq_ind_table * ibv_create_rwq_ind_table(struct ibv_context * context, struct ibv_rwq_ind_table_init_attr * init_attr) {
 	uhyve_ibv_create_rwq_ind_table_t uhyve_args;
 	uhyve_args.context = context;
 	uhyve_args.init_attr = (struct ibv_rwq_ind_table_init_attr *) guest_to_host((size_t) init_attr);
@@ -476,8 +468,9 @@ typedef struct {
 } __attribute__((packed)) uhyve_ibv_open_xrcd_t;
 
 struct ibv_xrcd * ibv_open_xrcd(struct ibv_context * context, struct ibv_xrcd_init_attr * xrcd_init_attr) {
-	// TODO: This will probably not work as xrcd_init_attr->fd is a file descriptor opened in HermitCore.
-	// Possibly comment this function out?
+	// If this function ever does weird things: xrcd_init_attr->fd is a file descriptor opened in
+	// HermitCore and therefore also opened in host space via uhyve_send(UHYVE_PORT_OPEN). This might
+	// become a problem if HermitCore's open() syscall is modified.
 	uhyve_ibv_open_xrcd_t uhyve_args;
 	uhyve_args.context = context;
 	uhyve_args.xrcd_init_attr = (struct ibv_xrcd_init_attr *) guest_to_host((size_t) xrcd_init_attr);
@@ -1449,7 +1442,7 @@ typedef struct {
 	struct ibv_mr * ret;
 } __attribute__((packed)) uhyve_ibv_reg_mr_t;
 
-struct ibv_mr * ibv_reg_mr(struct ibv_pd * pd, void * addr, int length, int access) { // !!!
+struct ibv_mr * ibv_reg_mr(struct ibv_pd * pd, void * addr, int length, int access) {
 	uhyve_ibv_reg_mr_t uhyve_args;
 	uhyve_args.pd = pd;
 	uhyve_args.addr = (void *) guest_to_host((size_t) addr);
@@ -1479,7 +1472,7 @@ typedef struct {
 } __attribute__((packed)) uhyve_ibv_rereg_mr_t;
 
 int ibv_rereg_mr(struct ibv_mr * mr, int flags, struct ibv_pd * pd, void * addr,
-	               int length, int access) { // !!!
+	               int length, int access) {
 	uhyve_ibv_rereg_mr_t uhyve_args;
 	uhyve_args.mr     = mr;
 	uhyve_args.flags  = flags;
@@ -1599,7 +1592,7 @@ int ibv_bind_mw(struct ibv_qp * qp, struct ibv_mw * mw, struct ibv_mw_bind * mw_
 	uhyve_args.mw = mw;
 	uhyve_args.mw_bind = (struct ibv_mw_bind *) guest_to_host((size_t) mw_bind);
 
-	uint64_t mw_bind__bind_info__addr = mw_bind->bind_info.addr; // !
+	uint64_t mw_bind__bind_info__addr = mw_bind->bind_info.addr;
 	mw_bind->bind_info.addr = (uint64_t) guest_to_host((size_t) mw_bind->bind_info.addr);
 
 	uhyve_send(UHYVE_PORT_IBV_BIND_MW, (unsigned) virt_to_phys((size_t) &uhyve_args));
@@ -2013,7 +2006,7 @@ typedef struct {
 	struct ibv_qp * ret;
 } __attribute__((packed)) uhyve_ibv_create_qp_ex_t;
 
-struct ibv_qp * ibv_create_qp_ex(struct ibv_context * context, struct ibv_qp_init_attr_ex * qp_init_attr_ex) { // !!!
+struct ibv_qp * ibv_create_qp_ex(struct ibv_context * context, struct ibv_qp_init_attr_ex * qp_init_attr_ex) {
 	uhyve_ibv_create_qp_ex_t uhyve_args;
 	uhyve_args.context = context;
 	uhyve_args.qp_init_attr_ex = (struct ibv_qp_init_attr_ex *) guest_to_host((size_t) qp_init_attr_ex);
@@ -2444,7 +2437,7 @@ int ibv_fork_init() {
 /* } __attribute__((packed)) uhyve_ibv_resolve_eth_l2_from_gid_t; */
 
 /* int ibv_resolve_eth_l2_from_gid(struct ibv_context * context, struct ibv_ah_attr * attr, */
-																/* uint8_t eth_mac[ETHERNET_LL_SIZE], uint16_t * vid) {	// !!! */
+																/* uint8_t eth_mac[ETHERNET_LL_SIZE], uint16_t * vid) { */
 	/* uhyve_ibv_resolve_eth_l2_from_gid_t uhyve_args; */
 	/* uhyve_args.context = context; */
 	/* uhyve_args.attr = (struct ibv_ah_attr *) guest_to_host((size_t) attr); */

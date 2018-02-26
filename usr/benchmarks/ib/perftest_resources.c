@@ -9,7 +9,6 @@
 #include <signal.h>
 #include <string.h>
 #include <ctype.h>
-/* #include <sys/mman.h> */
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <pthread.h>
@@ -1527,9 +1526,10 @@ int run_iter_bw(struct pingpong_context *ctx, struct perftest_parameters *user_p
 						is_sending_burst = 0;
 					}
 				}
-			}
-		}
+			} // Post WRs for loop
+		} // Queue Pair for loop
 
+		// Check for Work Completions
 		if (totccnt < tot_iters) {
 			if (user_param->use_event) {
 				if (ctx_notify_events(ctx->channel)) {
@@ -1575,8 +1575,8 @@ int run_iter_bw(struct pingpong_context *ctx, struct perftest_parameters *user_p
 				return_value = FAILURE;
 				goto cleaning;
 			}
-		}
-	}
+		} // Check for Work Completions if bloc
+	} // Iterations while loop
 
 	if (user_param->noPeak == ON && user_param->test_type == ITERATIONS)
 		user_param->tcompleted[0] = get_cycles();

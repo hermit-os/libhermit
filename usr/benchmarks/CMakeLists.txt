@@ -8,9 +8,7 @@ target_link_libraries(basic pthread)
 
 add_executable(hg hg.c hist.c rdtsc.c run.c init.c opt.c report.c setup.c)
 
-# add_executable(ib-pingpong-ud ib/pingpong.c ib/pingpong-ud.c)
-# add_executable(ib_write_bw ib/write_bw.c ib/get_clock.c ib/perftest_parameters.c
-	 # ib/perftest_resources.c ib/perftest_communication.c)
+# RDMA verbs interface
 add_executable(ib_write_bw ib/write_bw.c ib/get_clock.c ib/perftest_parameters.c
 	ib/perftest_resources.c ib/perftest_communication.c)
 add_executable(ib_write_lat ib/write_lat.c ib/get_clock.c ib/perftest_parameters.c

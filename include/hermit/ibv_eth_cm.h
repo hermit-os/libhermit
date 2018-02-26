@@ -25,10 +25,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * This is a first implementation of a lightweight Ethernet Connection Manager
+ * that helps to exchange destination information before a data exchange via RDMA.
+ * LwIP socket-functions are used.
+ */
+
 #ifndef __IBV_ETH_CM__
 #define __IBV_ETH_CM__
 
-struct pingpong_dest {
+#include <hermit/verbs.h>
+
+
+struct eth_cm_dest {
 	int                lid;
 	int                out_reads;
 	int                qpn;
@@ -63,11 +72,19 @@ int eth_client_connect(const char *server_ip, int port);
 int eth_server_connect(int port);
 
 
-int eth_client_exch_dest(int sockfd, struct pingpong_dest *local_dest,
-                         struct pingpong_dest *rem_dest);
-int eth_server_exch_dest(int sockfd, struct pingpong_dest *local_dest,
-                         struct pingpong_dest *rem_dest);
+int eth_client_exch_dest(int sockfd, struct eth_cm_dest *local_dest,
+                         struct eth_cm_dest *rem_dest);
 
+int eth_server_exch_dest(int sockfd, struct eth_cm_dest *local_dest,
+                         struct eth_cm_dest *rem_dest);
+
+/*
+ * Close the connection to the remote end node. This function calls close.
+ *
+ * sockfd:    Socket file descriptor to close.
+ *
+ * Returns:   0 on success and -1 on failure.
+ */
 int eth_close(int sockfd);
 
 #endif // __IBV_ETH_CM__

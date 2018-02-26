@@ -128,12 +128,14 @@ def plot_results(results, directory):
       ax.set_xscale('log', basex=2)
       num_data_points = len(results['hermit'][bm][num_wrs_list[0]]['num_bytes'])
       ax.set_xticks(np.power(2, range(1, num_data_points + 1)))
+      ax.set_yscale('log', basey=2)
       if 'lat' in bm:
         ax.set_ylim(bottom = 0.5, top = 256)
+      elif 'bw' in bm:
+        ax.set_ylim(bottom = 0.25, top = 8192)
+      ax.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
         #  y_ticks = np.power(2, range(-1, 8))
         #  ax.set_yticks(y_ticks, [(str(int(tick)) if tick >= 1 else str(tick)) for tick in y_ticks])
-        ax.set_yscale('log', basey=2)
-        ax.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
 
       # Plot, save and then clear figure
       for num_wrs in num_wrs_list:
@@ -154,4 +156,49 @@ def plot_results(results, directory):
 
       plt.savefig(file_path, bbox_inches = 'tight')
       plt.gcf().clear()
+
+
+  #  file_name = 'plot_' + bm + '-' + metric + 'DIFF'
+  #  file_path = os.path.join(directory, file_name)
+
+  #  fig, ax = plt.subplots(figsize=(10, 5))
+
+  #  ax.grid()
+
+  #  # Axis labels
+  #  ax.set_xlabel('Message Size [B]')
+  #  ax.set_ylabel(labels[metric])
+
+  #  # Axis ticks and scale (x: log2 / y: log2 for latency)
+  #  ax.set_xscale('log', basex=2)
+  #  num_data_points = len(results['hermit'][bm][num_wrs_list[0]]['num_bytes'])
+  #  ax.set_xticks(np.power(2, range(1, num_data_points + 1)))
+  #  ax.set_yscale('log', basey=2)
+  #  if 'lat' in bm:
+    #  ax.set_ylim(bottom = 0.5, top = 256)
+  #  elif 'bw' in bm:
+    #  ax.set_ylim(bottom = 0.25, top = 8192)
+  #  ax.get_yaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter())
+    #  #  y_ticks = np.power(2, range(-1, 8))
+    #  #  ax.set_yticks(y_ticks, [(str(int(tick)) if tick >= 1 else str(tick)) for tick in y_ticks])
+
+  #  # Plot, save and then clear figure
+  #  for num_wrs in num_wrs_list:
+    #  label_end = ' (' + num_wrs + ' WR' + \
+                #  (')' if num_wrs is '1' else 's)') if len(num_wrs_list) > 1 else ""
+    #  ax.plot(results['native'][bm][num_wrs]['num_bytes'][:20],
+            #  results['native'][bm][num_wrs][metric][:20],
+            #  'o-', color = line_color['native'][num_wrs], label = 'Native' + label_end,
+            #  linewidth = 2, markersize = 6)
+    #  label = 'HermitCore (' + num_wrs + ' work requests)'
+    #  ax.plot(results['hermit'][bm][num_wrs]['num_bytes'],
+            #  results['hermit'][bm][num_wrs][metric],
+            #  'o-', color = line_color['hermit'][num_wrs], label = 'HermitCore' + label_end,
+            #  linewidth = 2, markersize = 6)
+
+  #  plt.legend(fontsize = 12, ncol = 3, loc = 'lower right',
+             #  bbox_to_anchor = [1, 1.05])
+
+  #  plt.savefig(file_path, bbox_inches = 'tight')
+  #  plt.gcf().clear()
 

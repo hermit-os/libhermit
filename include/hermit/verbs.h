@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2004, 2005 Topspin Communications. All rights reserved.
- * Copyright (c) 2004, 2011-2012 Intel Corporation. All rights reserved.
- * Copyright (c) 2005, 2006, 2007 Cisco Systems, Inc. All rights reserved.
- * Copyright (c) 2005 PathScale, Inc. All rights reserved.
- * Copyright (c) 2018 Annika Wierichs, RWTH Aachen. All rights reserved.
+ * Copyright (c) 2004, 2005 Topspin Communications.
+ * Copyright (c) 2004, 2011-2012 Intel Corporation.
+ * Copyright (c) 2005, 2006, 2007 Cisco Systems, Inc.
+ * Copyright (c) 2005, PathScale, Inc.
+ * Copyright (c) 2018, Annika Wierichs, RWTH Aachen.
+ * All rights reserved.
  *
  * This software is available to you under a choice of one of two
  * licenses. You may choose to be licensed under the terms of the GNU
@@ -42,7 +43,7 @@
  * original verbs.h:
  * https://github.com/linux-rdma/rdma-core/blob/master/libibverbs/verbs.h
  *
- * API Version: 1.1.6
+ * Current API Version: 1.1.6
  */
 
 #ifndef __HERMIT_VERBS_H__
