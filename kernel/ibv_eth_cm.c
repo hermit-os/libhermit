@@ -172,7 +172,7 @@ int eth_recv_remote_dest(int sockfd, struct eth_cm_dest *rem_dest)
 		return 1;
 	}
 
-	uint32_t vaddr_hi, vaddr_lo;
+	uint32_t vaddr_hi, vaddr_lo; // See comment in send function.
 	sscanf(msg, KEY_PRINT_FMT_GID,
 	       (unsigned int*) &rem_dest->lid, &rem_dest->out_reads, &rem_dest->qpn,
 			   &rem_dest->psn, &rem_dest->rkey, &vaddr_hi, &vaddr_lo,
@@ -196,6 +196,7 @@ int eth_send_local_dest(int sockfd, struct eth_cm_dest *local_dest)
 {
 	char msg[KEY_MSG_SIZE_GID];
 
+	// TODO: This somehow did not work for a normal 64bit vaddr, IIRC. Check why.
 	unsigned long long host_vaddr = (unsigned	long long) guest_to_host((size_t) local_dest->vaddr);
 	uint32_t vaddr_hi, vaddr_lo;
 	unsigned long long vaddr_hi_shfd = host_vaddr >> 32;

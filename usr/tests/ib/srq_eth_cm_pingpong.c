@@ -631,10 +631,13 @@ int main(int argc, char *argv[])
 	}
 
 	int fd = -1;
-	if (servername)
+	if (servername) {
+		printf("Client: eth_client_connect.\n");
     fd = eth_client_connect(servername, port);
-	else
+	} else {
+		printf("Server: eth_server_connect.\n");
     fd = eth_server_connect(port);
+	}
 
 	if (!fd) {
 		fprintf(stderr, "Failed to open socket FD for ethernet connection manager.\n");
@@ -643,12 +646,14 @@ int main(int argc, char *argv[])
 
 	if (servername) { // Client.
 		for (q = 0; q < num_qp; ++q) {
+			printf("Client: eth_send_local_dest for QP %d.\n", q);
 			if (eth_send_local_dest(fd, &my_dest[q])) {
 				fprintf(stderr, "Failed to send local destination via ethernet.\n");
 				return 1;
 			}
 		}
 		for (q = 0; q < num_qp; ++q) {
+			printf("Client: eth_recv_rem_dest for QP %d.\n", q);
 			if (eth_recv_remote_dest(fd, &rem_dest[q])) {
 				fprintf(stderr, "Failed to receive remote destination via ethernet.\n");
 				return 1;
@@ -657,12 +662,14 @@ int main(int argc, char *argv[])
 
 	} else { // Server.
 		for (q = 0; q < num_qp; ++q) {
+			printf("Server: eth_recv_rem_dest for QP %d.\n", q);
 			if (eth_recv_remote_dest(fd, &rem_dest[q])) {
 				fprintf(stderr, "Failed to receive remote destination via ethernet.\n");
 				return 1;
 			}
 		}
 		for (q = 0; q < num_qp; ++q) {
+			printf("Server: eth_send_local_dest for QP %d.\n", q);
 			if (eth_send_local_dest(fd, &my_dest[q])) {
 				fprintf(stderr, "Failed to send local destination via ethernet.\n");
 				return 1;
@@ -670,6 +677,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	printf("eth_close.\n");
 	eth_close(fd);
 
 	for (q = 0; q < num_qp; ++q) {

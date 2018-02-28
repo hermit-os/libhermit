@@ -30,8 +30,12 @@
  * that helps to exchange destination information before a data exchange via RDMA.
  * LwIP socket-functions are used.
  *
- * TODO: Not really tested
+ * TODO: This is just a first prototype that links. See usr/tests/ib/srq_eth_cm_pingpong.c for an
+ *       example ping pong (not yet working).
  * TODO: Handle network setups comprising more than two end nodes.
+ * TODO: We could not include all GID raw data in the exchanged message if it is not used, i.e. if
+ *       it is == 0 and an LID is used. Refer to rdma-core/perftest for an example
+ *       (perftest_communication.c -> functions 'ethernet_{read,write}_keys').
  */
 
 #ifndef __IBV_ETH_CM__
@@ -49,7 +53,7 @@ struct eth_cm_dest {
 	unsigned long long vaddr;
 	union ibv_gid      gid;
 	unsigned           srqn;
-	int                gid_index;
+	// int                gid_index;
 };
 
 /*
