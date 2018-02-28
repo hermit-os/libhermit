@@ -68,8 +68,6 @@
 #include <dlfcn.h>
 #include <inttypes.h>
 
-#include <infiniband/verbs.h>		// Linux include
-
 #include "uhyve-cpu.h"
 #include "uhyve-syscalls.h"
 #include "uhyve-ibv.h"
@@ -233,36 +231,30 @@ static inline unsigned long long rdtsc() {
 }
 
 
-// DLSYM
-
-/* #define IB_MEM_DEBUG */
+/*
+ * Memory allocation redefinitions
+ */
 
 static uint8_t* ib_pool_addr = 0;
 static uint8_t* ib_pool_top  = 0;
-static const size_t std_alignment = 16; // TODO: Use sizeof(maxint_t) (?) or similar
-static pthread_mutex_t ib_pool_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-bool use_ib_mem_pool = false;
+bool use_ib_mem_pool         = false;
 bool init_real_calloc_active = false;
+
+static const size_t std_alignment = 16; // TODO: Use sizeof(maxint_t) (?) or similar
 static unsigned char dlsym_mem_buffer[8192];
+static pthread_mutex_t ib_pool_mutex = PTHREAD_MUTEX_INITIALIZER; // TODO: We probably don't need a lock.
 
 static void * (*real_malloc) (size_t)         = NULL;
 static void * (*real_calloc) (size_t, size_t) = NULL;
 static void * (*real_realloc)(void *, size_t) = NULL;
 static void   (*real_free)   (void *)         = NULL;
 
-
-/*
- * init_ib_mem_functions
- */
+/* init_ib_mem_functions */
 
 static void init_ib_mem_functions(void)
 {
 	pthread_mutex_lock(&ib_pool_mutex);
-
-#ifdef IB_MEM_DEBUG
-	printf("FUNCTION: init_ib_mem_functions().\n");
-#endif
 
 	if (real_malloc == NULL && real_calloc == NULL && real_realloc == NULL && real_free == NULL) {
 		init_real_calloc_active = true;
@@ -279,21 +271,12 @@ static void init_ib_mem_functions(void)
 	}
 
 	pthread_mutex_unlock(&ib_pool_mutex);
-#ifdef IB_MEM_DEBUG
-	printf("\tInit finished.\n");
-#endif
 }
 
-/*
- * new_ib_malloc_region
- */
+/* new_ib_malloc_region */
 
 void * new_ib_malloc_region(size_t size)
-{ // TODO: add check if requested chunk fits in remaining memory
-#ifdef IB_MEM_DEBUG
-	printf("FUNCTION: new_ib_malloc_region() ---------- size: %lu\n", size);
-#endif
-
+{
 	void * result = NULL;
 
 	if (0 == ib_pool_top || 0 == ib_pool_addr) {
@@ -307,29 +290,19 @@ void * new_ib_malloc_region(size_t size)
 		result = ib_pool_top;
 		ib_pool_top += size;
 		ib_pool_top += (size_t) (std_alignment - ((uintptr_t)ib_pool_top % std_alignment));
-#ifdef IB_MEM_DEBUG
-		printf("\tReturning ib memory pool address: %p\n", result);
-#endif
 	}
 
-	if (ib_pool_top > ib_pool_addr + IB_POOL_SIZE) { // TODO: make ib addr a uint8* as well?
-		fprintf(stderr, "\nError: IB Memory Pool overflow.------------------------------\n\n");
+	if (ib_pool_top > ib_pool_addr + IB_POOL_SIZE) {
+		fprintf(stderr, "IB Memory Pool overflow.\n");
 	}
 
 	return result;
 }
 
-
-/*
- * malloc
- */
+/* malloc */
 
 void * malloc(size_t size)
 {
-#ifdef IB_MEM_DEBUG
-	printf("FUNCTION: malloc() ------------- size: %lu\n", size);
-#endif
-
 	if (real_malloc == NULL) {
 		init_ib_mem_functions();
 	}
@@ -338,14 +311,8 @@ void * malloc(size_t size)
 
 	void * result;
 	if (use_ib_mem_pool) {
-#ifdef IB_MEM_DEBUG
-		printf("\tuse_ib_mem_pool == true.\n");
-#endif
 		result = new_ib_malloc_region(size);
 	} else { // !use_ib_mem_pool
-#ifdef IB_MEM_DEBUG
-		printf("\tcalling real_malloc()\n");
-#endif
 		result = real_malloc(size);
 	}
 
@@ -353,65 +320,44 @@ void * malloc(size_t size)
 	return result;
 }
 
-
-/*
- * calloc
- */
+/* calloc */
 
 void * calloc(size_t nitems, size_t size)
 {
-#ifdef IB_MEM_DEBUG
-	printf("FUNCTION: calloc() ------------- nitems: %lu  size: %lu\n", nitems, size);
-#endif
-
 	void * result;
 
 	if (real_calloc == NULL && !init_real_calloc_active) {
 		init_ib_mem_functions();
 	}
 
-	size_t full_size = nitems * size; // TODO: check if multiplication overflow
+	size_t full_size = nitems * size;
+	if (nitems != 0 && full_size/nitems != size) {
+		fprintf(stderr, "Multiplication overflow in calloc: nitems * size > max(size_t).\n");
+	}
+
 	if (init_real_calloc_active) {
-#ifdef IB_MEM_DEBUG
-		printf("\treturn dlsym_mem_buffer.\n");
-#endif
 		result = dlsym_mem_buffer;
 	} else if (use_ib_mem_pool) {
-#ifdef IB_MEM_DEBUG
-		printf("\tuse_ib_mem_pool == true\n");
-#endif
 		result = new_ib_malloc_region(full_size);
 		memset(result, 0, full_size);
 	} else { // !use_ib_mem_pool && !init_real_calloc_active
-#ifdef IB_MEM_DEBUG
-		printf("\tcalling real_calloc()\n");
-#endif
 		result = real_calloc(nitems, size);
 	}
 
 	return result;
 }
 
-
-/*
- * realloc
- */
+/* realloc */
 
 void * realloc(void * ptr, size_t new_size) {
-#ifdef IB_MEM_DEBUG
-	printf("FUNCTION: realloc() ----------------------- ptr: %p\n", ptr);
-#endif
-
 	if (real_realloc == NULL) {
 		init_ib_mem_functions();
 	}
-
 	if (!ptr) {
 		return malloc(new_size); // This is what standard realloc will do for a null ptr.
 	}
 
 	void * result;
-
 	pthread_mutex_lock(&ib_pool_mutex);
 
 	if (use_ib_mem_pool) {
@@ -419,29 +365,16 @@ void * realloc(void * ptr, size_t new_size) {
 		size_t orig_size = *mem_block_size_ptr;
 
 		if (new_size <= 0 || ptr == NULL) {
-#ifdef IB_MEM_DEBUG
-			printf("\tnew_size <= 0 || ptr == NULL ----------------------\n");
-#endif
 			result = NULL;
-
 		} else if (new_size <= orig_size) {
-#ifdef IB_MEM_DEBUG
-			printf("\tnew_size <= orig_size = %lu\n", orig_size);
-#endif
 			*mem_block_size_ptr = new_size;
 			result = ptr;
 		} else { // new_size > orig_size
-#ifdef IB_MEM_DEBUG
-			printf("\tnew_size > orig_size = %lu\n", orig_size);
-#endif
 			result = new_ib_malloc_region(new_size);
 			memcpy(result, ptr, orig_size);
 		}
 
 	} else { // !use_ib_mem_pool
-#ifdef IB_MEM_DEBUG
-		printf("\trealloc() real\n");
-#endif
 		result = real_realloc(ptr, new_size);
 	}
 
@@ -449,38 +382,17 @@ void * realloc(void * ptr, size_t new_size) {
 	return result;
 }
 
+/* free */
 
-/*
- * free
- */
-
- // TODO: just use free and real free depending on ptr given (in pool or not)
 void free(void * ptr) {
 	if (!ptr) {
 		return;
 	}
-
-#ifdef IB_MEM_DEBUG
-	printf("FUNCTION: free() --- ptr: %p\n", ptr);
-#endif
-
 	pthread_mutex_lock(&ib_pool_mutex);
 
-	if ((uint8_t*)ptr > ib_pool_addr && (uint8_t*)ptr < ib_pool_addr + IB_POOL_SIZE) {
-		if (use_ib_mem_pool) {
-#ifdef IB_MEM_DEBUG
-			printf("\tib free() (no action).\n");
-#endif
-		} else {
-#ifdef IB_MEM_DEBUG
-			printf("\tfree() in IB pool but use_ib_mem_pool not set.\n");
-#endif
-		}
-	} else { // ptr not within ib memory pool
-#ifdef IB_MEM_DEBUG
-			printf("\tfree() real\n");
-#endif
-			real_free(ptr);
+	if ((uint8_t *) ptr < ib_pool_addr ||
+			(uint8_t *) ptr > ib_pool_addr + IB_POOL_SIZE) {
+		real_free(ptr);
 	}
 
 	pthread_mutex_unlock(&ib_pool_mutex);
@@ -1246,7 +1158,7 @@ static int vcpu_loop(void)
 				}
 
 			/*
-			 * Verbs API KVM I/O ports
+			 * RDMA verbs KVM I/O ports
 			 */
 
 			case UHYVE_PORT_SET_IB_POOL_ADDR: {
@@ -1259,6 +1171,7 @@ static int vcpu_loop(void)
 			}
 
 			case UHYVE_PORT_IBV_POST_SEND:
+				// The following measurement will be ~1400 ticks for small messages.
 				/* ticks_case_exec = rdtsc(); */
 				call_ibv_post_send(run, guest_mem);
 				/* ticks_case_exec = rdtsc() - ticks_case_exec; */

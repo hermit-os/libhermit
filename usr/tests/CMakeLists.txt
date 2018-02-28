@@ -20,6 +20,8 @@ add_executable(ib-ud-pingpong ib/pingpong.c ib/ud_pingpong.c)
 add_executable(ib-uc-pingpong ib/pingpong.c ib/uc_pingpong.c)
 # Shared Receive Queue
 add_executable(ib-srq-pingpong ib/pingpong.c ib/srq_pingpong.c)
+# Shared Receive Queue using Ethernet Connection Manager (ECM)
+add_executable(ib-srq-eth-cm-pingpong ib/pingpong.c ib/srq_eth_cm_pingpong.c)
 # Shared Receive Queue, eXtended Reliable Connected
 add_executable(ib-xsrq-pingpong ib/pingpong.c ib/xsrq_pingpong.c)
 

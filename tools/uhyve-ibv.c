@@ -36,7 +36,6 @@
 
 #include "uhyve-ibv.h"
 
-#include <infiniband/verbs.h> // Linux native verbs header.
 #include <stdio.h>
 
 
@@ -1016,7 +1015,7 @@ void call_ibv_destroy_srq(struct kvm_run * run, uint8_t * guest_mem) {
  */
 
 void call_ibv_post_srq_recv(struct kvm_run * run, uint8_t * guest_mem) {
-	printf("sh_r");
+	/* printf("srq_recv "); */
 	unsigned data = *((unsigned*) ((size_t) run + run->io.data_offset));
 	uhyve_ibv_post_srq_recv_t * args = (uhyve_ibv_post_srq_recv_t *) (guest_mem + data);
 

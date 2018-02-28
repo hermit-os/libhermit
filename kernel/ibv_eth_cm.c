@@ -27,6 +27,7 @@
 
 #include <hermit/stdio.h>
 #include <hermit/stddef.h>
+#include <hermit/stdlib.h>
 #include <hermit/memory.h>
 #include <hermit/logging.h>
 
@@ -36,8 +37,12 @@
 #include <hermit/ibv_eth_cm.h>
 
 
-#define KEY_MSG_SIZE (59)
-#define KEY_PRINT_FMT "%04x:%04x:%06x:%06x:%08x:%016Lx:%08x"
+/* #define KEY_MSG_SIZE (59) */
+/* #define KEY_PRINT_FMT "%04x:%04x:%06x:%06x:%08x:%016Lx:%08x" */
+
+#define KEY_MSG_SIZE_GID (108)
+#define KEY_PRINT_FMT_GID "%04x:%04x:%06x:%06x:%08x:%016Lx:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x:%08x:"
+
 
 /*
  * Helper functions:
@@ -62,48 +67,10 @@ int check_add_port(char **service, int port, const char *server_ip, struct addri
 	return 0;
 }
 
-int eth_read(int sockfd, struct eth_cm_dest *rem_dest)
-{
-  int parsed;
-  char msg[KEY_MSG_SIZE];
-
-  if (lwip_read(sockfd, msg, sizeof msg) != sizeof msg) {
-    LOG_ERROR("eth_read: Couldn't read remote address.\n");
-    return 1;
-  }
-
-	// TODO: Replace sscanf (not available in HC) or implement the function.
-  parsed = sscanf(msg, KEY_PRINT_FMT,
-                  (unsigned int *) &rem_dest->lid, &rem_dest->out_reads, &rem_dest->qpn,
-                  &rem_dest->psn, &rem_dest->rkey, &rem_dest->vaddr, &rem_dest->srqn);
-
-  if (parsed != 7) {
-    LOG_ERROR("Couldn't parse line <%.*s>\n",(int)sizeof msg, msg);
-    return 1;
-  }
-
-  return 0;
-}
-
-int eth_write(int sockfd, struct eth_cm_dest *local_dest)
-{
-  char msg[KEY_MSG_SIZE];
-  ksprintf(msg, KEY_PRINT_FMT,
-          local_dest->lid, local_dest->out_reads, local_dest->qpn, local_dest->psn,
-          local_dest->rkey, local_dest->vaddr, local_dest->srqn);
-
-  if (lwip_write(sockfd, msg, sizeof msg) != sizeof msg) {
-    LOG_ERROR("Couldn't send local address.\n");
-    return 1;
-  }
-
-  return 0;
-}
 
 /*
  * Exposed functions:
  */
-
 
 int eth_client_connect(const char *server_ip, int port)
 {
@@ -191,47 +158,112 @@ int eth_server_connect(int port)
     return -1;
   }
 
+	lwip_close(sockfd);
   return connfd;
 }
 
-int eth_client_exch_dest(int sockfd, struct eth_cm_dest *local_dest,
-                         struct eth_cm_dest *rem_dest)
-{
-  if (eth_write(sockfd, local_dest)) {
-    LOG_ERROR("Unable to write local destination information to socket.\n");
-    return 1;
-  }
 
-  if (eth_read(sockfd, rem_dest)) {
-    LOG_ERROR("Unable to read remote destination information from socket.\n");
+int eth_recv_remote_dest(int sockfd, struct eth_cm_dest *rem_dest)
+{
+	char msg[KEY_MSG_SIZE_GID];
+
+	if (lwip_read(sockfd, msg, sizeof msg) != sizeof msg) {
+		LOG_ERROR("Ethernet_read_keys: Couldn't read remote address\n");
+		return 1;
+	}
+
+	uint32_t vaddr_hi, vaddr_lo;
+	sscanf(msg, KEY_PRINT_FMT_GID,
+	       (unsigned int*) &rem_dest->lid, &rem_dest->out_reads, &rem_dest->qpn,
+			   &rem_dest->psn, &rem_dest->rkey, &vaddr_hi, &vaddr_lo,
+			   &rem_dest->gid.raw[ 0], &rem_dest->gid.raw[ 1],
+			   &rem_dest->gid.raw[ 2], &rem_dest->gid.raw[ 3],
+			   &rem_dest->gid.raw[ 4], &rem_dest->gid.raw[ 5],
+			   &rem_dest->gid.raw[ 6], &rem_dest->gid.raw[ 7],
+			   &rem_dest->gid.raw[ 8], &rem_dest->gid.raw[ 9],
+			   &rem_dest->gid.raw[10], &rem_dest->gid.raw[11],
+			   &rem_dest->gid.raw[12], &rem_dest->gid.raw[13],
+			   &rem_dest->gid.raw[14], &rem_dest->gid.raw[15],
+			   &rem_dest->srqn);
+
+	rem_dest->vaddr = ((unsigned long long) vaddr_hi << 32) |
+										((unsigned long long) vaddr_lo);
+
+  return 0;
+}
+
+int eth_send_local_dest(int sockfd, struct eth_cm_dest *local_dest)
+{
+	char msg[KEY_MSG_SIZE_GID];
+
+	unsigned long long host_vaddr = (unsigned	long long) guest_to_host((size_t) local_dest->vaddr);
+	uint32_t vaddr_hi, vaddr_lo;
+	unsigned long long vaddr_hi_shfd = host_vaddr >> 32;
+	memcpy(&vaddr_hi, &vaddr_hi_shfd,  sizeof(uint32_t));
+	memcpy(&vaddr_lo, &host_vaddr,     sizeof(uint32_t));
+
+	ksprintf(msg, KEY_PRINT_FMT_GID,
+			local_dest->lid, local_dest->out_reads, local_dest->qpn, local_dest->psn, local_dest->rkey,
+			vaddr_hi, vaddr_lo,
+			local_dest->gid.raw[ 0], local_dest->gid.raw[ 1],
+			local_dest->gid.raw[ 2], local_dest->gid.raw[ 3],
+			local_dest->gid.raw[ 4], local_dest->gid.raw[ 5],
+			local_dest->gid.raw[ 6], local_dest->gid.raw[ 7],
+			local_dest->gid.raw[ 8], local_dest->gid.raw[ 9],
+			local_dest->gid.raw[10], local_dest->gid.raw[11],
+			local_dest->gid.raw[12], local_dest->gid.raw[13],
+			local_dest->gid.raw[14], local_dest->gid.raw[15],
+			local_dest->srqn);
+
+  if (lwip_write(sockfd, msg, sizeof msg) != sizeof msg) {
+    LOG_ERROR("Couldn't send local address.\n");
     return 1;
   }
 
   return 0;
 }
 
-int eth_server_exch_dest(int sockfd, struct eth_cm_dest *local_dest,
-                         struct eth_cm_dest *rem_dest)
+
+int eth_close(int connfd)
 {
-  if (eth_read(sockfd, rem_dest)) {
-    LOG_ERROR("Unable to read remote destination information from socket.\n");
-    return 1;
-  }
-
-  if (eth_write(sockfd, local_dest)) {
-    LOG_ERROR("Unable to write local destination information to socket.\n");
-    return 1;
-  }
-
-  return 0;
-}
-
-int eth_close(int sockfd)
-{
-  if (lwip_close(sockfd)) {
+  if (lwip_close(connfd)) {
     LOG_ERROR("Couldn't close socket.\n");
     return -1;
   }
 
   return 0;
 }
+
+
+/* int eth_client_exch_dest(int connfd, struct eth_cm_dest *local_dest, */
+                         /* struct eth_cm_dest *rem_dest) */
+/* { */
+  /* if (eth_write(connfd, local_dest)) { */
+    /* LOG_ERROR("Unable to write local destination information to socket.\n"); */
+    /* return 1; */
+  /* } */
+
+  /* if (eth_read(connfd, rem_dest)) { */
+    /* LOG_ERROR("Unable to read remote destination information from socket.\n"); */
+    /* return 1; */
+  /* } */
+
+  /* return 0; */
+/* } */
+
+/* int eth_server_exch_dest(int connfd, struct eth_cm_dest *local_dest, */
+                         /* struct eth_cm_dest *rem_dest) */
+/* { */
+  /* if (eth_read(connfd, rem_dest)) { */
+    /* LOG_ERROR("Unable to read remote destination information from socket.\n"); */
+    /* return 1; */
+  /* } */
+
+  /* if (eth_write(connfd, local_dest)) { */
+    /* LOG_ERROR("Unable to write local destination information to socket.\n"); */
+    /* return 1; */
+  /* } */
+
+  /* return 0; */
+/* } */
+

@@ -29,6 +29,9 @@
  * This is a first implementation of a lightweight Ethernet Connection Manager
  * that helps to exchange destination information before a data exchange via RDMA.
  * LwIP socket-functions are used.
+ *
+ * TODO: Not really tested
+ * TODO: Handle network setups comprising more than two end nodes.
  */
 
 #ifndef __IBV_ETH_CM__
@@ -53,38 +56,56 @@ struct eth_cm_dest {
  * Connect to a remote end node via ethernet sockets, given its IP address and a port number. This
  * function creates a socket, connects to the server and returns the socket file descriptor.
  *
- * server_ip: Server IP address given as string.
- * port:      Port number.
+ * server_ip:  Server IP address given as string.
+ * port:       Port number.
  *
- * Returns:   Socket file descriptor on success and -1 on failure.
+ * Returns:    Socket file descriptor on success and -1 on failure.
  */
 int eth_client_connect(const char *server_ip, int port);
 
 /*
  * Accept connection from a remote end node via ethernet sockets given a port number. This function
  * creates a socket, binds it and listens to it, then accepts the connection with the client trying
- * to connect.
+ * to connect. The listening FD is closed and the connected FD is returned.
  *
- * port:      Port number.
+ * port:       Port number.
  *
- * Returns:   Socket file descriptor on success and -1 on failure.
+ * Returns:    Connected socket file descriptor on success and -1 on failure.
  */
 int eth_server_connect(int port);
 
+/*
+ * Send local destination information via the given socket FD. The function creates a simple char
+ * message containing all information given as part of the destination struct and then calls
+ * write().
+ *
+ * sockfd:     Connected socket file descriptor returned by eth_*_connect.
+ * local_dest: Local destination struct.
+ *
+ * Returns:    0 on success, 1 on failure.
+ */
+int eth_send_local_dest(int sockfd, struct eth_cm_dest *local_dest);
 
-int eth_client_exch_dest(int sockfd, struct eth_cm_dest *local_dest,
-                         struct eth_cm_dest *rem_dest);
-
-int eth_server_exch_dest(int sockfd, struct eth_cm_dest *local_dest,
-                         struct eth_cm_dest *rem_dest);
+/*
+ * Receive remote destination information via the given socket FD. The function receives the
+ * communication partner's char message containing remote destination information via read(), then
+ * populates the given remote destination struct with the information.
+ *
+ * sockfd:     Connected socket file descriptor returned by eth_*_connect.
+ * rem_dest:   Remote destination struct to be populated.
+ *
+ * Returns:    0 on success, 1 on failure.
+ */
+int eth_recv_remote_dest(int sockfd, struct eth_cm_dest *rem_dest);
 
 /*
  * Close the connection to the remote end node. This function calls close.
  *
- * sockfd:    Socket file descriptor to close.
+ * sockfd:     Socket file descriptor to close.
  *
- * Returns:   0 on success and -1 on failure.
+ * Returns:    0 on success and -1 on failure.
  */
+
 int eth_close(int sockfd);
 
 #endif // __IBV_ETH_CM__

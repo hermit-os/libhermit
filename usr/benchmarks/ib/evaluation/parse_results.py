@@ -36,8 +36,8 @@ lat_metrics = ['num_bytes',
 
 labels = {metric: '' for metric in bw_metrics[2:] + lat_metrics[2:] }
 
-labels[bw_metrics [2]] = 'Peak Bandwidth [MB/sec]'
-labels[bw_metrics [3]] = 'Average Bandwidth [MB/sec]'
+labels[bw_metrics [2]] = 'Peak Bandwidth [MiB/sec]'
+labels[bw_metrics [3]] = 'Average Bandwidth [MiB/sec]'
 labels[bw_metrics [4]] = 'Message Rate [Mpps]'
 
 labels[lat_metrics[2]] = 'Min. Latency [${\mu}sec$]'
@@ -70,9 +70,6 @@ def parse_results(directory):
       for num_wrs in num_wrs_list:
 
         print('Benchmark: ' + machine + ' --- ' + bm + ' WRs: ' + num_wrs)
-
-        #  if bm.endswith("lat") and not num_wrs == '1':
-          #  continue
 
         read_line = False
         file_name = machine + '-' + bm + '-pl_' + num_wrs + '.log'
@@ -121,13 +118,15 @@ def plot_results(results, directory):
       ax.grid()
 
       # Axis labels
-      ax.set_xlabel('Message Size [B]')
+      ax.set_xlabel('Message Size [Bytes]')
       ax.set_ylabel(labels[metric])
 
       # Axis ticks and scale (x: log2 / y: log2 for latency)
       ax.set_xscale('log', basex=2)
       num_data_points = len(results['hermit'][bm][num_wrs_list[0]]['num_bytes'])
       ax.set_xticks(np.power(2, range(1, num_data_points + 1)))
+      #  ax.set_xticklabels(['2B', '4B', '8B', '16B', '', '64B', '', '256B', '', '1KiB', '',
+                          #  '4KiB', '', '16KiB', '', '64KiB', '', '256KiB', '', '1MiB'])
       ax.set_yscale('log', basey=2)
       if 'lat' in bm:
         ax.set_ylim(bottom = 0.5, top = 256)
