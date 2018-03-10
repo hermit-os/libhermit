@@ -44,6 +44,8 @@ int cpu_detection(void)
         LOG_INFO("device tree blob is invalid\n");
     }
 
+	LOG_INFO("HermitCore runs in exception level %d\n", get_current_el());
+
 #if 0
 	uint32_t value = 0;
 

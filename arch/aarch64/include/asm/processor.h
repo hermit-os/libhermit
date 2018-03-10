@@ -56,7 +56,19 @@ extern "C" {
 // determine the cpu features
 int cpu_detection(void);
 
-/** @brife Get thread local storage
+/** @brief get the current exception level
+ *
+ * Helper function to get the current exception level
+ *
+ */
+static inline uint32_t get_current_el(void)
+{
+	uint32_t curr;
+	asm volatile("mrs %0, CurrentEL" : "=r"(curr));
+	return (curr>>2) & 0x3;
+}
+
+/** @brief Get thread local storage
  *
  * Helper function to get the TLS of the current task
  */
