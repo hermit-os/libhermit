@@ -128,6 +128,20 @@ static void timer_handler(struct state *s)
 #endif
 }
 
+void udelay(uint32_t usecs)
+{
+	uint64_t diff, end, start = get_cntpct();
+	uint64_t deadline = (usecs * freq_hz) / 1000000;
+
+	do {
+		end = get_cntpct();
+        rmb();
+        diff = end > start ? end - start : start - end;
+        if ((diff < deadline) && (deadline - diff > 50000))
+			check_workqueues();
+    } while(diff < deadline);
+}
+
 int timer_wait(unsigned int ticks)
 {
 	uint64_t eticks = per_core(timer_ticks) + ticks;

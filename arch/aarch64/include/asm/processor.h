@@ -222,17 +222,14 @@ static inline size_t read_esr(void) {
         return val;
 }
 
-/** @brief Read cycle counter
- * @return The 64 bit time stamp value
- */
-inline static uint64_t rdtsc(void)
+static inline uint64_t get_cntpct(void)
 {
-	uint64_t result = 0;
-	asm volatile("mrs %0, pmccntr_el0" : "=r" (result));
-	return result;
+	uint64_t value;
+	asm volatile("mrs %0, cntpct_el0" : "=r" (value) :: "memory");
+	return value;
 }
 
-inline static uint64_t get_rdtsc(void) { return rdtsc(); }
+inline static uint64_t get_rdtsc(void) { get_cntpct(); }
 
 /// A one-instruction-do-nothing
 #define NOP		asm volatile ("nop")
@@ -329,13 +326,6 @@ static inline uint32_t get_cntkctl(void)
 static inline void set_cntkctl(uint32_t value)
 {
 	asm volatile("msr cntkctl_el1, %0" :: "r" (value) : "memory");
-}
-
-static inline uint64_t get_cntpct(void)
-{
-	uint64_t value;
-	asm volatile("mrs %0, cntpct_el0" : "=r" (value) :: "memory");
-	return value;
 }
 
 static inline void set_cntp_cval(uint64_t value)
@@ -451,7 +441,7 @@ uint32_t get_cpu_frequency(void);
 /** @brief Busywait an microseconds interval of time
  * @param usecs The time to wait in microseconds
  */
-static inline void udelay(uint32_t usecs) {}
+void udelay(uint32_t usecs);
 
 /// Register a task's TSS at GDT
 void register_task(void);
