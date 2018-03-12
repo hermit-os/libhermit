@@ -137,6 +137,8 @@ image_size: .quad 0
 possible_isles: .dword 1
 
 start64:
+  mrs x0, s3_1_c15_c3_0 // Read EL1 Configuration Base Address Register
+
   /* disable interrupts */
   msr daifset, #0b111
 
@@ -209,7 +211,7 @@ start64:
    *   A       [1]  Alignment fault checking disabled
    *   M       [0]  MMU disabled
    */
-  ldr x0, =0x34d5d905
+  ldr x0, =0x4D5D91F
   msr sctlr_el1, x0
 
   ldr     x0, =mmu_on
@@ -267,13 +269,13 @@ _setup_cpu:
     msr     tcr_el1, x0
 
     /*
-     * Enable FP/ASIMD
+     * Enable FP/ASIMD in Architectural Feature Access Control Register,
      */
     mov     x0, #3 << 20
     msr     cpacr_el1, x0
 
     /*
-     * Reset mdscr_el1
+     * Reset debug controll register
      */
     msr     mdscr_el1, xzr
 
@@ -629,22 +631,22 @@ el1_irq:
 ENDPROC(el1_irq)
 
 .align 6
-el0_sync:
-      trap_entry 0
+el1_fiq:
+      trap_entry 1
       mov     x0, sp
-      bl      do_sync
-      trap_exit 0
+      bl      do_fiq
+      trap_exit 1
       eret
-ENDPROC(el0_sync)
+ENDPROC(el1_fiq)
 
 .align 6
-el0_irq:
-      trap_entry 0
+el1_error:
+      trap_entry 1
       mov     x0, sp
-      bl      do_irq
-      trap_exit 0
+      bl      do_error
+      trap_exit 1
       eret
-ENDPROC(el0_irq)
+ENDPROC(el1_error)
 
 /*
  * Bad Abort numbers
@@ -703,20 +705,20 @@ ENDPROC(el1_error_invalid)
 .align  11
 ENTRY(vector_table)
 /* Current EL with SP0 */
-ventry el1_sync_invalid         // Synchronous EL1t
-ventry el1_irq_invalid          // IRQ EL1t
-ventry el1_fiq_invalid          // FIQ EL1t
-ventry el1_error_invalid        // Error EL1t
+ventry el1_sync_invalid	        // Synchronous EL1t
+ventry el1_irq_invalid	        // IRQ EL1t
+ventry el1_fiq_invalid	        // FIQ EL1t
+ventry el1_error_invalid	    // Error EL1t
 
 /* Current EL with SPx */
 ventry el1_sync                 // Synchronous EL1h
 ventry el1_irq                  // IRQ EL1h
-ventry el1_fiq_invalid          // FIQ EL1h
-ventry el1_error_invalid        // Error EL1h
+ventry el1_fiq          		// FIQ EL1h
+ventry el1_error		        // Error EL1h
 
 /* Lower EL using AArch64 */
-ventry el0_sync                 // Synchronous 64-bit EL0
-ventry el0_irq                  // IRQ 64-bit EL0
+ventry el0_sync_invalid			// Synchronous 64-bit EL0
+ventry el0_irq_invalid			// IRQ 64-bit EL0
 ventry el0_fiq_invalid          // FIQ 64-bit EL0
 ventry el0_error_invalid        // Error 64-bit EL0
 

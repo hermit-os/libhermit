@@ -40,11 +40,12 @@ uint32_t get_cpu_frequency(void)
 
 int cpu_detection(void)
 {
+	LOG_INFO("HermitCore runs in exception level %d\n", get_current_el());
+	LOG_INFO("System control register: 0x%x\n", get_sctlr());
+
 	if (!dtb && (fdt_check_header(dtb) != 0)) {
         LOG_INFO("device tree blob is invalid\n");
     }
-
-	LOG_INFO("HermitCore runs in exception level %d\n", get_current_el());
 
 #if 0
 	uint32_t value = 0;

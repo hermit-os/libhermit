@@ -43,6 +43,15 @@
 extern "C" {
 #endif
 
+/* interrupts */
+#define INT_PPI_VMAINT			(16+9)
+#define INT_PPI_HYP_TIMER		(16+10)
+#define INT_PPI_VIRT_TIMER 		(16+11)
+#define INT_PPI_SPHYS_TIMER		(16+13)
+#define INT_PPI_NSPHYS_TIMER	(16+14)
+
+#define INT_TIMER0				34
+
 /** @brief Pointer-type to IRQ-handling functions
  *
  * Whenever you write a IRQ-handling function it has to match this signature.

@@ -53,8 +53,29 @@ extern "C" {
 
 #define ARMV8_PMCNTENSET_EL0_EN	(1 << 31) /* Performance Monitors Count Enable Set register */
 
+/* interrupts */
+#define INT_PPI_VMAINT			(16+9)
+#define INT_PPI_HYP_TIMER		(16+10)
+#define INT_PPI_VIRT_TIMER		(16+11)
+#define INT_PPI_SPHYS_TIMER		(16+13)
+#define INT_PPI_NSPHYS_TIMER	(16+14)
+
 // determine the cpu features
 int cpu_detection(void);
+
+static inline uint32_t get_isr(void)
+{
+	uint32_t status;
+	asm volatile("mrs %0, isr_el1" : "=r"(status));
+	return status;
+}
+
+static inline uint32_t get_sctlr(void)
+{
+	uint32_t status;
+	asm volatile("mrs %0, sctlr_el1" : "=r"(status));
+	return status;
+}
 
 /** @brief get the current exception level
  *
@@ -289,103 +310,110 @@ static inline size_t msb(size_t i) {
 static inline uint32_t get_cntfrq(void)
 {
 	uint32_t val;
-	asm volatile("isb; mrs %0, cntfrq_el0; isb" : "=r" (val) :: "memory");
+	asm volatile("mrs %0, cntfrq_el0" : "=r" (val) :: "memory");
 	return val;
 }
 
 static inline void set_cntfrq(uint32_t value)
 {
-	asm volatile("isb; msr cntfrq_el0, %0; isb" :: "r"(value) : "memory");
+	asm volatile("msr cntfrq_el0, %0" :: "r"(value) : "memory");
 }
 
 static inline uint32_t get_cntkctl(void)
 {
 	uint32_t value;
-	asm volatile("isb; mrs %0, cntkctl_el1; isb" : "=r" (value) :: "memory");
+	asm volatile("mrs %0, cntkctl_el1" : "=r" (value) :: "memory");
 	return value;
 }
 
 static inline void set_cntkctl(uint32_t value)
 {
-	asm volatile("isb; msr cntkctl_el1, %0; isb" :: "r" (value) : "memory");
+	asm volatile("msr cntkctl_el1, %0" :: "r" (value) : "memory");
 }
 
 static inline uint64_t get_cntpct(void)
 {
 	uint64_t value;
-	asm volatile("isb; mrs %0, cntpct_el0; isb" : "=r" (value) :: "memory");
+	asm volatile("mrs %0, cntpct_el0" : "=r" (value) :: "memory");
 	return value;
 }
 
 static inline void set_cntp_cval(uint64_t value)
 {
-	asm volatile("isb; msr cntp_cval_el0, %0; isb" :: "r"(value) : "memory");
+	asm volatile("msr cntp_cval_el0, %0" :: "r"(value) : "memory");
 }
 
 static inline uint64_t get_cntp_cval(void)
 {
 	uint64_t value;
-	asm volatile("isb; mrs %0, cntp_cval_el0; isb" : "=r" (value) :: "memory");
+	asm volatile("mrs %0, cntp_cval_el0" : "=r" (value) :: "memory");
 	return value;
 }
 
 static inline void set_cntp_tval(uint64_t value)
 {
-	asm volatile("isb; msr cntp_tval_el0, %0; isb" :: "r"(value) : "memory");
+	asm volatile("msr cntp_tval_el0, %0" :: "r"(value) : "memory");
 }
 
 static inline uint64_t get_cntp_tval(void)
 {
 	uint64_t value;
-	asm volatile("isb; mrs %0, cntp_tval_el0; isb" : "=r" (value) :: "memory");
+	asm volatile("mrs %0, cntp_tval_el0" : "=r" (value) :: "memory");
 	return value;
 }
 
 static inline void set_cntp_ctl(uint32_t value)
 {
-	asm volatile("isb; msr cntp_ctl_el0, %0; isb" :: "r"(value) : "memory");
+	asm volatile("msr cntp_ctl_el0, %0" :: "r"(value) : "memory");
 }
 
 static inline uint32_t get_cntp_ctl(void)
 {
 	uint32_t value;
-	asm volatile("isb; mrs %0, cntp_ctl_el0; isb" : "=r" (value) :: "memory");
+	asm volatile("mrs %0, cntp_ctl_el0" : "=r" (value) :: "memory");
+	return value;
+}
+
+static inline uint64_t get_cntvct(void)
+{
+	uint64_t value;
+	asm volatile("mrs %0, cntvct_el0" : "=r" (value) :: "memory");
 	return value;
 }
 
 static inline void set_cntv_cval(uint64_t value)
 {
-	asm volatile("isb; msr cntv_cval_el0, %0; isb" :: "r"(value) : "memory");
+	asm volatile("msr cntv_cval_el0, %0" :: "r"(value) : "memory");
 }
 
 static inline uint64_t get_cntv_cval(void)
 {
 	uint64_t value;
-	asm volatile("isb; mrs %0, cntv_cval_el0; isb" : "=r" (value) :: "memory");
+	asm volatile("mrs %0, cntv_cval_el0" : "=r" (value) :: "memory");
 	return value;
 }
 
 static inline void set_cntv_tval(uint64_t value)
 {
-	asm volatile("isb; msr cntv_tval_el0, %0; isb" :: "r"(value) : "memory");
+	asm volatile("msr cntv_tval_el0, %0" :: "r"(value) : "memory");
 }
 
 static inline uint64_t get_cntv_tval(void)
 {
 	uint64_t value;
-	asm volatile("isb; mrs %0, cntv_tval_el0; isb" : "=r" (value) :: "memory");
+	asm volatile("mrs %0, cntv_tval_el0" : "=r" (value) :: "memory");
 	return value;
 }
 
 static inline void set_cntv_ctl(uint32_t value)
 {
-	asm volatile("isb; msr cntv_ctl_el0, %0; isb" :: "r"(value) : "memory");
+	asm volatile("msr cntv_ctl_el0, %0" :: "r"(value) : "memory");
 }
 
 static inline uint32_t get_cntv_ctl(void)
 {
 	uint32_t value;
-	asm volatile("isb; mrs %0, cntv_ctl_el0; isb" : "=r" (value) :: "memory");
+	asm volatile("mrs %0, cntv_ctl_el0" : "=r" (value) :: "memory");
 	return value;
 }
 

@@ -28,8 +28,10 @@
 #include <hermit/stdlib.h>
 #include <hermit/stdio.h>
 #include <hermit/logging.h>
+#include <hermit/errno.h>
 #include <asm/processor.h>
 #include <asm/page.h>
+#include <asm/irq.h>
 
 /* GIC related constants */
 #define GICD_BASE			0x8000000
@@ -48,10 +50,13 @@
 #define GICD_ISACTIVER		0x300
 #define GICD_ICACTIVER		0x380
 #define GICD_IPRIORITYR		0x400
+#define GICD_ITARGETSR		0x800
 #define GICD_ICFGR			0xc00
 #define GICD_NSACR			0xe00
+#define GICD_SGIR			0xF00
 
-#define GICD_ITARGETSR		0x800
+#define GICD_CTLR_ENABLEGRP0	(1 << 0)
+#define GICD_CTLR_ENABLEGRP1	(1 << 1)
 
 /* Physical CPU Interface registers */
 #define GICC_CTLR			0x0
@@ -66,148 +71,179 @@
 #define GICC_DIR			0x1000
 #define GICC_PRIODROP		GICC_EOIR
 
-#define TIMER_IRQ			27
+#define GICC_CTLR_ENABLEGRP0	(1 << 0)
+#define GICC_CTLR_ENABLEGRP1	(1 << 1)
+#define GICC_CTLR_FIQEN			(1 << 3)
+
+#define MAX_HANDLERS	256
+
+/** @brief IRQ handle pointers
+*
+* This array is actually an array of function pointers. We use
+* this to handle custom IRQ handlers for a given IRQ
+*/
+static irq_handler_t irq_routines[MAX_HANDLERS] = {[0 ... MAX_HANDLERS-1] = NULL};
 
 static size_t gicd_base = GICD_BASE;
 static size_t gicc_base = GICC_BASE;
+static uint32_t nr_irqs = 0;
 
 static inline uint32_t gicd_read(size_t off)
 {
-	uint32_t value;
-	asm volatile("ldr %0, [%1]" : "=&r"(value) : "r"(gicd_base + off));
-    rmb();
+	uint32_t value = *((uint32_t*) (gicd_base + off));
+	rmb();
 	return value;
 }
 
 static inline void gicd_write(size_t off, uint32_t value)
 {
-	asm volatile("str %0, [%1]" :: "r"(value), "r"(gicd_base + off));
-    wmb();
-}
-
-static inline uint32_t gicd_read_reg(size_t off, uint32_t reg)
-{
-	uint32_t value;
-	asm volatile("ldr %0, [%1]" : "=&r"(value) : "r"(gicd_base + off + reg));
-	rmb();
-	return value;
-}
-
-static inline void gicd_write_reg(size_t off, uint32_t reg, uint32_t value)
-{
-	asm volatile("str %0, [%1]" :: "r"(value), "r"(gicd_base + off + reg));
+	*((uint32_t*) (gicd_base + off)) = value;
 	wmb();
 }
 
 static inline uint32_t gicc_read(size_t off)
 {
-	uint32_t value;
-	asm volatile("ldr %0, [%1]" : "=&r"(value) : "r"(gicc_base + off));
+	uint32_t value = *((uint32_t*) (gicc_base + off));
 	rmb();
 	return value;
 }
 
 static inline void gicc_write(size_t off, uint32_t value)
 {
-	asm volatile("str %0, [%1]" :: "r"(value), "r"(gicc_base + off));
-    wmb();
+	*((uint32_t*) (gicc_base + off)) = value;
+	wmb();
 }
 
-static void gic_enable_interrupts(void)
+static void gicc_enable(void)
 {
-	// Global enable forwarding interrupts from distributor to cpu interface
-	uint32_t ctlr = gicd_read(GICD_CTLR);
-	ctlr |= 1;
-	gicd_write(GICD_CTLR, ctlr);
-
 	// Global enable signalling of interrupt from the cpu interface
-	ctlr = gicc_read(GICC_CTLR);
-	ctlr |= 1;
+	uint32_t ctlr = gicc_read(GICC_CTLR);
+	ctlr |= GICC_CTLR_ENABLEGRP0 | GICC_CTLR_ENABLEGRP1 | GICC_CTLR_FIQEN | 0x1<<2 /* AckCtl */;
 	gicc_write(GICC_CTLR, ctlr);
 }
 
-static void gic_disable_interrupts(void)
+static void gicc_disable(void)
 {
 	// Global disable signalling of interrupt from the cpu interface
 	uint32_t ctlr = gicc_read(GICC_CTLR);
-	ctlr = ctlr & ~1;
+	ctlr = ctlr & ~(GICC_CTLR_ENABLEGRP0 | GICC_CTLR_ENABLEGRP1 | GICC_CTLR_FIQEN | 0x1<<2 /* AckCtl */);
 	gicc_write(GICC_CTLR, ctlr);
+}
 
-	// Global disable forwarding interrupts from distributor to cpu interface
-	ctlr = gicd_read(GICD_CTLR);
-	ctlr = ctlr & ~1;
+static void gicd_enable(void)
+{
+	// Global enable forwarding interrupts from distributor to cpu interface
+	uint32_t ctlr = gicd_read(GICD_CTLR);
+	ctlr |= GICD_CTLR_ENABLEGRP0 | GICD_CTLR_ENABLEGRP1;
 	gicd_write(GICD_CTLR, ctlr);
 }
 
-static void gic_cpu_set_priority(char priority)
+static void gicd_disable(void)
 {
-    gicc_write(GICC_PMR, priority & 0x000000FF);
+	// Global disable forwarding interrupts from distributor to cpu interface
+	uint32_t ctlr = gicd_read(GICD_CTLR);
+	ctlr = ctlr & ~(GICD_CTLR_ENABLEGRP0|GICD_CTLR_ENABLEGRP1);
+	gicd_write(GICD_CTLR, ctlr);
 }
 
-static void gic_set_priority(int irq_number, unsigned char priority)
+static void gicc_set_priority(uint32_t priority)
 {
-    uint32_t value = gicd_read_reg(GICD_IPRIORITYR, irq_number >> 2);
-    value &= ~(0xff << (8 * (irq_number & 0x3))); // clear old priority
-    value |= priority << (8 * (irq_number & 0x3)); // set new priority
-    gicd_write_reg(GICD_IPRIORITYR, irq_number >> 2, value);
+	gicc_write(GICC_PMR, priority & 0xFF);
 }
 
-static void gic_route_interrupt(int irq_number, unsigned char cpu_set)
+static void gic_set_enable(uint32_t vector, uint8_t enable)
 {
-    uint32_t value = gicd_read_reg(GICD_ITARGETSR, irq_number >> 2);
-    value &= ~(0xff << (8 * (irq_number & 0x3))); // clear old target
-    value |= cpu_set << (8 * (irq_number & 0x3)); // set new target
-    gicd_write_reg(GICD_ITARGETSR, irq_number >> 2, value);
+	if (enable) {
+		uint32_t regoff = GICD_ISENABLER + 4 * (vector / 32);
+		gicd_write(regoff, gicd_read(regoff) | (1 << (vector % 32)));
+	} else {
+		uint32_t regoff = GICD_ICENABLER + 4 * (vector / 32);
+		gicd_write(regoff, gicd_read(regoff) | (1 << (vector % 32)));
+	}
 }
 
-static inline void clear_bit_non_atomic(int nr, volatile void *base)
+static int unmask_interrupt(uint32_t vector)
 {
-    volatile uint32_t *tmp = base;
-    tmp[nr >> 5] &= (unsigned long)~(1 << (nr & 0x1f));
+	if (vector >= nr_irqs)
+	return -EINVAL;
+
+	gic_set_enable(vector, 1);
+
+	return 0;
 }
 
-static inline void set_bit_non_atomic(int nr, volatile void *base)
+static int mask_interrupt(uint32_t vector)
 {
-    volatile uint32_t *tmp = base;
-    tmp[nr >> 5] |= (1 << (nr & 0x1f));
+	if (vector >= nr_irqs)
+	return -EINVAL;
+
+	gic_set_enable(vector, 0);
+
+	return 0;
 }
 
-static void gic_enable_interrupt(int irq_number, unsigned char cpu_set, unsigned char level_sensitive)
+/* This installs a custom IRQ handler for the given IRQ */
+int irq_install_handler(unsigned int irq, irq_handler_t handler)
 {
-    int *set_enable_reg;
-    void *cfg_reg;
+	if (irq >= MAX_HANDLERS)
+	return -EINVAL;
 
-    // set priority
-    gic_set_priority(irq_number, 0x0);
+	irq_routines[irq] = handler;
+	unmask_interrupt(irq);
 
-    // set target cpus for this interrupt
-    gic_route_interrupt(irq_number, cpu_set);
+	return 0;
+}
 
-    // set level/edge triggered
-    cfg_reg = (void *)gicd_read(GICD_ICFGR);
-	LOG_INFO("Found GICD_ICFGR at %p\n", cfg_reg);
-    if (level_sensitive) {
-        clear_bit_non_atomic((irq_number * 2) + 1, cfg_reg);
-    } else {
-        set_bit_non_atomic((irq_number * 2) + 1, cfg_reg);
-    }
-    wmb();
+/* This clears the handler for a given IRQ */
+int irq_uninstall_handler(unsigned int irq)
+{
+	if (irq >= MAX_HANDLERS)
+	return -EINVAL;
 
-    // enable forwarding interrupt from distributor to cpu interface
-    set_enable_reg = (int *)gicd_read(GICD_ISENABLER);
-    set_enable_reg[irq_number >> 5] = 1 << (irq_number & 0x1f);
-    wmb();
+	irq_routines[irq] = NULL;
+	mask_interrupt(irq);
+
+	return 0;
 }
 
 int irq_init(void)
 {
 	LOG_INFO("Enable interrupt handling\n");
 
-	gic_disable_interrupts();
-	gic_cpu_set_priority(0xFF);
-	gic_enable_interrupts();
+	gicc_disable();
+	gicd_disable();
 
-	//gic_enable_interrupt(TIMER_IRQ /* interrupt number */, 0x1 /*cpu_set*/, 0x1 /*level_sensitive*/);
+	nr_irqs = ((gicd_read(GICD_TYPER) & 0x1f) + 1) * 32;
+	LOG_INFO("number of supported interrupts %u\n", nr_irqs);
+
+	gicd_write(GICD_ICENABLER, 0xffff0000);
+	gicd_write(GICD_ISENABLER, 0x0000ffff);
+	gicd_write(GICD_ICPENDR, 0xffffffff);
+	gicd_write(GICD_IGROUPR, 0);
+
+	for (uint32_t i = 0; i < 32 / 4; i++) {
+		gicd_write(GICD_IPRIORITYR + i * 4, 0x80808080);
+	}
+
+	for (uint32_t i = 32/16; i < nr_irqs / 16; i++) {
+		gicd_write(GICD_NSACR + i * 4, 0xffffffff);
+	}
+
+	for (uint32_t i = 32/32; i < nr_irqs / 32; i++) {
+		gicd_write(GICD_ICENABLER + i * 4, 0xffffffff);
+		gicd_write(GICD_ICPENDR + i * 4, 0xffffffff);
+		gicd_write(GICD_IGROUPR + i * 4, 0);
+	}
+
+	for (uint32_t i = 32/4; i < nr_irqs / 4; i++) {
+		gicd_write(GICD_ITARGETSR + i * 4, 0);
+		gicd_write(GICD_IPRIORITYR + i * 4, 0x80808080);
+	}
+
+	gicd_enable();
+
+	gicc_set_priority(0xF0);
+	gicc_enable();
 
 	return 0;
 }
@@ -217,29 +253,72 @@ int enable_dynticks(void)
 	return 0;
 }
 
-void do_sync (void *regs)
+void do_sync(void *regs)
 {
 	kputs("receive sync\n");
+
+	while (1) {
+		HALT;
+	}
+}
+
+void do_fiq(void *regs)
+{
+	uint32_t iar = gicc_read(GICC_IAR);
+	uint32_t vector = iar & 0x3ff;
+
+	LOG_INFO("fiq %d\n", vector);
+
+	if (vector < MAX_HANDLERS && irq_routines[vector])
+	(irq_routines[vector])(regs);
+	else
+	LOG_INFO("Unable to handle fiq %d\n", vector);
+
+	gicc_write(GICC_EOIR, iar);
 }
 
 void do_irq (void *regs)
 {
-	kputs("receive interrupt\n");
-#if 0
-    uint32_t esr = read_esr();
-    uint32_t ec = esr >> 24;
-    uint32_t iss = esr & 0xFFFFFF;
+	uint32_t iar = gicc_read(GICC_IAR);
+	uint32_t vector = iar & 0x3ff;
+
+	LOG_INFO("receive interrupt %d\n", vector);
+
+	#if 0
+	uint32_t esr = read_esr();
+	uint32_t ec = esr >> 24;
+	uint32_t iss = esr & 0xFFFFFF;
 
 	/* data abort from lower or current level */
-    if (ec == 0b100100 || ec == 0b100101) {
-		/* check if value in far_el1 is valid */
-		if (!(iss & (1 << 10))) {
-			/* read far_el1 register, which holds the faulting virtual address */
-            uint64_t far = read_far();
-			//page_fault_handler(far);
-		} else {
-			kputs("Could not handle data abort: address in far_el1 invalid\n");
-		}
-    }
+	if (ec == 0b100100 || ec == 0b100101) {
+	/* check if value in far_el1 is valid */
+	if (!(iss & (1 << 10))) {
+	/* read far_el1 register, which holds the faulting virtual address */
+	uint64_t far = read_far();
+	//page_fault_handler(far);
+} else {
+kputs("Could not handle data abort: address in far_el1 invalid\n");
+}
+}
 #endif
+
+gicc_write(GICC_EOIR, iar);
+}
+
+void do_error(void *regs)
+{
+	LOG_ERROR("receive error\n");
+
+	while (1) {
+		HALT;
+	}
+}
+
+void do_bad_mode(void *regs, int reason)
+{
+	LOG_ERROR("Receive unhandled exception: %d\n", reason);
+
+	while (1) {
+		HALT;
+	}
 }
