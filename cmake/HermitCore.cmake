@@ -56,7 +56,6 @@ set(HERMIT_KERNEL_INCLUDES
     ${CMAKE_BINARY_DIR}/include
     ${HERMIT_ROOT}/include
     ${HERMIT_ROOT}/arch/${HERMIT_ARCH}/include
-	${HERMIT_ROOT}/arch/${HERMIT_ARCH}/libfdt
     ${HERMIT_ROOT}/lwip/src/include
     ${HERMIT_ROOT}/drivers)
 

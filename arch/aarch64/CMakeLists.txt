@@ -17,13 +17,12 @@ add_definitions(-D__KERNEL__)
 ### C sources ###
 
 file(GLOB KERNEL_SOURCES	"kernel/*.c")
-file(GLOB FDT_SOURCES	"libfdt/*.c")
 file(GLOB KERNEL_S_SOURCES	"kernel/*.S")
 file(GLOB LIBKERN_S_SOURCES      "libkern/*.S")
 file(GLOB MM_SOURCES		"mm/*.c")
 
 add_library(${AARCH64_KERNEL_C_TARGET} OBJECT
-	${KERNEL_SOURCES} ${KERNEL_S_SOURCES} ${MM_SOURCES} ${LIBKERN_S_SOURCES} ${FDT_SOURCES})
+	${KERNEL_SOURCES} ${KERNEL_S_SOURCES} ${MM_SOURCES} ${LIBKERN_S_SOURCES})
 
 target_include_directories(${AARCH64_KERNEL_C_TARGET} BEFORE
 	PUBLIC ${HERMIT_KERNEL_INCLUDES}

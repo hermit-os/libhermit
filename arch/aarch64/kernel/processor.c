@@ -29,7 +29,6 @@
 #include <hermit/stdio.h>
 #include <hermit/logging.h>
 #include <asm/processor.h>
-#include <libfdt.h>
 
 void *dtb __attribute__ ((section (".data")));
 
@@ -42,10 +41,6 @@ int cpu_detection(void)
 {
 	LOG_INFO("HermitCore runs in exception level %d\n", get_current_el());
 	LOG_INFO("System control register: 0x%x\n", get_sctlr());
-
-	if (!dtb && (fdt_check_header(dtb) != 0)) {
-        LOG_INFO("device tree blob is invalid\n");
-    }
 
 #if 0
 	uint32_t value = 0;
