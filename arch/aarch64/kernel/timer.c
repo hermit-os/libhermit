@@ -95,7 +95,7 @@ static void timer_handler(struct state *s)
 	set_cntp_ctl(0);
 #endif
 
-#if 1
+#if 0
 	/*
 	 * Every TIMER_FREQ clocks (approximately 1 second), we will
 	 * display a message on the screen
