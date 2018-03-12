@@ -664,7 +664,7 @@ int wakeup_task(tid_t id)
 	core_id = task->last_core;
 
 	if (task->status == TASK_BLOCKED) {
-		LOG_DEBUG("wakeup task %d on core %d\n", id, core_id);
+		LOG_INFO("wakeup task %d on core %d\n", id, core_id);
 
 		task->status = TASK_READY;
 		ret = 0;
@@ -712,7 +712,7 @@ int block_task(tid_t id)
 	core_id = task->last_core;
 
 	if (task->status == TASK_RUNNING) {
-		LOG_DEBUG("block task %d on core %d\n", id, core_id);
+		LOG_INFO("block task %d on core %d\n", id, core_id);
 
 		task->status = TASK_BLOCKED;
 
@@ -906,7 +906,8 @@ void reschedule(void)
 	uint8_t flags;
 
 	flags = irq_nested_disable();
-	if ((stack = scheduler()))
+	stack = scheduler();
+	if (stack)
 		switch_context(stack);
 	irq_nested_enable(flags);
 }

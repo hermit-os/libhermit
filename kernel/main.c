@@ -568,7 +568,12 @@ out:
 }
 
 int foo(void) {
-	LOG_INFO("Hello from foo\n");
+	task_t* curr_task = curr_task = per_core(current_task);
+
+	for(int i=0; i<4; i++) {
+		LOG_INFO("Hello from foo %d\n", curr_task->id);
+		reschedule();
+	}
 
 	return 0;
 }
@@ -615,12 +620,10 @@ int hermit_main(void)
 
 	create_kernel_task_on_core(NULL, initd, NULL, NORMAL_PRIO, boot_processor);
 	create_kernel_task_on_core(NULL, foo, NULL, NORMAL_PRIO, CORE_ID);
+	create_kernel_task_on_core(NULL, foo, NULL, NORMAL_PRIO, CORE_ID);
 
 	while(1) {
-		reschedule();
-	#if 0
 		check_workqueues();
-	#endif
 		wait_for_task();
 	}
 

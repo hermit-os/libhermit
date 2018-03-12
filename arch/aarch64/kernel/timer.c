@@ -42,22 +42,15 @@
 DEFINE_PER_CORE(uint64_t, timer_ticks, 0);
 static uint32_t freq_hz;  /* frequency in Hz (updates per second) */
 
-extern uint32_t cpu_freq;
 #if 0
 extern int32_t boot_processor;
 #endif
 
 #define MHZ 1000000
 
-static void restart_periodic_timer(void)
-{
-	set_cntp_tval(freq_hz / TIMER_FREQ);
-	set_cntp_ctl(1);
-}
-
 #ifdef DYNAMIC_TICKS
-DEFINE_PER_CORE(uint64_t, last_tick, 0);
-static uint64_t boot_tick = 0;
+DEFINE_PER_CORE(uint64_t, last_tsc, 0);
+static uint64_t boot_tsc = 0;
 
 void check_ticks(void)
 {
@@ -65,17 +58,23 @@ void check_ticks(void)
 	if (!freq_hz)
 		return;
 
-	const uint64_t curr_tick = get_cntpct();
+	const uint64_t curr_tsc = get_cntpct();
 	rmb();
 
-	uint64_t diff_ticks = curr_tick - per_core(last_tick);
-	diff_ticks = (diff_ticks * (uint64_t) TIMER_FREQ) / freq_hz;
+	const uint64_t diff_tsc = curr_tsc - per_core(last_tsc);
+	const uint64_t diff_ticks = (diff_tsc * (uint64_t) TIMER_FREQ) / freq_hz;
 
 	if (diff_ticks > 0) {
 		set_per_core(timer_ticks, per_core(timer_ticks) + diff_ticks);
-		set_per_core(last_tick, curr_tick);
+		set_per_core(last_tsc, curr_tsc);
 		rmb();
 	}
+}
+#else
+static void restart_periodic_timer(void)
+{
+	set_cntp_tval(freq_hz / TIMER_FREQ);
+	set_cntp_ctl(1);
 }
 #endif
 
@@ -189,8 +188,8 @@ int timer_init(void)
 	irq_install_handler(INT_PPI_NSPHYS_TIMER, timer_handler);
 
 #ifdef DYNAMIC_TICKS
-    boot_tick = get_cntpct();
-    set_per_core(last_tick, boot_tick);
+    boot_tsc = get_cntpct();
+    set_per_core(last_tsc, boot_tsc);
 #else
 	restart_periodic_timer();
 #endif

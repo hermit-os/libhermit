@@ -29,6 +29,7 @@
 #include <hermit/stdio.h>
 #include <hermit/logging.h>
 #include <hermit/errno.h>
+#include <hermit/tasks.h>
 #include <asm/processor.h>
 #include <asm/page.h>
 #include <asm/irq.h>
@@ -269,10 +270,22 @@ void do_fiq(void *regs)
 
 	LOG_INFO("fiq %d\n", vector);
 
-	if (vector < MAX_HANDLERS && irq_routines[vector])
-	(irq_routines[vector])(regs);
-	else
-	LOG_INFO("Unable to handle fiq %d\n", vector);
+	if (vector < MAX_HANDLERS && irq_routines[vector]) {
+		(irq_routines[vector])(regs);
+	} else {
+		LOG_INFO("Unable to handle fiq %d\n", vector);
+	}
+
+	// Check if timers have expired that would unblock tasks
+	check_workqueues_in_irqhandler(vector);
+
+	if (vector == INT_PPI_NSPHYS_TIMER) {
+		// a timer interrupt may have caused unblocking of tasks
+		scheduler();
+	} else if (get_highest_priority() > per_core(current_task)->prio) {
+		// there's a ready task with higher priority
+		scheduler();
+	}
 
 	gicc_write(GICC_EOIR, iar);
 }
@@ -284,25 +297,24 @@ void do_irq (void *regs)
 
 	LOG_INFO("receive interrupt %d\n", vector);
 
-	#if 0
+#if 0
 	uint32_t esr = read_esr();
 	uint32_t ec = esr >> 24;
 	uint32_t iss = esr & 0xFFFFFF;
 
 	/* data abort from lower or current level */
 	if (ec == 0b100100 || ec == 0b100101) {
-	/* check if value in far_el1 is valid */
-	if (!(iss & (1 << 10))) {
-	/* read far_el1 register, which holds the faulting virtual address */
-	uint64_t far = read_far();
-	//page_fault_handler(far);
-} else {
-kputs("Could not handle data abort: address in far_el1 invalid\n");
-}
-}
+		/* check if value in far_el1 is valid */
+		if (!(iss & (1 << 10))) {
+		/* read far_el1 register, which holds the faulting virtual address */
+		uint64_t far = read_far();
+		//page_fault_handler(far);
+	} else {
+		kputs("Could not handle data abort: address in far_el1 invalid\n");
+	}
 #endif
 
-gicc_write(GICC_EOIR, iar);
+	gicc_write(GICC_EOIR, iar);
 }
 
 void do_error(void *regs)

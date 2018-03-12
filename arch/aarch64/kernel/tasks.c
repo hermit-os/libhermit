@@ -177,8 +177,10 @@ void wait_for_task(void)
 
 void wakeup_core(uint32_t core_id)
 {
+	// Currently not required...
 }
 
 void shutdown_system(void)
 {
+	LOG_INFO("Try to shutdown system\n");
 }
