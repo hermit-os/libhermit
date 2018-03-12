@@ -79,6 +79,29 @@ void check_ticks(void)
 }
 #endif
 
+int timer_deadline(uint32_t ticks)
+{
+	set_cntp_tval(ticks * freq_hz / TIMER_FREQ);
+	set_cntp_ctl(1);
+
+	return 0;
+}
+
+void timer_disable(void)
+{
+	/* stop timer */
+	set_cntp_ctl(0);
+
+	return 0;
+}
+
+int timer_is_running(void)
+{
+	uint32_t v = get_cntp_ctl();
+
+	return (v & 0x1);
+}
+
 /*
  * Handles the timer. In this case, it's very simple: We
  * increment the 'timer_ticks' variable every time the
@@ -91,8 +114,7 @@ static void timer_handler(struct state *s)
 	set_per_core(timer_ticks, per_core(timer_ticks)+1);
 	restart_periodic_timer();
 #else
-	/* stop timer */
-	set_cntp_ctl(0);
+	timer_disable();
 #endif
 
 #if 0

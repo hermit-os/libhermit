@@ -40,11 +40,11 @@
 extern "C" {
 #endif
 
-static inline int timer_deadline(uint32_t t) { return 0; } //return apic_timer_deadline(t); }
+int timer_deadline(uint32_t t);
 
-static inline void timer_disable(void) { }//apic_disable_timer(); }
+void timer_disable(void);
 
-static inline int timer_is_running(void) { return 0; } //apic_timer_is_running(); }
+int timer_is_running(void);
 
 #ifdef __cplusplus
 }
