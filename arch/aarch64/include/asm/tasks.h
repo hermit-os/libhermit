@@ -43,14 +43,6 @@
 extern "C" {
 #endif
 
-
-/**
- * @brief Switch to current task
- *
- * @param stack Pointer to the old stack pointer
- */
-void switch_context(size_t** stack);
-
 /** @brief Setup a default frame for a new task
  *
  * @param task Pointer to the task structure

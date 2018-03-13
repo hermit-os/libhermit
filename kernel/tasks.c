@@ -664,7 +664,7 @@ int wakeup_task(tid_t id)
 	core_id = task->last_core;
 
 	if (task->status == TASK_BLOCKED) {
-		LOG_INFO("wakeup task %d on core %d\n", id, core_id);
+		LOG_DEBUG("wakeup task %d on core %d\n", id, core_id);
 
 		task->status = TASK_READY;
 		ret = 0;
@@ -712,7 +712,7 @@ int block_task(tid_t id)
 	core_id = task->last_core;
 
 	if (task->status == TASK_RUNNING) {
-		LOG_INFO("block task %d on core %d\n", id, core_id);
+		LOG_DEBUG("block task %d on core %d\n", id, core_id);
 
 		task->status = TASK_BLOCKED;
 
@@ -871,7 +871,7 @@ get_task_out:
 	spinlock_irqsave_unlock(&readyqueues[core_id].lock);
 
 	if (curr_task != orig_task) {
-		LOG_INFO("schedule on core %d from %u to %u with prio %u\n", core_id, orig_task->id, curr_task->id, (uint32_t)curr_task->prio);
+		LOG_DEBUG("schedule on core %d from %u to %u with prio %u\n", core_id, orig_task->id, curr_task->id, (uint32_t)curr_task->prio);
 
 		return (size_t**) &(orig_task->last_stack_pointer);
 	}
@@ -897,17 +897,4 @@ int get_task(tid_t id, task_t** task)
 	*task = &task_table[id];
 
 	return 0;
-}
-
-
-void reschedule(void)
-{
-	size_t** stack;
-	uint8_t flags;
-
-	flags = irq_nested_disable();
-	stack = scheduler();
-	if (stack)
-		switch_context(stack);
-	irq_nested_enable(flags);
 }

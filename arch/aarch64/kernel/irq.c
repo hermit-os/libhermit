@@ -77,6 +77,7 @@
 #define GICC_CTLR_FIQEN			(1 << 3)
 
 #define MAX_HANDLERS	256
+#define RESCHED_INT		1
 
 /** @brief IRQ handle pointers
 *
@@ -263,31 +264,34 @@ void do_sync(void *regs)
 	}
 }
 
-void do_fiq(void *regs)
+size_t** do_fiq(void *regs)
 {
+	size_t** ret = NULL;
 	uint32_t iar = gicc_read(GICC_IAR);
 	uint32_t vector = iar & 0x3ff;
 
-	LOG_INFO("fiq %d\n", vector);
+	//LOG_INFO("fiq %d\n", vector);
 
 	if (vector < MAX_HANDLERS && irq_routines[vector]) {
 		(irq_routines[vector])(regs);
-	} else {
+	} else if (vector != RESCHED_INT) {
 		LOG_INFO("Unable to handle fiq %d\n", vector);
 	}
 
 	// Check if timers have expired that would unblock tasks
 	check_workqueues_in_irqhandler(vector);
 
-	if (vector == INT_PPI_NSPHYS_TIMER) {
+	if ((vector == INT_PPI_NSPHYS_TIMER) || (vector == RESCHED_INT)) {
 		// a timer interrupt may have caused unblocking of tasks
-		scheduler();
+		ret = scheduler();
 	} else if (get_highest_priority() > per_core(current_task)->prio) {
 		// there's a ready task with higher priority
-		scheduler();
+		ret = scheduler();
 	}
 
 	gicc_write(GICC_EOIR, iar);
+
+	return ret;
 }
 
 void do_irq (void *regs)
@@ -333,4 +337,10 @@ void do_bad_mode(void *regs, int reason)
 	while (1) {
 		HALT;
 	}
+}
+
+void reschedule(void)
+{
+	// (2 << 24) = Forward the interrupt only to the CPU interface of the PE that requested the interrupt
+	gicd_write(GICD_SGIR, (2 << 24) | RESCHED_INT);
 }

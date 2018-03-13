@@ -38,6 +38,7 @@
 #include <asm/tss.h>
 #include <asm/page.h>
 #include <asm/multiboot.h>
+#include <asm/irqflags.h>
 
 #define TLS_ALIGNBITS		5
 #define TLS_ALIGNSIZE		(1L << TLS_ALIGNBITS)
@@ -227,4 +228,16 @@ void wakeup_core(uint32_t core_id)
 
 	LOG_DEBUG("wakeup core %d\n", core_id);
 	apic_send_ipi(core_id, 121);
+}
+
+void reschedule(void)
+{
+	size_t** stack;
+	uint8_t flags;
+
+	flags = irq_nested_disable();
+	stack = scheduler();
+	if (stack)
+		switch_context(stack);
+	irq_nested_enable(flags);
 }

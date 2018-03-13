@@ -148,16 +148,14 @@ int create_default_frame(task_t* task, entry_point_t ep, void* arg, uint32_t cor
 	//stptr->sp = (size_t)stack + state_size;
 	/* the first-function-to-be-called's arguments, ... */
 	stptr->x0 = (size_t) arg;
-	//stptr->int_no = 0xB16B00B5;
-	//stptr->error =  0xC03DB4B3;
 
 	/* The procedure link register needs to hold the address of the
 	 * first function to be called when returning from switch_context. */
-	stptr->x30 = (size_t)thread_entry;
+	stptr->elr_el1 = (size_t)thread_entry;
 	stptr->x1 = (size_t)ep; // use second argument to transfer the entry point
 
 	/* Zero the condition flags. */
-	stptr->nzcv = 0x0;
+	stptr->spsr_el1 = 0x205;
 
 	/* Set the task's stack pointer entry to the stack we have crafted right now. */
 	task->last_stack_pointer = (size_t*)stack;

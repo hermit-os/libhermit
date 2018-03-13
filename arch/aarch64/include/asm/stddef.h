@@ -82,9 +82,9 @@ typedef wchar_t wint_t;
 
 /// This defines what the stack looks like after the task context is saved
 struct state {
-	uint64_t nzcv;
-	uint64_t tpidrro_el0;
-	uint64_t tpidr_el0;
+	uint64_t elr_el1;
+	uint64_t spsr_el1;
+	uint64_t res;
 	uint64_t x0;
 	uint64_t x1;
 	uint64_t x2;
@@ -116,11 +116,6 @@ struct state {
 	uint64_t x28;
 	uint64_t x29;
 	uint64_t x30;
-
-	/// Interrupt number
-	//uint64_t int_no;
-	//uint64_t sp;
-	//uint64_t error;
 } __attribute__((aligned(16)));
 
 typedef struct {

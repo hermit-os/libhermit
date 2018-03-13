@@ -455,61 +455,6 @@ _setup_idmap_pgtable:
 
     ret
 
-.global switch_context
-.balign 16
-switch_context:
-  stp x29, x30, [sp, #-16]!
-  stp x27, x28, [sp, #-16]!
-  stp x25, x26, [sp, #-16]!
-  stp x23, x24, [sp, #-16]!
-  stp x21, x22, [sp, #-16]!
-  stp x19, x20, [sp, #-16]!
-  stp x17, x18, [sp, #-16]!
-  stp x15, x16, [sp, #-16]!
-  stp x13, x14, [sp, #-16]!
-  stp x11, x12, [sp, #-16]!
-  stp x9, x10, [sp, #-16]!
-  stp x7, x8, [sp, #-16]!
-  stp x5, x6, [sp, #-16]!
-  stp x3, x4, [sp, #-16]!
-  stp x1, x2, [sp, #-16]!
-  mrs x1, tpidr_el0
-  stp x1, x0, [sp, #-16]!
-  mrs x1, tpidrro_el0
-  mrs x2, nzcv
-  stp x1, x2, [sp, #-16]!
-
-  mov x1, sp
-  str x1, [x0]				/* store old sp */
-  bl get_current_stack		/* get new sp   */
-  mov sp, x0
-
-  /* call cleanup code */
-  bl finish_task_switch
-
-  ldp x0, x1, [sp], #16
-  msr tpidrro_el0, x0
-  msr nzcv, x1
-  ldp x1, x0, [sp], #16
-  msr tpidr_el0, x1
-  ldp x1, x2, [sp], #16
-  ldp x3, x4, [sp], #16
-  ldp x5, x6, [sp], #16
-  ldp x7, x8, [sp], #16
-  ldp x9, x10, [sp], #16
-  ldp x11, x12, [sp], #16
-  ldp x13, x14, [sp], #16
-  ldp x15, x16, [sp], #16
-  ldp x17, x18, [sp], #16
-  ldp x19, x20, [sp], #16
-  ldp x21, x22, [sp], #16
-  ldp x23, x24, [sp], #16
-  ldp x25, x26, [sp], #16
-  ldp x27, x28, [sp], #16
-  ldp x29, x30, [sp], #16
-
-  ret
-
 /*
  * There are no PUSH/POP instruction in ARMv8.
  * Use STR and LDR for stack accesses.
@@ -523,89 +468,49 @@ ldr     \xreg, [sp], #8
 .endm
 
 .macro trap_entry, el
-      sub     sp, sp, #32             // room for LR, SP, SPSR, ELR
-      push    x29
-      push    x28
-      push    x27
-      push    x26
-      push    x25
-      push    x24
-      push    x23
-      push    x22
-      push    x21
-      push    x20
-      push    x19
-      push    x18
-      push    x17
-      push    x16
-      push    x15
-      push    x14
-      push    x13
-      push    x12
-      push    x11
-      push    x10
-      push    x9
-      push    x8
-      push    x7
-      push    x6
-      push    x5
-      push    x4
-      push    x3
-      push    x2
-      push    x1
-      push    x0
-.if     \el == 0
-      mrs     x21, sp_el0
-.else
-      add     x21, sp, #272
-.endif
-      mrs     x22, elr_el1
-      mrs     x23, spsr_el1
-      stp     x30, x21, [sp, #240]
-      stp     x22, x23, [sp, #256]
+     stp x29, x30, [sp, #-16]!
+     stp x27, x28, [sp, #-16]!
+     stp x25, x26, [sp, #-16]!
+     stp x23, x24, [sp, #-16]!
+     stp x21, x22, [sp, #-16]!
+     stp x19, x20, [sp, #-16]!
+     stp x17, x18, [sp, #-16]!
+     stp x15, x16, [sp, #-16]!
+     stp x13, x14, [sp, #-16]!
+     stp x11, x12, [sp, #-16]!
+     stp x9, x10, [sp, #-16]!
+     stp x7, x8, [sp, #-16]!
+     stp x5, x6, [sp, #-16]!
+     stp x3, x4, [sp, #-16]!
+     stp x1, x2, [sp, #-16]!
+	 str x0, [sp, #-16]!
+
+     mrs x22, elr_el1
+     mrs x23, spsr_el1
+     stp x22, x23, [sp, #-16]!
 .endm
 
 .macro trap_exit, el
-      ldp     x21, x22, [sp, #256]    // load ELR, SPSR
-.if     \el == 0
-      ldr     x23, [sp, #248]         // load return stack pointer
-.endif
-      pop     x0
-      pop     x1
-      pop     x2
-      pop     x3
-      pop     x4
-      pop     x5
-      pop     x6
-      pop     x7
-      pop     x8
-      pop     x9
-      msr     elr_el1, x21            // set up the return data
-      msr     spsr_el1, x22
-.if     \el == 0
-      msr     sp_el0, x23
-.endif
-      pop     x10
-      pop     x11
-      pop     x12
-      pop     x13
-      pop     x14
-      pop     x15
-      pop     x16
-      pop     x17
-      pop     x18
-      pop     x19
-      pop     x20
-      pop     x21
-      pop     x22
-      pop     x23
-      pop     x24
-      pop     x25
-      pop     x26
-      pop     x27
-      pop     x28
-      pop     x29
-	  ldr     x30, [sp], #32
+     ldp x22, x23, [sp], #16
+	 msr elr_el1, x22
+     msr spsr_el1, x23
+
+	 ldr x0, [sp], #16
+	 ldp x1, x2, [sp], #16
+     ldp x3, x4, [sp], #16
+     ldp x5, x6, [sp], #16
+     ldp x7, x8, [sp], #16
+     ldp x9, x10, [sp], #16
+     ldp x11, x12, [sp], #16
+     ldp x13, x14, [sp], #16
+     ldp x15, x16, [sp], #16
+     ldp x17, x18, [sp], #16
+     ldp x19, x20, [sp], #16
+     ldp x21, x22, [sp], #16
+     ldp x23, x24, [sp], #16
+     ldp x25, x26, [sp], #16
+     ldp x27, x28, [sp], #16
+     ldp x29, x30, [sp], #16
 .endm
 
 
@@ -635,7 +540,18 @@ el1_fiq:
       trap_entry 1
       mov     x0, sp
       bl      do_fiq
-      trap_exit 1
+	  cmp     x0, 0
+	  b.eq    1f
+
+	  mov x1, sp
+	  str x1, [x0]                  /* store old sp */
+	  bl get_current_stack          /* get new sp   */
+	  mov sp, x0
+
+	  /* call cleanup code */
+	  bl finish_task_switch
+
+1:    trap_exit 1
       eret
 ENDPROC(el1_fiq)
 
