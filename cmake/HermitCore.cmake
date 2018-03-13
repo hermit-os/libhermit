@@ -34,6 +34,8 @@ if(NOT CMAKE_TOOLCHAIN_FILE)
 	set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_LIST_DIR}/HermitCore-Toolchain-${HERMIT_ARCH}${_BOOTSTRAP_ARCH_SUFFIX}.cmake)
 endif()
 
+# NASM is only required on x86_64
+if("${TARGET_ARCH}" STREQUAL "x86_64-hermit")
 # NASM detection will change binary format depending on host system, but
 # we only want to generate elf64 for HermitCore
 # Note: Has to be set *before* ASM_NASM is enabled
@@ -46,6 +48,7 @@ enable_language(ASM_NASM)
 # Note: Has to be set *after* ASM_NASM is enabled
 set(CMAKE_ASM_NASM_FLAGS
 	"${CMAKE_ASM_NASM_FLAGS} -I ${CMAKE_BINARY_DIR}/include/")
+endif()
 
 if(MTUNE)
 	set(HERMIT_KERNEL_FLAGS ${HERMIT_KERNEL_FLAGS} -mtune=${MTUNE})
