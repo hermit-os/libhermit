@@ -35,7 +35,7 @@ if(NOT CMAKE_TOOLCHAIN_FILE)
 endif()
 
 # NASM is only required on x86_64
-if("${TARGET_ARCH}" STREQUAL "x86_64-hermit")
+if("${HERMIT_ARCH}" STREQUAL "x86")
 # NASM detection will change binary format depending on host system, but
 # we only want to generate elf64 for HermitCore
 # Note: Has to be set *before* ASM_NASM is enabled
