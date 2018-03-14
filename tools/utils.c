@@ -36,6 +36,7 @@
 
 #include "proxy.h"
 
+#ifdef __x86_64__
 inline static void __cpuid(uint32_t code, uint32_t* a, uint32_t* b, uint32_t* c, uint32_t* d)
 {
 	__asm volatile ("cpuid" : "=a"(*a), "=b"(*b), "=c"(*c), "=d"(*d) : "0"(code), "2"(*c));
@@ -94,6 +95,7 @@ static uint32_t get_frequency_from_brand(void)
 
 	return 0;
 }
+#endif
 
 uint32_t get_cpufreq(void)
 {
@@ -101,9 +103,11 @@ uint32_t get_cpufreq(void)
 	uint32_t freq = 0;
 	char* match;
 
+#ifdef __x86_64__
 	freq = get_frequency_from_brand();
 	if (freq > 0)
-	return freq;
+		return freq;
+#endif
 
 	// TODO: fallback solution, on some systems is cpuinfo_max_freq the turbo frequency
 	// => wrong value
