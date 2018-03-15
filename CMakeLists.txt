@@ -15,6 +15,8 @@ add_kernel_module_sources("libkern"		"libkern/*.c")
 add_kernel_module_sources("mm"			"mm/*.c")
 if("${TARGET_ARCH}" STREQUAL "x86_64-hermit")
 add_kernel_module_sources("drivers"		"drivers/net/*.c")
+else()
+add_kernel_module_sources("drivers"             "drivers/net/uhyve-net.c")
 endif()
 
 set(LWIP_SRC lwip/src)
