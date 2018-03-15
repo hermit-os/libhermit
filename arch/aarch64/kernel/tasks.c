@@ -182,3 +182,17 @@ void shutdown_system(void)
 {
 	LOG_INFO("Try to shutdown system\n");
 }
+
+extern uint32_t uhyve;
+const int32_t is_uhyve(void)
+{
+	return (uhyve != 0);
+}
+
+#if 0
+extern uint32_t single_kernel;
+const int32_t is_single_kernel(void)
+{
+	return (single_kernel != 0);
+}
+#endif

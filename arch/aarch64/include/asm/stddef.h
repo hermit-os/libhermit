@@ -122,7 +122,7 @@ typedef struct {
 	void	*ss_sp;		/* Stack base or pointer.  */
 } stack_t;
 
-static inline const int32_t is_uhyve(void) { return 0; }
+const int32_t is_uhyve(void);
 static inline const int32_t is_single_kernel(void) { return 1; }
 static inline const char* get_cmdline(void) { return 0; }
 static inline int init_rcce(void) { return 0; }

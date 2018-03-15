@@ -229,7 +229,7 @@ static inline uint64_t get_cntpct(void)
 	return value;
 }
 
-inline static uint64_t get_rdtsc(void) { get_cntpct(); }
+inline static uint64_t get_rdtsc(void) { return get_cntpct(); }
 
 /// A one-instruction-do-nothing
 #define NOP		asm volatile ("nop")

@@ -119,22 +119,43 @@ _start:
 b start64
 
 .align 8
+.global base
+base: .quad 0
+.global limit
+limit: .quad 0
+.global cpu_freq
+cpu_freq: .dword 0
 .global boot_processor
-boot_processor: .dword 0
+boot_processor: .dword -1
 .global cpu_online
 cpu_online: .dword 0
 .global possible_cpus
 possible_cpus: .dword 0
+.global current_boot_id
+current_boot_id: .dword 0
+isle: .dword -1
+.global possible_isles
+possible_isles: .dword 1
+.global uhyve
+uhyve: .dword 0
+.global single_kernel
+single_kernel: .dword 1
+.global image_size
+image_size: .quad 0
+
+.global hcip
+hcip: .byte 10,0,5,2
+.global hcgateway
+hcgateway: .byte 10,0,5,1
+.global hcmask
+hcmask: .byte 255,255,255,0
+.global host_logical_addr
+host_logical_addr: .quad 0
+
 .global hbmem_base
 hbmem_base: .quad 0
 .global hbmem_size
 hbmem_size: .quad 0
-.global isle
-isle: .dword -1
-.global image_size
-image_size: .quad 0
-.global possible_isles
-possible_isles: .dword 1
 
 start64:
   mrs x0, s3_1_c15_c3_0 // Read EL1 Configuration Base Address Register
