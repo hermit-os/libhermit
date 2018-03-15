@@ -67,20 +67,6 @@
 #include "uhyve-net.h"
 #include "proxy.h"
 
-// define this macro to create checkpoints with KVM's dirty log
-//#define USE_DIRTY_LOG
-
-#define MAX_FNAME	256
-#define MAX_MSR_ENTRIES	25
-
-#define GUEST_OFFSET		0x0
-#define CPUID_FUNC_PERFMON	0x0A
-#define GUEST_PAGE_SIZE		0x200000   /* 2 MB pages in guest */
-
-#define KVM_32BIT_MAX_MEM_SIZE	(1ULL << 32)
-#define KVM_32BIT_GAP_SIZE	(768 << 20)
-#define KVM_32BIT_GAP_START	(KVM_32BIT_MAX_MEM_SIZE - KVM_32BIT_GAP_SIZE)
-
 
 // Networkports
 #define UHYVE_PORT_NETINFO		0x505
@@ -91,19 +77,19 @@
 #define UHYVE_IRQ	11
 
 static bool restart = false;
-static bool full_checkpoint = false;
-static uint32_t ncores = 1;
-static pthread_t* vcpu_threads = NULL;
 static pthread_t net_thread;
 static int* vcpu_fds = NULL;
-static uint32_t no_checkpoint = 0;
 static pthread_mutex_t kvm_lock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_barrier_t barrier;
 
 bool verbose = false;
+bool full_checkpoint = false;
+pthread_barrier_t barrier;
+pthread_t* vcpu_threads = NULL;
 uint8_t* klog = NULL;
 uint8_t* guest_mem = NULL;
 size_t guest_size = 0x20000000ULL;
+uint32_t no_checkpoint = 0;
+uint32_t ncores = 1;
 uint64_t elf_entry;
 int kvm = -1, vmfd = -1, netfd = -1, efd = -1;
 uint8_t* mboot = NULL;

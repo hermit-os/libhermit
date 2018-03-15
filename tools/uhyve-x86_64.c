@@ -58,6 +58,7 @@
 #include <asm/msr-index.h>
 #include <asm/mman.h>
 
+#include "uhyve.h"
 #include "uhyve-x86_64.h"
 #include "uhyve-syscalls.h"
 #include "uhyve-net.h"
@@ -66,9 +67,16 @@
 // define this macro to create checkpoints with KVM's dirty log
 //#define USE_DIRTY_LOG
 
+#define MAX_FNAME       256
+#define MAX_MSR_ENTRIES 25
+
 #define GUEST_OFFSET		0x0
 #define CPUID_FUNC_PERFMON	0x0A
 #define GUEST_PAGE_SIZE		0x200000   /* 2 MB pages in guest */
+
+#define KVM_32BIT_MAX_MEM_SIZE  (1ULL << 32)
+#define KVM_32BIT_GAP_SIZE      (768 << 20)
+#define KVM_32BIT_GAP_START     (KVM_32BIT_MAX_MEM_SIZE - KVM_32BIT_GAP_SIZE)
 
 #define BOOT_GDT	0x1000
 #define BOOT_INFO	0x2000
@@ -138,15 +146,23 @@
 #define PAGE_MAP_BITS	9
 #define PAGE_LEVELS		4
 
+#define IOAPIC_DEFAULT_BASE	0xfec00000
+#define APIC_DEFAULT_BASE	0xfee00000
+
 static bool cap_tsc_deadline = false;
 static bool cap_irqchip = false;
 static bool cap_adjust_clock_stable = false;
 static bool cap_irqfd = false;
 static bool cap_vapic = false;
 
+extern pthread_barrier_t barrier;
+extern pthread_t* vcpu_threads;
 extern uint64_t elf_entry;
 extern uint8_t* klog;
 extern bool verbose;
+extern bool full_checkpoint;
+extern uint32_t no_checkpoint;
+extern uint32_t ncores;
 extern uint8_t* guest_mem;
 extern size_t guest_size;
 extern int kvm, vmfd, netfd, efd;
