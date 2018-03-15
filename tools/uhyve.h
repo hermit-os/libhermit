@@ -28,6 +28,8 @@
 #ifndef __UHYVE_H__
 #define __UHYVE_H__
 
+#include <err.h>
+
 // Networkports
 #define UHYVE_PORT_NETINFO              0x505
 #define UHYVE_PORT_NETWRITE             0x506
@@ -50,6 +52,7 @@ void save_cpu_state(void);
 void init_cpu_state(uint64_t elf_entry);
 int load_kernel(uint8_t* mem, char* path);
 int load_checkpoint(uint8_t* mem, char* path);
-void init_irq_chip(void);
+void init_kvm_arch(void);
+int load_kernel(uint8_t* mem, char* path);
 
 #endif
