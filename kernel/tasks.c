@@ -38,7 +38,6 @@
 #include <hermit/memory.h>
 #include <hermit/logging.h>
 #include <asm/processor.h>
-#include <../arch/aarch64/kernel/tasks.c>
 
 /*
  * Note that linker symbols are not variables, they have no memory allocated for

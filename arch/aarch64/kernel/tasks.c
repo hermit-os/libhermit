@@ -29,7 +29,8 @@
 #include <hermit/stdlib.h>
 #include <hermit/tasks.h>
 #include <hermit/errno.h>
-#include <asm/tasks.h>
+#include <hermit/logging.h>
+#include <hermit/string.h>
 
 #define TLS_ALIGNBITS		5
 #define TLS_ALIGNSIZE		(1L << TLS_ALIGNBITS)
