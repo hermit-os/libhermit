@@ -232,8 +232,7 @@ start64:
    *   A       [1]  Alignment fault checking disabled
    *   M       [0]  MMU disabled
    */
-  ldr x0, =0x4D5D905
-  //ldr x0, =0x4D5D91F
+  ldr x0, =0x4D5D91F
   msr sctlr_el1, x0
 
   ldr     x0, =mmu_on
@@ -241,7 +240,7 @@ start64:
 
 mmu_on:
   /* Pointer to stack base  */
-  ldr x1, =(boot_stack+KERNEL_STACK_SIZE-0xF)
+  ldr x1, =(boot_stack+KERNEL_STACK_SIZE-0x10)
   mov sp, x1
 
   /* Test core ID */
