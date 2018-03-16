@@ -158,7 +158,7 @@ hbmem_base: .quad 0
 hbmem_size: .quad 0
 
 start64:
-  mrs x0, s3_1_c15_c3_0 // Read EL1 Configuration Base Address Register
+  //mrs x0, s3_1_c15_c3_0 // Read EL1 Configuration Base Address Register
 
   /* disable interrupts */
   msr daifset, #0b111
@@ -232,7 +232,8 @@ start64:
    *   A       [1]  Alignment fault checking disabled
    *   M       [0]  MMU disabled
    */
-  ldr x0, =0x4D5D91F
+  ldr x0, =0x4D5D905
+  //ldr x0, =0x4D5D91F
   msr sctlr_el1, x0
 
   ldr     x0, =mmu_on
@@ -330,15 +331,15 @@ _setup_initial_pgtable:
     cmp     x0, x1
     b.lo    1b
 
-	/* Clear fixmap page table */
-	ldr     x0, =fixmap_pgtable
-	add     x1, x0, #PAGE_SIZE
+    /* Clear fixmap page table */
+    ldr     x0, =fixmap_pgtable
+    add     x1, x0, #PAGE_SIZE
 2:  stp     xzr, xzr, [x0], #16
-	stp     xzr, xzr, [x0], #16
-	stp     xzr, xzr, [x0], #16
-	stp     xzr, xzr, [x0], #16
-	cmp     x0, x1
-	b.lo    2b
+    stp     xzr, xzr, [x0], #16
+    stp     xzr, xzr, [x0], #16
+    stp     xzr, xzr, [x0], #16
+    cmp     x0, x1
+    b.lo    2b
 
     /* Find the size of the kernel */
     ldr     x0, =kernel_start
@@ -384,12 +385,12 @@ _setup_initial_pgtable:
     /* Store the entry */
     str     x7, [x4, x3, lsl #3]
 
-	/* Find the table index of the uart device */
-	mov     x0, 0x09000000  /* default address of QEMU */
-	mov		x2, 1	/* only one entry required */
-	ldr     x5, =fixmap_pgtable
+    /* Find the table index of the uart device */
+    mov     x0, 0x09000000  /* default address of QEMU */
+    mov	    x2, 1           /* only one entry required */
+    ldr     x5, =fixmap_pgtable
 
-	/* Build the L2 block entries */
+    /* Build the L2 block entries */
     sub     x6, x0, x22                 // x6 := paddr(_text)
     lsr     x6, x6, #L2_SHIFT           // L2_SHIFT = 21
     mov     x7, #PT_MEM
@@ -458,7 +459,7 @@ _setup_idmap_pgtable:
     /* Store the entry */
     str     x1, [x5, x0, lsl #3]
 
-	/* Create the VA = PA map */
+    /* Create the VA = PA map */
     mov     x6, 0x09000000              // x0 := vaddr(0x09000000)
     sub     x6, x6, x22                 // x0 := paddr(0x09000000)
 
