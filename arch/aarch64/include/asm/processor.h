@@ -38,6 +38,7 @@
 
 #include <hermit/stddef.h>
 #include <asm/irqflags.h>
+#include <asm/atomic.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -449,6 +450,8 @@ void udelay(uint32_t usecs);
 /// Register a task's TSS at GDT
 void register_task(void);
 
+extern atomic_int32_t cpu_online;
+
 /** @brief System calibration
  *
  * This procedure will detect the CPU frequency and calibrate the APIC timer.
@@ -457,6 +460,7 @@ void register_task(void);
  */
 static inline int system_calibration(void)
 {
+	atomic_int32_inc(&cpu_online);
 	irq_enable();
 
 	return 0;
