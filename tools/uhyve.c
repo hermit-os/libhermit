@@ -72,13 +72,14 @@ static pthread_t net_thread;
 static int* vcpu_fds = NULL;
 static pthread_mutex_t kvm_lock = PTHREAD_MUTEX_INITIALIZER;
 
-bool verbose = false;
+extern bool verbose;
+extern size_t guest_size;
+
 bool full_checkpoint = false;
 pthread_barrier_t barrier;
 pthread_t* vcpu_threads = NULL;
 uint8_t* klog = NULL;
 uint8_t* guest_mem = NULL;
-size_t guest_size = 0x20000000ULL;
 uint32_t no_checkpoint = 0;
 uint32_t ncores = 1;
 uint64_t elf_entry;
@@ -154,6 +155,7 @@ static void close_fd(int* fd)
 
 static void uhyve_exit(void* arg)
 {
+print_registers();
 	if (pthread_mutex_trylock(&kvm_lock))
 	{
 		close_fd(&vcpufd);
@@ -214,8 +216,8 @@ static void* wait_for_packet(void* arg)
 {
 	int ret;
 	struct pollfd fds = {	.fd = netfd,
-							.events = POLLIN,
-							.revents  = 0};
+				.events = POLLIN,
+				.revents  = 0};
 
 	while(1)
 	{
@@ -541,10 +543,6 @@ void sigterm_handler(int signum)
 
 int uhyve_init(char *path)
 {
-	char* v = getenv("HERMIT_VERBOSE");
-	if (v && (strcmp(v, "0") != 0))
-		verbose = true;
-
 	signal(SIGTERM, sigterm_handler);
 
 	// register routine to close the VM
