@@ -304,7 +304,7 @@ static int qemu_init(char *path)
 		NULL, NULL, NULL, NULL};
 
 #ifdef __aarch64__
-	fprintf(stderr, "QEMU as hypervisor is currently not supported for aarch64\n")
+	fprintf(stderr, "QEMU as hypervisor is currently not supported for aarch64\n");
 	exit(1);
 #endif
 
@@ -460,7 +460,7 @@ static int multi_init(char *path)
 	char* result;
 
 #ifdef __aarch64__
-	fprintf(stderr, "The multi-kernel version is currently not supported for aarch64\n")
+	fprintf(stderr, "The multi-kernel version is currently not supported for aarch64\n");
 	exit(1);
 #endif 
 
