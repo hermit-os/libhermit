@@ -303,6 +303,11 @@ static int qemu_init(char *path)
 		"-no-acpi", NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
 		NULL, NULL, NULL, NULL};
 
+#ifdef __aarch64__
+	fprintf(stderr, "QEMU as hypervisor is currently not supported for aarch64\n")
+	exit(1);
+#endif
+
 	str = getenv("HERMIT_CPUS");
 	if (str)
 		qemu_argv[5] = str;
@@ -453,6 +458,11 @@ static int multi_init(char *path)
 	FILE* file;
 	char isle_path[MAX_PATH];
 	char* result;
+
+#ifdef __aarch64__
+	fprintf(stderr, "The multi-kernel version is currently not supported for aarch64\n")
+	exit(1);
+#endif 
 
 	// set path to temporary file
 	snprintf(isle_path, MAX_PATH, "/sys/hermit/isle%d/path", isle_nr);
