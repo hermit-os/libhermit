@@ -350,8 +350,15 @@ static int vcpu_loop(void)
 
 			case UHYVE_PORT_OPEN: {
 					uhyve_open_t* uhyve_open = (uhyve_open_t*) (guest_mem+raddr);
+					char rpath[PATH_MAX];
 
-					uhyve_open->ret = open((const char*)guest_mem+(size_t)uhyve_open->name, uhyve_open->flags, uhyve_open->mode);
+					// forbid to open the kvm device
+					if (realpath((const char*)guest_mem+(size_t)uhyve_open->name, rpath) < 0)
+						uhyve_open->ret = -1;
+					else if (strcmp(rpath, "/dev/kvm") == 0)
+						uhyve_open->ret = -1;
+					else
+						uhyve_open->ret = open((const char*)guest_mem+(size_t)uhyve_open->name, uhyve_open->flags, uhyve_open->mode);
 					break;
 				}
 
