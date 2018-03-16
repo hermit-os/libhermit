@@ -90,8 +90,6 @@ void timer_disable(void)
 {
 	/* stop timer */
 	set_cntp_ctl(0);
-
-	return 0;
 }
 
 int timer_is_running(void)

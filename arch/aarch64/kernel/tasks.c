@@ -44,6 +44,8 @@
 extern const void tls_start;
 extern const void tls_end;
 
+extern atomic_int32_t cpu_online;
+
 static char tls[16][DEFAULT_STACK_SIZE];
 static int id = 0;
 
@@ -182,6 +184,11 @@ void wakeup_core(uint32_t core_id)
 void shutdown_system(void)
 {
 	LOG_INFO("Try to shutdown system\n");
+
+	atomic_int32_dec(&cpu_online);
+	while(1) {
+		HALT;
+	}
 }
 
 extern uint32_t uhyve;

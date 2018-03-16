@@ -94,7 +94,7 @@ static inline uint32_t get_current_el(void)
  * Helper function to get the TLS of the current task
  */
 static inline size_t get_tls(void) {
-	uint64_t addr;
+	uint64_t addr = 0;
 	asm volatile(
 		"mrs %0, tpidr_el0"
 		: "+r"(addr)
@@ -232,11 +232,14 @@ static inline uint64_t get_cntpct(void)
 inline static uint64_t get_rdtsc(void) { return get_cntpct(); }
 
 /// A one-instruction-do-nothing
-#define NOP		asm volatile ("nop")
+#define NOP	asm volatile ("nop")
 /// The PAUSE instruction provides a hint to the processor that the code sequence is a spin-wait loop.
 #define PAUSE	asm volatile ("yield")
 /// The HALT instruction stops the processor until the next interrupt arrives
 #define HALT	asm volatile ("wfi")
+
+/// Send IPIs to the other core, which flush the TLB on the other cores.
+int ipi_tlb_flush(void);
 
 /** @brief Flush Translation Lookaside Buffer
  */
@@ -259,21 +262,21 @@ static inline void tlb_flush(uint8_t with_ipi)
 /** @brief Flush a specific page entry in TLB
  * @param addr The (virtual) address of the page to flush
  */
- static inline void tlb_flush_one_page(size_t addr, uint8_t with_ipi)
- {
- 	asm volatile(
- 		"tlbi vaae1, %0 \n\t"
+static inline void tlb_flush_one_page(size_t addr, uint8_t with_ipi)
+{
+	asm volatile(
+		"tlbi vaae1, %0 \n\t"
 		"isb"
- 		:
- 		: "r" (addr)
- 		: "memory"
- 	);
+		:
+		: "r" (addr)
+		: "memory"
+	);
 
- 	#if MAX_CORES > 1
- 		if (with_ipi)
- 			ipi_tlb_flush();
- 	#endif
- }
+#if MAX_CORES > 1
+	if (with_ipi)
+		ipi_tlb_flush();
+#endif
+}
 
 /// Force strict CPU ordering, serializes load and store operations.
 static inline void mb(void) { asm volatile ("dmb sy" : : : "memory"); }
