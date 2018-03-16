@@ -304,6 +304,9 @@ static int vcpu_loop(void)
 			}
 		}
 
+		uint64_t port = 0;
+		unsigned raddr = 0;
+
 		/* handle requests */
 		switch (run->exit_reason) {
 		case KVM_EXIT_HLT:
@@ -311,49 +314,49 @@ static int vcpu_loop(void)
 			return 0;
 
 		case KVM_EXIT_MMIO:
-			err(1, "KVM: unhandled KVM_EXIT_MMIO at 0x%llx\n", run->mmio.phys_addr);
-			break;
+			fprintf(stderr, "KVM: handled KVM_EXIT_MMIO at 0x%llx\n", run->mmio.phys_addr);
+			port = run->mmio.phys_addr;
+			raddr = *((unsigned*) (guest_mem+run->mmio.phys_addr));
 
 		case KVM_EXIT_IO:
+			if (!port) {
+				port = run->io.port;
+				raddr = *((unsigned*)((size_t)run+run->io.data_offset));
+			}
+
 			//printf("port 0x%x\n", run->io.port);
-			switch (run->io.port) {
+			switch (port) {
 			case UHYVE_PORT_WRITE: {
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-					uhyve_write_t* uhyve_write = (uhyve_write_t*) (guest_mem+data);
+					uhyve_write_t* uhyve_write = (uhyve_write_t*) (guest_mem+raddr);
 
 					uhyve_write->len = write(uhyve_write->fd, guest_mem+(size_t)uhyve_write->buf, uhyve_write->len);
 					break;
 				}
 
 			case UHYVE_PORT_READ: {
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-					uhyve_read_t* uhyve_read = (uhyve_read_t*) (guest_mem+data);
+					uhyve_read_t* uhyve_read = (uhyve_read_t*) (guest_mem+raddr);
 
 					uhyve_read->ret = read(uhyve_read->fd, guest_mem+(size_t)uhyve_read->buf, uhyve_read->len);
 					break;
 				}
 
 			case UHYVE_PORT_EXIT: {
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-
 					if (cpuid)
-						pthread_exit((int*)(guest_mem+data));
+						pthread_exit((int*)(guest_mem+raddr));
 					else
-						exit(*(int*)(guest_mem+data));
+						exit(*(int*)(guest_mem+raddr));
 					break;
 				}
 
 			case UHYVE_PORT_OPEN: {
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-					uhyve_open_t* uhyve_open = (uhyve_open_t*) (guest_mem+data);
+					uhyve_open_t* uhyve_open = (uhyve_open_t*) (guest_mem+raddr);
 
 					uhyve_open->ret = open((const char*)guest_mem+(size_t)uhyve_open->name, uhyve_open->flags, uhyve_open->mode);
 					break;
 				}
 
 			case UHYVE_PORT_CLOSE: {
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-					uhyve_close_t* uhyve_close = (uhyve_close_t*) (guest_mem+data);
+					uhyve_close_t* uhyve_close = (uhyve_close_t*) (guest_mem+raddr);
 
 					if (uhyve_close->fd > 2)
 						uhyve_close->ret = close(uhyve_close->fd);
@@ -363,8 +366,7 @@ static int vcpu_loop(void)
 				}
 
 			case UHYVE_PORT_NETINFO: {
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-					uhyve_netinfo_t* uhyve_netinfo = (uhyve_netinfo_t*)(guest_mem+data);
+					uhyve_netinfo_t* uhyve_netinfo = (uhyve_netinfo_t*)(guest_mem+raddr);
 					memcpy(uhyve_netinfo->mac_str, uhyve_get_mac(), 18);
 					// guest configure the ethernet device => start network thread
 					check_network();
@@ -372,8 +374,7 @@ static int vcpu_loop(void)
 				}
 
 			case UHYVE_PORT_NETWRITE: {
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-					uhyve_netwrite_t* uhyve_netwrite = (uhyve_netwrite_t*)(guest_mem + data);
+					uhyve_netwrite_t* uhyve_netwrite = (uhyve_netwrite_t*)(guest_mem + raddr);
 					uhyve_netwrite->ret = 0;
 					ret = write(netfd, guest_mem + (size_t)uhyve_netwrite->data, uhyve_netwrite->len);
 					if (ret >= 0) {
@@ -386,8 +387,7 @@ static int vcpu_loop(void)
 				}
 
 			case UHYVE_PORT_NETREAD: {
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-					uhyve_netread_t* uhyve_netread = (uhyve_netread_t*)(guest_mem + data);
+					uhyve_netread_t* uhyve_netread = (uhyve_netread_t*)(guest_mem + raddr);
 					ret = read(netfd, guest_mem + (size_t)uhyve_netread->data, uhyve_netread->len);
 					if (ret > 0) {
 						uhyve_netread->len = ret;
@@ -400,8 +400,7 @@ static int vcpu_loop(void)
 				}
 
 			case UHYVE_PORT_NETSTAT: {
-					unsigned status = *((unsigned*)((size_t)run+run->io.data_offset));
-					uhyve_netstat_t* uhyve_netstat = (uhyve_netstat_t*)(guest_mem + status);
+					uhyve_netstat_t* uhyve_netstat = (uhyve_netstat_t*)(guest_mem + raddr);
 					char* str = getenv("HERMIT_NETIF");
 					if (str)
 						uhyve_netstat->status = 1;
@@ -411,8 +410,7 @@ static int vcpu_loop(void)
 				}
 
 			case UHYVE_PORT_LSEEK: {
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-					uhyve_lseek_t* uhyve_lseek = (uhyve_lseek_t*) (guest_mem+data);
+					uhyve_lseek_t* uhyve_lseek = (uhyve_lseek_t*) (guest_mem+raddr);
 
 					uhyve_lseek->offset = lseek(uhyve_lseek->fd, uhyve_lseek->offset, uhyve_lseek->whence);
 					break;
@@ -420,8 +418,7 @@ static int vcpu_loop(void)
 
 			case UHYVE_PORT_CMDSIZE: {
 					int i;
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-					uhyve_cmdsize_t *val = (uhyve_cmdsize_t *) (guest_mem+data);
+					uhyve_cmdsize_t *val = (uhyve_cmdsize_t *) (guest_mem+raddr);
 
 					val->argc = uhyve_argc;
 					for(i=0; i<uhyve_argc; i++)
@@ -437,8 +434,7 @@ static int vcpu_loop(void)
 			case UHYVE_PORT_CMDVAL: {
 					int i;
 					char **argv_ptr, **env_ptr;
-					unsigned data = *((unsigned*)((size_t)run+run->io.data_offset));
-					uhyve_cmdval_t *val = (uhyve_cmdval_t *) (guest_mem+data);
+					uhyve_cmdval_t *val = (uhyve_cmdval_t *) (guest_mem+raddr);
 
 					/* argv */
 					argv_ptr = (char **)(guest_mem + (size_t)val->argv);
@@ -454,7 +450,7 @@ static int vcpu_loop(void)
 				}
 
 			default:
-				err(1, "KVM: unhandled KVM_EXIT_IO at port 0x%x, direction %d\n", run->io.port, run->io.direction);
+				err(1, "KVM: unhandled KVM_EXIT_IO / KVM_EXIT_MMIO at port 0x%lx\n", port);
 				break;
 			}
 			break;

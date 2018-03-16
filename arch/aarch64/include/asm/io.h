@@ -47,7 +47,7 @@ extern "C" {
  */
 inline static unsigned char inportb(unsigned short _port)
 {
-	return 0;
+	return *((unsigned char*)(size_t)_port);
 }
 
 /** @brief Read a word (2 byte) from an IO port
@@ -57,7 +57,7 @@ inline static unsigned char inportb(unsigned short _port)
  */
 inline static unsigned short inportw(unsigned short _port)
 {
-	return 0;
+	return *((unsigned short*)(size_t)_port);
 }
 
 /** @brief Read a double word (4 byte) from an IO port
@@ -67,7 +67,7 @@ inline static unsigned short inportw(unsigned short _port)
  */
 inline static unsigned int inportl(unsigned short _port)
 {
-	return 0;
+	return *((unsigned int*)(size_t)_port);
 }
 
 /** @brief Write a byte to an IO port
@@ -77,6 +77,7 @@ inline static unsigned int inportl(unsigned short _port)
  */
 inline static void outportb(unsigned short _port, unsigned char _data)
 {
+	*((unsigned char*)(size_t)_port) = _data;
 }
 
 /** @brief Write a word (2 bytes) to an IO port
@@ -86,6 +87,7 @@ inline static void outportb(unsigned short _port, unsigned char _data)
  */
 inline static void outportw(unsigned short _port, unsigned short _data)
 {
+	*((unsigned short*)(size_t)_port) = _data;
 }
 
 /** @brief Write a double word (4 bytes) to an IO port
@@ -95,6 +97,7 @@ inline static void outportw(unsigned short _port, unsigned short _data)
  */
 inline static void outportl(unsigned short _port, unsigned int _data)
 {
+	*((unsigned int*)(size_t)_port) = _data;
 }
 
 #ifdef __cplusplus

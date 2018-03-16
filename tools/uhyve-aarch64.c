@@ -61,8 +61,10 @@
 #include "proxy.h"
 
 #define GUEST_OFFSET	0x0
-#define GICD_BASE	0x8000000
-#define GICC_BASE	0x8010000
+#define GICD_BASE		0x8000000
+#define GICC_BASE		0x8010000
+
+#define PAGE_SIZE		0x1000
 
 #ifndef offsetof
 #define offsetof(TYPE, MEMBER)		((size_t) &((TYPE *)0)->MEMBER)
@@ -71,6 +73,7 @@
 					 KVM_REG_ARM_CORE | KVM_REG_ARM_CORE_REG(x))
 
 static bool cap_irqfd = false;
+static bool cap_read_only = false;
 static int gic_fd = -1;
 
 extern uint64_t elf_entry;
@@ -133,7 +136,7 @@ void restore_cpu_state(void)
 
 void save_cpu_state(void)
 {
-	err(1, "Checkpointing is currently not supported!");	
+	err(1, "Checkpointing is currently not supported!");
 }
 
 int load_checkpoint(uint8_t* mem, char* path)
@@ -219,11 +222,24 @@ void init_kvm_arch(void)
 	}
 	madvise(guest_mem, guest_size, MADV_HUGEPAGE);
 
-	struct kvm_userspace_memory_region kvm_region = {
+	cap_read_only = kvm_ioctl(vmfd, KVM_CHECK_EXTENSION, KVM_CAP_READONLY_MEM) <= 0 ? false : true;
+	if (!cap_read_only)
+		err(1, "the support of KVM_CAP_READONLY_MEM is curently required");
+
+	struct kvm_userspace_memory_region kvm_mmap_region = {
 		.slot = 0,
-		.guest_phys_addr = GUEST_OFFSET,
-		.memory_size = guest_size,
+		.guest_phys_addr = 0,
+		.memory_size = PAGE_SIZE,
 		.userspace_addr = (uint64_t) guest_mem,
+		.flags = KVM_MEM_READONLY,
+	};
+	kvm_ioctl(vmfd, KVM_SET_USER_MEMORY_REGION, &kvm_mmap_region);
+
+	struct kvm_userspace_memory_region kvm_region = {
+		.slot = 1,
+		.guest_phys_addr = PAGE_SIZE,
+		.memory_size = guest_size - PAGE_SIZE,
+		.userspace_addr = (uint64_t) guest_mem + PAGE_SIZE,
 #ifdef USE_DIRTY_LOG
 		.flags = KVM_MEM_LOG_DIRTY_PAGES,
 #else
@@ -256,8 +272,8 @@ void init_kvm_arch(void)
 	kvm_ioctl(gic_fd, KVM_SET_DEVICE_ATTR, &dist_attr);
 
 	cap_irqfd = kvm_ioctl(vmfd, KVM_CHECK_EXTENSION, KVM_CAP_IRQFD) <= 0 ? false : true;
-        if (!cap_irqfd)
-                err(1, "the support of KVM_CAP_IRQFD is curently required");
+    if (!cap_irqfd)
+            err(1, "the support of KVM_CAP_IRQFD is curently required");
 }
 
 int load_kernel(uint8_t* mem, char* path)
