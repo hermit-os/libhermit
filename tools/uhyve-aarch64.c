@@ -340,7 +340,7 @@ int load_kernel(uint8_t* mem, char* path)
 		if (ret < 0)
 			goto out;
 		if (!klog)
-			klog = mem+paddr+0x5000-GUEST_OFFSET;
+			klog = mem+paddr+0x1000-GUEST_OFFSET;
 		if (!mboot)
 			mboot = mem+paddr-GUEST_OFFSET;
 
