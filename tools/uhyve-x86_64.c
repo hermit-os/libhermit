@@ -155,6 +155,7 @@ static bool cap_adjust_clock_stable = false;
 static bool cap_irqfd = false;
 static bool cap_vapic = false;
 
+size_t guest_size = 0x20000000ULL;
 extern pthread_barrier_t barrier;
 extern pthread_t* vcpu_threads;
 extern uint64_t elf_entry;
@@ -850,7 +851,13 @@ void init_kvm_arch(void)
 		if (verbose)
 			fprintf(stderr, "VM uses KSN feature \"mergeable\" to reduce the memory footprint.\n");
 	}
-	madvise(guest_mem, guest_size, MADV_HUGEPAGE);
+
+	const char* hugepage = getenv("HERMIT_HUGEPAGE");
+	if (merge && (strcmp(merge, "0") != 0)) {
+		madvise(guest_mem, guest_size, MADV_HUGEPAGE);
+		if (verbose)
+			fprintf(stderr, "VM uses huge pages to improve the performance.\n");
+	}
 
 	struct kvm_userspace_memory_region kvm_region = {
 		.slot = 0,
@@ -1039,6 +1046,8 @@ int load_kernel(uint8_t* mem, char* path)
 		}
 		*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x38)) += memsz; // total kernel size
 	}
+
+	ret = 0;
 
 out:
 	if (phdr)

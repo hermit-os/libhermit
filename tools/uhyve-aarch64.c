@@ -60,7 +60,7 @@
 #include "uhyve.h"
 #include "proxy.h"
 
-#define GUEST_OFFSET	0x0
+#define GUEST_OFFSET		0x0
 #define GICD_BASE		0x8000000
 #define GICC_BASE		0x8010000
 
@@ -76,6 +76,7 @@ static bool cap_irqfd = false;
 static bool cap_read_only = false;
 static int gic_fd = -1;
 
+size_t guest_size = 0x60000000ULL;
 extern uint64_t elf_entry;
 extern uint8_t* klog;
 extern bool verbose;
@@ -92,35 +93,36 @@ void print_registers(void)
 	struct kvm_one_reg reg;
 	uint64_t data;
 
-	fprintf(stderr, "\n Dump state of CPU %d\n", cpuid);
-        fprintf(stderr, " Registers:\n");
+	fprintf(stderr, "\n Dump state of CPU %d\n\n", cpuid);
+	fprintf(stderr, " Registers\n");
+	fprintf(stderr, " =========\n");
 
 	reg.addr = (uint64_t)&data;
 	reg.id = ARM64_CORE_REG(regs.pc);
 	kvm_ioctl(vcpufd, KVM_GET_ONE_REG, &reg);
-	fprintf(stderr, " PC:\t\t0x%lx\n", data);
+	fprintf(stderr, " PC:     0x%016lx\n", data);
 
 	reg.id = ARM64_CORE_REG(regs.pstate);
 	kvm_ioctl(vcpufd, KVM_GET_ONE_REG, &reg);
-	fprintf(stderr, " PSTATE:\t0x%lx\n", data);
+	fprintf(stderr, " PSTATE: 0x%016lx\n", data);
 
 	reg.id = ARM64_CORE_REG(sp_el1);
 	kvm_ioctl(vcpufd, KVM_GET_ONE_REG, &reg);
-	fprintf(stderr, " SP_EL1:\t0x%lx\n", data);
+	fprintf(stderr, " SP_EL1: 0x%016lx\n", data);
 
 	reg.id = ARM64_CORE_REG(regs.regs[30]);
 	kvm_ioctl(vcpufd, KVM_GET_ONE_REG, &reg);
-	fprintf(stderr, " LR:\t\t0x%lx\n", data);
+	fprintf(stderr, " LR:     0x%016lx\n", data);
 
 	for(int i=0; i<=29; i+=2)
 	{
 		reg.id = ARM64_CORE_REG(regs.regs[i]);
 		kvm_ioctl(vcpufd, KVM_GET_ONE_REG, &reg);
-		fprintf(stderr, " X%d:\t\t0x%lx\t", i, data);
+		fprintf(stderr, " X%d:\t 0x%016lx\t", i, data);
 
 		reg.id = ARM64_CORE_REG(regs.regs[i+1]);
 		kvm_ioctl(vcpufd, KVM_GET_ONE_REG, &reg);
-		fprintf(stderr, " X%d:\t\t0x%lx\n", i+1, data);
+		fprintf(stderr, " X%d:\t0x%016lx\n", i+1, data);
 	}
 }
 
@@ -220,7 +222,13 @@ void init_kvm_arch(void)
 		if (verbose)
 			fprintf(stderr, "VM uses KSN feature \"mergeable\" to reduce the memory footprint.\n");
 	}
-	madvise(guest_mem, guest_size, MADV_HUGEPAGE);
+
+	const char* hugepage = getenv("HERMIT_HUGEPAGE");
+	if (merge && (strcmp(merge, "0") != 0)) {
+		madvise(guest_mem, guest_size, MADV_HUGEPAGE);
+		if (verbose)
+			fprintf(stderr, "VM uses huge pages to improve the performance.\n");
+	}
 
 	cap_read_only = kvm_ioctl(vmfd, KVM_CHECK_EXTENSION, KVM_CAP_READONLY_MEM) <= 0 ? false : true;
 	if (!cap_read_only)
@@ -336,7 +344,7 @@ int load_kernel(uint8_t* mem, char* path)
 		if (phdr[ph_i].p_type != PT_LOAD)
 			continue;
 
-		//printf("Kernel location 0x%zx, file size 0x%zx, memory size 0x%zx\n", paddr, filesz, memsz);
+		//fprintf(stderr, "Kernel location 0x%zx, file size 0x%zx, memory size 0x%zx\n", paddr, filesz, memsz);
 
 		ret = pread_in_full(fd, mem+paddr-GUEST_OFFSET, filesz, offset);
 		if (ret < 0)
@@ -345,13 +353,14 @@ int load_kernel(uint8_t* mem, char* path)
 			klog = mem+paddr+0x1000-GUEST_OFFSET;
 		if (!mboot)
 			mboot = mem+paddr-GUEST_OFFSET;
+		//fprintf(stderr, "mboot at %p, klog at %p\n", mboot, klog);
 
 		if (first_load) {
 			first_load = 0;
 
 			// initialize kernel
 			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x100)) = paddr; // physical start address
-			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x108)) = guest_size;   // physical limit
+			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x108)) = guest_size - PAGE_SIZE;   // physical limit
 			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x110)) = get_cpufreq();
 			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x128)) = 1; // number of used cpus
 			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x130)) = 0; // cpuid
@@ -392,8 +401,10 @@ int load_kernel(uint8_t* mem, char* path)
 
 			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0xbc)) = guest_mem;
 		}
-		*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x150)) += memsz; // total kernel size
+		*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x158)) += memsz; // total kernel size
 	}
+
+	ret = 0;
 
 out:
 	if (phdr)
