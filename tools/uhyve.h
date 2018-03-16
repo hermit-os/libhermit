@@ -30,11 +30,23 @@
 
 #include <err.h>
 
+#define UHYVE_PORT_WRITE		0x400
+#define UHYVE_PORT_OPEN			0x440
+#define UHYVE_PORT_CLOSE		0x480
+#define UHYVE_PORT_READ			0x500
+#define UHYVE_PORT_EXIT			0x540
+#define UHYVE_PORT_LSEEK		0x580
+
 // Networkports
-#define UHYVE_PORT_NETINFO              0x505
-#define UHYVE_PORT_NETWRITE             0x506
-#define UHYVE_PORT_NETREAD              0x507
-#define UHYVE_PORT_NETSTAT              0x508
+#define UHYVE_PORT_NETINFO              0x600
+#define UHYVE_PORT_NETWRITE             0x640
+#define UHYVE_PORT_NETREAD              0x680
+#define UHYVE_PORT_NETSTAT              0x700
+
+/* Ports and data structures for uhyve command line arguments and envp
+ * forwarding */
+#define UHYVE_PORT_CMDSIZE		0x740
+#define UHYVE_PORT_CMDVAL		0x780
 
 #define UHYVE_IRQ       11
 

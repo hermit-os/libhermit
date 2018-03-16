@@ -66,10 +66,6 @@
 #define HERMIT_PORT	0x494E
 #define HERMIT_MAGIC	0x7E317
 
-/* Ports and data structures for command line args + envp forwarding to uhyve */
-#define UHYVE_PORT_CMDSIZE	0x509
-#define UHYVE_PORT_CMDVAL	0x510
-
 typedef struct {
 	int argc;
 	int argsz[MAX_ARGC_ENVC];

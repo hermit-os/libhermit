@@ -67,15 +67,6 @@
 #include "uhyve-net.h"
 #include "proxy.h"
 
-
-// Networkports
-#define UHYVE_PORT_NETINFO		0x505
-#define UHYVE_PORT_NETWRITE		0x506
-#define UHYVE_PORT_NETREAD		0x507
-#define UHYVE_PORT_NETSTAT		0x508
-
-#define UHYVE_IRQ	11
-
 static bool restart = false;
 static pthread_t net_thread;
 static int* vcpu_fds = NULL;
@@ -103,11 +94,6 @@ int uhyve_envc = -1;
 char **uhyve_argv = NULL;
 extern char **environ;
 char **uhyve_envp = NULL;
-
-/* Ports and data structures for uhyve command line arguments and envp
- * forwarding */
-#define UHYVE_PORT_CMDSIZE	0x509
-#define UHYVE_PORT_CMDVAL	0x510
 
 typedef struct {
 	int argc;
