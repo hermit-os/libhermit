@@ -948,6 +948,7 @@ int load_kernel(uint8_t* mem, char* path)
 	    || hdr.e_ident[EI_OSABI] != HERMIT_ELFOSABI
 	    || hdr.e_type != ET_EXEC || hdr.e_machine != EM_X86_64) {
 		fprintf(stderr, "Invalid HermitCore file!\n");
+		ret = -1;
 		goto out;
 	}
 
@@ -957,6 +958,7 @@ int load_kernel(uint8_t* mem, char* path)
 	phdr = malloc(buflen);
 	if (!phdr) {
 		fprintf(stderr, "Not enough memory\n");
+		ret = -1;
 		goto out;
 	}
 
@@ -1044,6 +1046,6 @@ out:
 
 	close(fd);
 
-	return 0;
+	return ret;
 }
 #endif

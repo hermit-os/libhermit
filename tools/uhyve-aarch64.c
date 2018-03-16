@@ -272,7 +272,7 @@ void init_kvm_arch(void)
 	kvm_ioctl(gic_fd, KVM_SET_DEVICE_ATTR, &dist_attr);
 
 	cap_irqfd = kvm_ioctl(vmfd, KVM_CHECK_EXTENSION, KVM_CAP_IRQFD) <= 0 ? false : true;
-    if (!cap_irqfd)
+	if (!cap_irqfd)
             err(1, "the support of KVM_CAP_IRQFD is curently required");
 }
 
@@ -304,6 +304,7 @@ int load_kernel(uint8_t* mem, char* path)
 	    || hdr.e_ident[EI_OSABI] != HERMIT_ELFOSABI
 	    || hdr.e_type != ET_EXEC || hdr.e_machine != EM_AARCH64) {
 		fprintf(stderr, "Invalid HermitCore file!\n");
+		ret = -1;
 		goto out;
 	}
 
@@ -313,6 +314,7 @@ int load_kernel(uint8_t* mem, char* path)
 	phdr = malloc(buflen);
 	if (!phdr) {
 		fprintf(stderr, "Not enough memory\n");
+		ret = -1;
 		goto out;
 	}
 
@@ -399,6 +401,6 @@ out:
 
 	close(fd);
 
-	return 0;
+	return ret;
 }
 #endif
