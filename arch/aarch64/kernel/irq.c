@@ -257,7 +257,7 @@ int enable_dynticks(void)
 
 void do_sync(void *regs)
 {
-	kputs("receive sync\n");
+	LOG_INFO("receive sync\n");
 
 	while (1) {
 		HALT;
