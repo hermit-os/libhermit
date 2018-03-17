@@ -64,6 +64,9 @@
 #define GICD_BASE		0x8000000
 #define GICC_BASE		0x8010000
 
+#define KVM_GAP_SIZE		(2*(GICC_BASE-GICD_BASE))
+#define KVM_GAP_START		GICD_BASE
+
 #define PAGE_SIZE		0x1000
 
 #ifndef offsetof
@@ -74,7 +77,6 @@
 
 static bool cap_irqfd = false;
 static bool cap_read_only = false;
-static int gic_fd = -1;
 
 size_t guest_size = 0x60000000ULL;
 extern uint64_t elf_entry;
@@ -234,50 +236,45 @@ void init_kvm_arch(void)
 	if (!cap_read_only)
 		err(1, "the support of KVM_CAP_READONLY_MEM is curently required");
 
-	struct kvm_userspace_memory_region kvm_mmap_region = {
+	struct kvm_userspace_memory_region kvm_region = {
 		.slot = 0,
 		.guest_phys_addr = 0,
 		.memory_size = PAGE_SIZE,
 		.userspace_addr = (uint64_t) guest_mem,
 		.flags = KVM_MEM_READONLY,
 	};
-	kvm_ioctl(vmfd, KVM_SET_USER_MEMORY_REGION, &kvm_mmap_region);
+	kvm_ioctl(vmfd, KVM_SET_USER_MEMORY_REGION, &kvm_region);
 
-	struct kvm_userspace_memory_region kvm_region = {
+	kvm_region = (struct kvm_userspace_memory_region) {
 		.slot = 1,
 		.guest_phys_addr = PAGE_SIZE,
 		.memory_size = guest_size - PAGE_SIZE,
 		.userspace_addr = (uint64_t) guest_mem + PAGE_SIZE,
-#ifdef USE_DIRTY_LOG
+ #ifdef USE_DIRTY_LOG
 		.flags = KVM_MEM_LOG_DIRTY_PAGES,
-#else
-		.flags = 0,
-#endif
+ #else
+ 		.flags = 0,
+ #endif
 	};
 	kvm_ioctl(vmfd, KVM_SET_USER_MEMORY_REGION, &kvm_region);
 
 	/* Create interrupt controller GICv2 */
-	uint64_t cpu_if_addr = GICC_BASE;
-	uint64_t dist_addr = GICD_BASE;
-	struct kvm_device_attr cpu_if_attr = {
-		.group	= KVM_DEV_ARM_VGIC_GRP_ADDR,
-		.attr	= KVM_VGIC_V2_ADDR_TYPE_CPU,
-		.addr	= (uint64_t)(unsigned long)&cpu_if_addr,
+	struct kvm_arm_device_addr gic_addr[] = {
+		[0] = {
+			.id = KVM_VGIC_V2_ADDR_TYPE_DIST |
+			(KVM_ARM_DEVICE_VGIC_V2 << KVM_ARM_DEVICE_ID_SHIFT),
+			.addr = GICD_BASE,
+		},
+		[1] = {
+			.id = KVM_VGIC_V2_ADDR_TYPE_CPU |
+			(KVM_ARM_DEVICE_VGIC_V2 << KVM_ARM_DEVICE_ID_SHIFT),
+			.addr = GICC_BASE,
+		}
 	};
-	struct kvm_create_device gic_device = {
-		.flags	= 0,
-		.type = KVM_DEV_TYPE_ARM_VGIC_V2,
-	};
-	struct kvm_device_attr dist_attr = {
-		.group	= KVM_DEV_ARM_VGIC_GRP_ADDR,
-		.addr	= (uint64_t)(unsigned long)&dist_addr,
-		.attr  = KVM_VGIC_V2_ADDR_TYPE_DIST,
-	};
-	kvm_ioctl(vmfd, KVM_CREATE_DEVICE, &gic_device);
 
-	gic_fd = gic_device.fd;
-	kvm_ioctl(gic_fd, KVM_SET_DEVICE_ATTR, &cpu_if_attr);
-	kvm_ioctl(gic_fd, KVM_SET_DEVICE_ATTR, &dist_attr);
+	kvm_ioctl(vmfd, KVM_CREATE_IRQCHIP, NULL);
+	kvm_ioctl(vmfd, KVM_ARM_SET_DEVICE_ADDR, &gic_addr[0]);
+	kvm_ioctl(vmfd, KVM_ARM_SET_DEVICE_ADDR, &gic_addr[1]);
 
 	cap_irqfd = kvm_ioctl(vmfd, KVM_CHECK_EXTENSION, KVM_CAP_IRQFD) <= 0 ? false : true;
 	if (!cap_irqfd)
@@ -399,7 +396,7 @@ int load_kernel(uint8_t* mem, char* path)
 				*((uint8_t*) (mem+paddr-GUEST_OFFSET + 0xBB)) = (uint8_t) ip[3];
 			}
 
-			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0xbc)) = guest_mem;
+			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0xbc)) = (uint64_t) guest_mem;
 		}
 		*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x158)) += memsz; // total kernel size
 	}
