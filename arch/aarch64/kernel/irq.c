@@ -216,7 +216,7 @@ int irq_init(void)
 	gicd_disable();
 
 	nr_irqs = ((gicd_read(GICD_TYPER) & 0x1f) + 1) * 32;
-	LOG_INFO("number of supported interrupts %u\n", nr_irqs);
+	LOG_INFO("Number of supported interrupts %u\n", nr_irqs);
 
 	gicd_write(GICD_ICENABLER, 0xffff0000);
 	gicd_write(GICD_ISENABLER, 0x0000ffff);
@@ -270,7 +270,7 @@ size_t** do_fiq(void *regs)
 	uint32_t iar = gicc_read(GICC_IAR);
 	uint32_t vector = iar & 0x3ff;
 
-	//LOG_INFO("fiq %d\n", vector);
+	LOG_INFO("fiq %d\n", vector);
 
 	if (vector < MAX_HANDLERS && irq_routines[vector]) {
 		(irq_routines[vector])(regs);
