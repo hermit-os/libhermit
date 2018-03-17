@@ -92,27 +92,27 @@ static uint32_t nr_irqs = 0;
 
 static inline uint32_t gicd_read(size_t off)
 {
-	uint32_t value = *((uint32_t*) (gicd_base + off));
+	uint32_t value = *((volatile uint32_t*) (gicd_base + off));
 	rmb();
 	return value;
 }
 
 static inline void gicd_write(size_t off, uint32_t value)
 {
-	*((uint32_t*) (gicd_base + off)) = value;
+	*((volatile uint32_t*) (gicd_base + off)) = value;
 	wmb();
 }
 
 static inline uint32_t gicc_read(size_t off)
 {
-	uint32_t value = *((uint32_t*) (gicc_base + off));
+	uint32_t value = *((volatile uint32_t*) (gicc_base + off));
 	rmb();
 	return value;
 }
 
 static inline void gicc_write(size_t off, uint32_t value)
 {
-	*((uint32_t*) (gicc_base + off)) = value;
+	*((volatile uint32_t*) (gicc_base + off)) = value;
 	wmb();
 }
 
