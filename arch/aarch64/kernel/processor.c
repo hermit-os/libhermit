@@ -30,11 +30,11 @@
 #include <hermit/logging.h>
 #include <asm/processor.h>
 
-void *dtb __attribute__ ((section (".data")));
+extern uint32_t cpu_freq;
 
 uint32_t get_cpu_frequency(void)
 {
-	return 0;
+	return cpu_freq;
 }
 
 int cpu_detection(void)

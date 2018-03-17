@@ -586,8 +586,9 @@ int hermit_main(void)
 	LOG_INFO("BBS starts at %p and ends at %p\n", &hbss_start, (size_t)&kernel_start + image_size);
 	LOG_INFO("Per core data starts at %p and ends at %p\n", &percore_start, &percore_end);
 	LOG_INFO("Per core size 0x%zx\n", (size_t) &percore_end0 - (size_t) &percore_start);
+	if (get_cpu_frequency() > 0)
+		LOG_INFO("Processor frequency: %u MHz\n", get_cpu_frequency());
 #if 0
-	LOG_INFO("Processor frequency: %u MHz\n", get_cpu_frequency());
 	LOG_INFO("Total memory: %zd MiB\n", atomic_int64_read(&total_pages) * PAGE_SIZE / (1024ULL*1024ULL));
 	LOG_INFO("Current allocated memory: %zd KiB\n", atomic_int64_read(&total_allocated_pages) * PAGE_SIZE / 1024ULL);
 	LOG_INFO("Current available memory: %zd MiB\n", atomic_int64_read(&total_available_pages) * PAGE_SIZE / (1024ULL*1024ULL));
