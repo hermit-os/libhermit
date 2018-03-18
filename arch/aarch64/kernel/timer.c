@@ -177,8 +177,6 @@ int timer_wait(unsigned int ticks)
  */
 int timer_init(void)
 {
-	LOG_INFO("Set system counter frequency to %d MHz\n", 1);
-
 	freq_hz = get_cntfrq();
 
 	LOG_INFO("aarch64_timer: frequency %d KHz\n", freq_hz / 1000);
@@ -186,8 +184,8 @@ int timer_init(void)
 	irq_install_handler(INT_PPI_NSPHYS_TIMER, timer_handler);
 
 #ifdef DYNAMIC_TICKS
-    boot_tsc = get_cntpct();
-    set_per_core(last_tsc, boot_tsc);
+	boot_tsc = get_cntpct();
+	set_per_core(last_tsc, boot_tsc);
 #else
 	restart_periodic_timer();
 #endif
