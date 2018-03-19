@@ -63,6 +63,7 @@
 /* Number of virtual address bits for 4KB page */
 #define VA_BITS         48
 
+#define PT_DEVICE	0x703
 #define PT_PT           0x713
 #define PT_MEM          0x713
 #define PT_SELF         ((1) << 55)
@@ -531,6 +532,6 @@ l2_pgtable:
     .space 510*8, 0
     .quad l0_pgtable + PT_PT + PT_SELF
 l3_pgtable:
-    .quad 0x00000000 + PT_MEM // map II ports
-    .quad 0x09000000 + PT_MEM // map QEMU's uart port
+    .quad 0x00000000 + PT_DEVICE // map II ports
+    .quad 0x09000000 + PT_DEVICE // map QEMU's uart port
     .space 510*8, 0

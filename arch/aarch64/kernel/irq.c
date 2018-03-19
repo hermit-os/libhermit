@@ -37,6 +37,8 @@
 /* GIC related constants */
 #define GICD_BASE			0x8000000
 #define GICC_BASE			0x8010000
+#define GICD_SIZE			0x10000
+#define GICC_SIZE			0x20000
 #define GICR_BASE			0
 
 /* GIC Distributor interface register offsets that are common to GICv3 & GICv2 */
@@ -208,9 +210,29 @@ int irq_uninstall_handler(unsigned int irq)
 	return 0;
 }
 
-int irq_init(void)
+int irq_post_init(void)
 {
 	LOG_INFO("Enable interrupt handling\n");
+
+	gicd_base = (size_t) vma_alloc(GICD_SIZE, VMA_READ|VMA_WRITE);
+	if (BUILTIN_EXPECT(!gicd_base, 0))
+                goto oom;
+
+        int ret = page_map(gicd_base, GICD_BASE, GICD_SIZE >> PAGE_BITS, PG_GLOBAL|PG_RW|PG_PCD);
+        if (BUILTIN_EXPECT(ret, 0))
+                goto oom;
+
+	LOG_INFO("Map gicd at 0x%zx\n", gicd_base);
+
+	gicc_base = (size_t) vma_alloc(GICC_SIZE, VMA_READ|VMA_WRITE);
+	if (BUILTIN_EXPECT(!gicc_base, 0))
+                goto oom;
+
+        ret = page_map(gicc_base, GICC_BASE, GICC_SIZE >> PAGE_BITS, PG_GLOBAL|PG_RW|PG_PCD);
+        if (BUILTIN_EXPECT(ret, 0))
+                goto oom;
+
+	LOG_INFO("Map gicc at 0x%zx\n", gicc_base);
 
 	gicc_disable();
 	gicd_disable();
@@ -248,6 +270,11 @@ int irq_init(void)
 	gicc_enable();
 
 	return 0;
+
+oom:
+	LOG_ERROR("Failed to intialize interrupt controller\n");
+
+	return ret;
 }
 
 void do_sync(void *regs)
@@ -266,7 +293,6 @@ void do_sync(void *regs)
 			if (page_fault_handler(far) == 0)
 				return;
 
-kprintf("0x%zx, 0x%zx\n", far, virt_to_phys(far));
 			LOG_ERROR("Unable to handle page fault at 0x%llx\n", far);
 		} else {
 			LOG_ERROR("Unknown exception\n");

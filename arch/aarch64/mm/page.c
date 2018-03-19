@@ -151,16 +151,17 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits)
 					kprintf("Remap address 0x%zx at core %d\n", viraddr, CORE_ID);
 				}*/
 
-				self[lvl][vpn] = phyaddr | PT_MEM;
+				if (bits & PG_PCD)
+					self[lvl][vpn] = phyaddr | PT_DEVICE;
+				else
+					self[lvl][vpn] = phyaddr | PT_MEM;
 
 				phyaddr += PAGE_SIZE;
 			}
 		}
 	}
 
-//	asm volatile ("dsb sy" ::: "memory");
 	tlb_flush_range(viraddr, viraddr+npages*PAGE_SIZE);
-//tlb_flush();
 
 	ret = 0;
 out:
@@ -185,9 +186,7 @@ int page_unmap(size_t viraddr, size_t npages)
 		self[0][vpn] = 0;
 	}
 
-	//asm volatile ("dsb sy" ::: "memory");
 	tlb_flush_range(viraddr, viraddr+npages*PAGE_SIZE);
-//tlb_flush();
 
 	spinlock_irqsave_unlock(&page_lock);
 

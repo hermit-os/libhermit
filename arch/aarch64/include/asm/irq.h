@@ -78,7 +78,7 @@ int irq_uninstall_handler(unsigned int irq);
  *
  * @return Just returns 0 in any case
  */
-int irq_init(void);
+static inline int irq_init(void) { return 0; }
 
 /** @brief reset the counters of the received interrupts
  */

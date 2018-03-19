@@ -419,8 +419,11 @@ uint32_t get_cpu_frequency(void);
  */
 void udelay(uint32_t usecs);
 
-/// Register a task's TSS at GDT
-void register_task(void);
+/// Finalize the GIC initialization
+int irq_post_init(void);
+
+// Sets up the system clock
+int timer_calibration(void);
 
 extern atomic_int32_t cpu_online;
 
@@ -432,6 +435,8 @@ extern atomic_int32_t cpu_online;
  */
 static inline int system_calibration(void)
 {
+	irq_post_init();
+	timer_calibration();
 	atomic_int32_inc(&cpu_online);
 	irq_enable();
 

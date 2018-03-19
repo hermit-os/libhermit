@@ -172,16 +172,21 @@ int timer_wait(unsigned int ticks)
 	return 0;
 }
 
+int timer_init(void)
+{
+	irq_install_handler(INT_PPI_NSPHYS_TIMER, timer_handler);
+
+	return 0;
+}
+
 /*
  * Sets up the system clock
  */
-int timer_init(void)
+int timer_calibration(void)
 {
 	freq_hz = get_cntfrq();
 
 	LOG_INFO("aarch64_timer: frequency %d KHz\n", freq_hz / 1000);
-
-	irq_install_handler(INT_PPI_NSPHYS_TIMER, timer_handler);
 
 #ifdef DYNAMIC_TICKS
 	boot_tsc = get_cntpct();

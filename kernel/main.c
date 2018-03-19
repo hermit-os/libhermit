@@ -126,11 +126,11 @@ static int hermit_init(void)
 	koutput_init();
 
 	system_init();
-	//irq_init();
+	irq_init();
 	timer_init();
 	multitasking_init();
 	memory_init();
-	//signal_init();
+	signal_init();
 
 	return 0;
 }
