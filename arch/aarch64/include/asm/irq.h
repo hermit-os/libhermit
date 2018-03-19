@@ -92,7 +92,7 @@ void print_irq_stats(void);
  *
  * @return 0 on success
  */
-int enable_dynticks(void);
+inline static int enable_dynticks(void) { return 0; }
 
 #ifdef __cplusplus
 }

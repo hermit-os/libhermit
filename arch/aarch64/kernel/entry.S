@@ -37,42 +37,6 @@
 #define PAGE_SIZE	(1 << PAGE_SHIFT)
 #define PAGE_MASK	(~(PAGE_SIZE-1))
 
-/* Level 1 table, 1GiB per entry */
-#define L1_SHIFT	30
-#define L1_SIZE		(1 << L1_SHIFT)
-#define L1_OFFSET	(L1_SIZE - 1)
-#define L1_INVAL	L0_INVAL
-#define L1_BLOCK	L0_BLOCK
-#define L1_TABLE	L0_TABLE
-#define L1_MASK		(~(L1_SIZE-1))
-
-/* Level 2 table, 2MiB per entry */
-#define L2_SHIFT	21
-#define L2_SIZE		(1 << L2_SHIFT)
-#define L2_OFFSET	(L2_SIZE - 1)
-#define L2_INVAL	L0_INVAL
-#define L2_BLOCK	L0_BLOCK
-#define L2_TABLE	L0_TABLE
-#define L2_MASK		(~(L2_SIZE-1))
-
-/* Level 3 table, 4KiB per entry */
-#define L3_SHIFT            12
-#define L3_SIZE             (1 << L3_SHIFT)
-#define L3_OFFSET           (L3_SIZE - 1)
-#define L3_INVAL            0x0
-        /* 0x1 is reserved */
-        /* 0x2 also marks an invalid address */
-#define L3_PAGE             0x3
-#define L3_MASK             (~(L3_SIZE-1))
-#define Ln_ENTRIES	(1 << 9)
-#define Ln_ADDR_MASK	(Ln_ENTRIES - 1)
-
-#define ATTR_MASK_L	0xfff
-
-#define PT_PT		0x3
-#define PT_MEM		0x711
-#define TCR_FLAGS	(TCR_IRGN_WBWA | TCR_ORGN_WBWA | TCR_SHARED)
-
 /*
  * Memory types available.
  */
@@ -92,11 +56,16 @@
 #define TCR_TBI0        ((1) << 37)
 #define TCR_TBI1        ((1) << 38)
 #define TCR_ASID16      ((1) << 36)
-#define TCR_IPS_40BIT   ((2) << 32)
-#define TCR_TG1_4K      ((2) << 30)
+#define TCR_TG1_16K     ((1) << 30)
+#define TCR_TG1_4K      ((0) << 30)
+#define TCR_FLAGS       (TCR_IRGN_WBWA | TCR_ORGN_WBWA | TCR_SHARED)
 
 /* Number of virtual address bits for 4KB page */
-#define VA_BITS         39
+#define VA_BITS         48
+
+#define PT_PT           0x713
+#define PT_MEM          0x713
+#define PT_SELF         ((1) << 55)
 
 #define ALIGN   .align 4
 
@@ -126,7 +95,7 @@ limit: .quad 0
 .global cpu_freq
 cpu_freq: .dword 0
 .global boot_processor
-boot_processor: .dword -1
+boot_processor: .dword 0
 .global cpu_online
 cpu_online: .dword 0
 .global possible_cpus
@@ -152,11 +121,6 @@ hcmask: .byte 255,255,255,0
 .global host_logical_addr
 host_logical_addr: .quad 0
 
-.global hbmem_base
-hbmem_base: .quad 0
-.global hbmem_size
-hbmem_size: .quad 0
-
 start64:
   //mrs x0, s3_1_c15_c3_0 // Read EL1 Configuration Base Address Register
 
@@ -181,22 +145,19 @@ start64:
   isb
 
   /* Calculate where we are */
-  bl _calc_offset
+  //bl _calc_offset
 
   /* Setup CPU for turnning the MMU on. */
   bl _setup_cpu
 
   /* Setup the initial page table. */
-  bl _setup_initial_pgtable
-
-  /*
-   * Setup the identity mapping
-   */
-  bl _setup_idmap_pgtable
+  bl _setup_pgtable
 
   /* Load TTBRx */
-  msr     ttbr1_el1, x4
-  msr     ttbr0_el1, x5
+  mov     x0, xzr
+  msr     ttbr1_el1, x0
+  ldr     x0, =l0_pgtable
+  msr     ttbr0_el1, x0
   isb
 
   /* Set exception table */
@@ -274,18 +235,25 @@ _setup_cpu:
      *   NORMAL             100     11111111 (0xff)
      */
     ldr     x0, =(MAIR(0x00, MT_DEVICE_nGnRnE) | \
-                 MAIR(0x04, MT_DEVICE_nGnRE) | \
-                 MAIR(0x0c, MT_DEVICE_GRE) | \
-                 MAIR(0x44, MT_NORMAL_NC) | \
-                 MAIR(0xff, MT_NORMAL))
+                  MAIR(0x04, MT_DEVICE_nGnRE) | \
+                  MAIR(0x0c, MT_DEVICE_GRE) | \
+                  MAIR(0x44, MT_NORMAL_NC) | \
+                  MAIR(0xff, MT_NORMAL))
     msr     mair_el1, x0
 
     /*
      * Setup translation control register (TCR)
      */
-    ldr     x0, =(TCR_TxSZ(VA_BITS) | TCR_ASID16 | TCR_TG1_4K \
-                | TCR_FLAGS )
-    mrs     x1, ID_AA64MMFR0_EL1
+
+    // determine physical address size
+    mrs     x0, id_aa64mmfr0_el1
+    and     x0, x0, 0xF
+    lsl     x0, x0, 32
+
+    ldr     x1, =(TCR_TxSZ(VA_BITS) | TCR_TG1_4K | TCR_FLAGS )
+    orr     x0, x0, x1
+
+    mrs     x1, id_aa64mmfr0_el1
     bfi     x0, x1, #32, #3
     msr     tcr_el1, x0
 
@@ -302,179 +270,53 @@ _setup_cpu:
 
     ret
 
-_setup_initial_pgtable:
-    ldr     x4, =boot_l1_pgtable
-    ldr     x5, =boot_l2_pgtable
+_setup_pgtable:
+    ldr     x0, =kernel_end
+    add     x0, x0, PAGE_SIZE
+    mov     x1, ~(PAGE_SIZE-1)
+    and     x0, x0, x1
+    mov     x3, x0  // x3 := address of the first allocated page table
 
-    sub     x4, x4, x22             // x4 := paddr (boot_l1_pgtable)
-    sub     x5, x5, x22             // x5 := paddr (boot_l2_pgtable)
-
-
-    /* Clear level-1 boot page table */
-    mov     x0, x4
-    add     x1, x0, #PAGE_SIZE
-1:  stp     xzr, xzr, [x0], #16
-    stp     xzr, xzr, [x0], #16
-    stp     xzr, xzr, [x0], #16
-    stp     xzr, xzr, [x0], #16
-    cmp     x0, x1
+    // create page tables for the first GB
+    ldr     x1, =l2_pgtable
+    add     x1, x1, 8
+    add     x0, x0, PT_PT
+    mov     x2, xzr
+1:
+    str     x0, [x1], 8
+    add     x0, x0, PAGE_SIZE
+    add     x2, x2, 1
+    cmp     x2, 510
     b.lo    1b
 
-    /* Clear level-2 boot page table */
-    mov     x0, x5
-    add     x1, x0, #PAGE_SIZE
-1:  stp     xzr, xzr, [x0], #16
-    stp     xzr, xzr, [x0], #16
-    stp     xzr, xzr, [x0], #16
-    stp     xzr, xzr, [x0], #16
-    cmp     x0, x1
-    b.lo    1b
-
-    /* Clear fixmap page table */
-    ldr     x0, =fixmap_pgtable
-    add     x1, x0, #PAGE_SIZE
-2:  stp     xzr, xzr, [x0], #16
-    stp     xzr, xzr, [x0], #16
-    stp     xzr, xzr, [x0], #16
-    stp     xzr, xzr, [x0], #16
-    cmp     x0, x1
+    // create identity mapping
+    ldr     x5, =kernel_start
+    mov     x6, x5
+    add     x5, x5, PT_MEM
+    ldr     x0, =kernel_end
+    mov     x7, xzr
+2:
+    str     x5, [x3], 8
+    add     x5, x5, PAGE_SIZE
+    add     x6, x6, PAGE_SIZE
+    add     x7, x7, 1
+    cmp     x6, x0
     b.lo    2b
 
-    /* Find the size of the kernel */
-    ldr     x0, =kernel_start
-    ldr     x1, =kernel_end
-    sub     x2, x1, x0
-    /* Get the number of l2 pages to allocate, rounded down */
-    lsr     x2, x2, #L2_SHIFT
-    /* Add 4 MiB for any rounding above and the module data */
-    add     x2, x2, #2                  // x2 := total number of entries
-
-    /* Find the table index */
-    lsr     x3, x0, #L2_SHIFT           // L2_SHIFT = 21
-    and     x3, x3, #Ln_ADDR_MASK       // x3 := index of l2 table
-
-    /* Build the L2 block entries */
-    sub     x6, x0, x22                 // x6 := paddr(_text)
-    lsr     x6, x6, #L2_SHIFT           // L2_SHIFT = 21
-    mov     x7, #PT_MEM
-1:  orr     x7, x7, x6, lsl #L2_SHIFT   // x7 := l2 pgtbl entry content
-
-    /* Store the entry */
-    str     x7, [x5, x3, lsl #3]
-
-    /* Clear the address bits */
-    and     x7, x7, #ATTR_MASK_L
-
-    sub     x2, x2, #1
-    add     x3, x3, #1
-    add     x6, x6, #1
-    cbnz    x2, 1b
-
-    /* Link the l1 -> l2 table */
-    /* Find the table index */
-    lsr     x3, x0, #L1_SHIFT           // L1_SHIFT = 30
-    and     x3, x3, #Ln_ADDR_MASK       // x3 := index of l1 table
-
-
-    /* Build the L1 page table entry */
-    ldr     x7, =PT_PT
-    lsr     x9, x5, #12
-    orr     x7, x7, x9, lsl #12
-
-    /* Store the entry */
-    str     x7, [x4, x3, lsl #3]
-
-    /* Find the table index of the uart device */
-    mov     x0, 0x09000000  /* default address of QEMU */
-    mov	    x2, 1           /* only one entry required */
-    ldr     x5, =fixmap_pgtable
-
-    /* Build the L2 block entries */
-    sub     x6, x0, x22                 // x6 := paddr(_text)
-    lsr     x6, x6, #L2_SHIFT           // L2_SHIFT = 21
-    mov     x7, #PT_MEM
-1:  orr     x7, x7, x6, lsl #L2_SHIFT   // x7 := l2 pgtbl entry content
-
-    /* Store the entry */
-    str     x7, [x5, x3, lsl #3]
-
-    /* Clear the address bits */
-    and     x7, x7, #ATTR_MASK_L
-
-    sub     x2, x2, #1
-    add     x3, x3, #1
-    add     x6, x6, #1
-    cbnz    x2, 1b
-
-    /* Link the l1 -> l2 table */
-    /* Find the table index */
-    lsr     x3, x0, #L1_SHIFT           // L1_SHIFT = 30
-    and     x3, x3, #Ln_ADDR_MASK       // x3 := index of l1 table
-
-
-    /* Build the L1 page table entry */
-    ldr     x7, =PT_PT
-    lsr     x9, x5, #12
-    orr     x7, x7, x9, lsl #12
-
-    /* Store the entry */
-    str     x7, [x4, x3, lsl #3]
+    /* Clear rest of the boot page tables */
+3:
+    str     xzr, [x3], 8
+    add     x7, x7, 1
+    cmp     x7, 510*PAGE_SIZE
+    b.lo    3b
 
     ret
 
-_calc_offset:
-    ldr     x22, =_start             // x0 := vaddr(_start)
-    adr     x21, _start              // x21 := paddr(_start)
-    sub     x22, x22, x21            // x22 := phys-offset (vaddr - paddr)
-    ret
-
-_setup_idmap_pgtable:
-    ldr     x5, =idmap_pgtable
-    sub     x5, x5, x22             // x5 := paddr(idmap_pgtable)
-
-    /* Clear identity mapping page table */
-    mov     x0, x5
-    add     x1, x0, #PAGE_SIZE
-1:  stp     xzr, xzr, [x0], #16
-    stp     xzr, xzr, [x0], #16
-    stp     xzr, xzr, [x0], #16
-    stp     xzr, xzr, [x0], #16
-    cmp     x0, x1
-    b.lo    1b
-
-    /* Create the VA = PA map */
-    ldr     x6, =kernel_start           // x0 := vaddr(kernel_start)
-    sub     x6, x6, x22                 // x0 := paddr(kernel_start)
-
-    /* Find the table index */
-    lsr     x0, x6, #L1_SHIFT
-    and     x0, x0, #Ln_ADDR_MASK       // x0 := index of l1 table
-
-    /* Build the L1 block entry */
-    ldr     x1, =PT_MEM
-    lsr     x2, x6, #L1_SHIFT
-    orr     x1, x1, x2, lsl #L1_SHIFT
-
-    /* Store the entry */
-    str     x1, [x5, x0, lsl #3]
-
-    /* Create the VA = PA map */
-    mov     x6, 0x09000000              // x0 := vaddr(0x09000000)
-    sub     x6, x6, x22                 // x0 := paddr(0x09000000)
-
-    /* Find the table index */
-    lsr     x0, x6, #L1_SHIFT
-    and     x0, x0, #Ln_ADDR_MASK       // x0 := index of l1 table
-
-    /* Build the L1 block entry */
-    ldr     x1, =PT_MEM
-    lsr     x2, x6, #L1_SHIFT
-    orr     x1, x1, x2, lsl #L1_SHIFT
-
-    /* Store the entry */
-    str     x1, [x5, x0, lsl #3]
-
-    ret
+//_calc_offset:
+//    ldr     x22, =_start             // x0 := vaddr(_start)
+//    adr     x21, _start              // x21 := paddr(_start)
+//    sub     x22, x22, x21            // x22 := phys-offset (vaddr - paddr)
+//    ret
 
 /*
  * There are no PUSH/POP instruction in ARMv8.
@@ -513,11 +355,11 @@ ldr     \xreg, [sp], #8
 
 .macro trap_exit, el
      ldp x22, x23, [sp], #16
-	 msr elr_el1, x22
+     msr elr_el1, x22
      msr spsr_el1, x23
 
-	 ldr x0, [sp], #16
-	 ldp x1, x2, [sp], #16
+     ldr x0, [sp], #16
+     ldp x1, x2, [sp], #16
      ldp x3, x4, [sp], #16
      ldp x5, x6, [sp], #16
      ldp x7, x8, [sp], #16
@@ -561,16 +403,16 @@ el1_fiq:
       trap_entry 1
       mov     x0, sp
       bl      do_fiq
-	  cmp     x0, 0
-	  b.eq    1f
+      cmp     x0, 0
+      b.eq    1f
 
-	  mov x1, sp
-	  str x1, [x0]                  /* store old sp */
-	  bl get_current_stack          /* get new sp   */
-	  mov sp, x0
+      mov x1, sp
+      str x1, [x0]                  /* store old sp */
+      bl get_current_stack          /* get new sp   */
+      mov sp, x0
 
-	  /* call cleanup code */
-	  bl finish_task_switch
+      /* call cleanup code */
+      bl finish_task_switch
 
 1:    trap_exit 1
       eret
@@ -645,17 +487,17 @@ ENTRY(vector_table)
 ventry el1_sync_invalid	        // Synchronous EL1t
 ventry el1_irq_invalid	        // IRQ EL1t
 ventry el1_fiq_invalid	        // FIQ EL1t
-ventry el1_error_invalid	    // Error EL1t
+ventry el1_error_invalid        // Error EL1t
 
 /* Current EL with SPx */
 ventry el1_sync                 // Synchronous EL1h
 ventry el1_irq                  // IRQ EL1h
-ventry el1_fiq          		// FIQ EL1h
-ventry el1_error		        // Error EL1h
+ventry el1_fiq                  // FIQ EL1h
+ventry el1_error                // Error EL1h
 
 /* Lower EL using AArch64 */
-ventry el0_sync_invalid			// Synchronous 64-bit EL0
-ventry el0_irq_invalid			// IRQ 64-bit EL0
+ventry el0_sync_invalid         // Synchronous 64-bit EL0
+ventry el0_irq_invalid          // IRQ 64-bit EL0
 ventry el0_fiq_invalid          // FIQ 64-bit EL0
 ventry el0_error_invalid        // Error 64-bit EL0
 
@@ -674,13 +516,21 @@ boot_stack: .skip KERNEL_STACK_SIZE
 boot_ist: .skip KERNEL_STACK_SIZE
 
 
-.global boot_l1_pgtable, boot_l2_pgtable, fixmap_pgtable
-.align 12 // 4KiB aligned
-boot_l1_pgtable:
-  .space PAGE_SIZE
-boot_l2_pgtable:
-  .space PAGE_SIZE
-fixmap_pgtable:
-  .space PAGE_SIZE
-idmap_pgtable:
-  .space PAGE_SIZE
+.global l0_pgtable
+.align 12
+l0_pgtable:
+    .quad l1_pgtable + PT_PT
+    .space 510*8, 0
+    .quad l0_pgtable + PT_PT + PT_SELF
+l1_pgtable:
+    .quad l2_pgtable + PT_PT
+    .space 510*8, 0
+    .quad l0_pgtable + PT_PT + PT_SELF
+l2_pgtable:
+    .quad l3_pgtable + PT_PT
+    .space 510*8, 0
+    .quad l0_pgtable + PT_PT + PT_SELF
+l3_pgtable:
+    .quad 0x00000000 + PT_MEM // map II ports
+    .quad 0x09000000 + PT_MEM // map QEMU's uart port
+    .space 510*8, 0

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, Stefan Lankes, Daniel Krebs, RWTH Aachen University
+ * Copyright (c) 2014-2018, Stefan Lankes, RWTH Aachen University
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,21 +43,21 @@
 #define GICD_CTLR			0x0
 #define GICD_TYPER			0x4
 #define GICD_IIDR			0x8
-#define GICD_IGROUPR		0x80
-#define GICD_ISENABLER		0x100
-#define GICD_ICENABLER		0x180
-#define GICD_ISPENDR		0x200
-#define GICD_ICPENDR		0x280
-#define GICD_ISACTIVER		0x300
-#define GICD_ICACTIVER		0x380
-#define GICD_IPRIORITYR		0x400
-#define GICD_ITARGETSR		0x800
+#define GICD_IGROUPR			0x80
+#define GICD_ISENABLER			0x100
+#define GICD_ICENABLER			0x180
+#define GICD_ISPENDR			0x200
+#define GICD_ICPENDR			0x280
+#define GICD_ISACTIVER			0x300
+#define GICD_ICACTIVER			0x380
+#define GICD_IPRIORITYR			0x400
+#define GICD_ITARGETSR			0x800
 #define GICD_ICFGR			0xc00
 #define GICD_NSACR			0xe00
 #define GICD_SGIR			0xF00
 
-#define GICD_CTLR_ENABLEGRP0	(1 << 0)
-#define GICD_CTLR_ENABLEGRP1	(1 << 1)
+#define GICD_CTLR_ENABLEGRP0		(1 << 0)
+#define GICD_CTLR_ENABLEGRP1		(1 << 1)
 
 /* Physical CPU Interface registers */
 #define GICC_CTLR			0x0
@@ -70,14 +70,14 @@
 #define GICC_AHPPIR			0x28
 #define GICC_IIDR			0xFC
 #define GICC_DIR			0x1000
-#define GICC_PRIODROP		GICC_EOIR
+#define GICC_PRIODROP			GICC_EOIR
 
-#define GICC_CTLR_ENABLEGRP0	(1 << 0)
-#define GICC_CTLR_ENABLEGRP1	(1 << 1)
+#define GICC_CTLR_ENABLEGRP0		(1 << 0)
+#define GICC_CTLR_ENABLEGRP1		(1 << 1)
 #define GICC_CTLR_FIQEN			(1 << 3)
 
-#define MAX_HANDLERS	256
-#define RESCHED_INT		1
+#define MAX_HANDLERS			256
+#define RESCHED_INT			1
 
 /** @brief IRQ handle pointers
 *
@@ -167,7 +167,7 @@ static void gic_set_enable(uint32_t vector, uint8_t enable)
 static int unmask_interrupt(uint32_t vector)
 {
 	if (vector >= nr_irqs)
-	return -EINVAL;
+		return -EINVAL;
 
 	gic_set_enable(vector, 1);
 
@@ -177,7 +177,7 @@ static int unmask_interrupt(uint32_t vector)
 static int mask_interrupt(uint32_t vector)
 {
 	if (vector >= nr_irqs)
-	return -EINVAL;
+		return -EINVAL;
 
 	gic_set_enable(vector, 0);
 
@@ -188,7 +188,7 @@ static int mask_interrupt(uint32_t vector)
 int irq_install_handler(unsigned int irq, irq_handler_t handler)
 {
 	if (irq >= MAX_HANDLERS)
-	return -EINVAL;
+		return -EINVAL;
 
 	irq_routines[irq] = handler;
 	unmask_interrupt(irq);
@@ -200,7 +200,7 @@ int irq_install_handler(unsigned int irq, irq_handler_t handler)
 int irq_uninstall_handler(unsigned int irq)
 {
 	if (irq >= MAX_HANDLERS)
-	return -EINVAL;
+		return -EINVAL;
 
 	irq_routines[irq] = NULL;
 	mask_interrupt(irq);
@@ -250,14 +250,30 @@ int irq_init(void)
 	return 0;
 }
 
-int enable_dynticks(void)
-{
-	return 0;
-}
-
 void do_sync(void *regs)
 {
-	LOG_INFO("receive sync\n");
+	uint32_t esr = read_esr();
+	uint32_t ec = esr >> 26;
+	uint32_t iss = esr & 0xFFFFFF;
+
+        /* data abort from lower or current level */
+	if ((ec == 0b100100) || (ec == 0b100101)) {
+		/* check if value in far_el1 is valid */
+		if (!(iss & (1 << 10))) {
+			/* read far_el1 register, which holds the faulting virtual address */
+			uint64_t far = read_far();
+
+			if (page_fault_handler(far) == 0)
+				return;
+
+kprintf("0x%zx, 0x%zx\n", far, virt_to_phys(far));
+			LOG_ERROR("Unable to handle page fault at 0x%llx\n", far);
+		} else {
+			LOG_ERROR("Unknown exception\n");
+		}
+	} else {
+		LOG_ERROR("Unsupported exception class\n");
+	}
 
 	while (1) {
 		HALT;
@@ -301,23 +317,6 @@ void do_irq (void *regs)
 
 	LOG_INFO("receive interrupt %d\n", vector);
 
-#if 0
-	uint32_t esr = read_esr();
-	uint32_t ec = esr >> 24;
-	uint32_t iss = esr & 0xFFFFFF;
-
-	/* data abort from lower or current level */
-	if (ec == 0b100100 || ec == 0b100101) {
-		/* check if value in far_el1 is valid */
-		if (!(iss & (1 << 10))) {
-		/* read far_el1 register, which holds the faulting virtual address */
-		uint64_t far = read_far();
-		//page_fault_handler(far);
-	} else {
-		kputs("Could not handle data abort: address in far_el1 invalid\n");
-	}
-#endif
-
 	gicc_write(GICC_EOIR, iar);
 }
 
@@ -342,5 +341,5 @@ void do_bad_mode(void *regs, int reason)
 void reschedule(void)
 {
 	// (2 << 24) = Forward the interrupt only to the CPU interface of the PE that requested the interrupt
-	gicd_write(GICD_SGIR, (2 << 24) | RESCHED_INT);
+	//gicd_write(GICD_SGIR, (2 << 24) | RESCHED_INT);
 }

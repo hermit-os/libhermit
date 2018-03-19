@@ -35,28 +35,15 @@
 
 #include <asm/atomic.h>
 #include <asm/page.h>
-//#include <asm/multiboot.h>
 
 extern uint64_t base;
 extern uint64_t limit;
 
-/*typedef struct free_list {
+typedef struct free_list {
 	size_t start, end;
 	struct free_list* next;
 	struct free_list* prev;
-} free_list_t;*/
-
-typedef struct free_list {
-	size_t type;
-	size_t size;
-	//size_t start, end;
-	struct free_list* next;
-	struct free_list* prev;
 } free_list_t;
-
-#define BLOCK_FREE			0x00DE1E7E
-#define BLOCK_ALLOCATED		0xA110CA7E
-#define BLOCK_HEADER_SIZE	sizeof(free_list_t)
 
 /*
  * Note that linker symbols are not variables, they have no memory allocated for
@@ -68,8 +55,7 @@ extern const void kernel_end;
 static spinlock_t list_lock = SPINLOCK_INIT;
 
 static free_list_t init_list = {0, 0, NULL, NULL};
-static free_list_t* free_start = (free_list_t*) &kernel_end;
-
+static free_list_t* free_start = (free_list_t*) &init_list;
 
 atomic_int64_t total_pages = ATOMIC_INIT(0);
 atomic_int64_t total_allocated_pages = ATOMIC_INIT(0);
@@ -77,7 +63,6 @@ atomic_int64_t total_available_pages = ATOMIC_INIT(0);
 
 size_t get_pages(size_t npages)
 {
-	#if 0
 	size_t i, ret = 0;
 	free_list_t* curr = free_start;
 
@@ -118,15 +103,12 @@ out:
 	}
 
 	return ret;
-	#endif
-	return 0;
 }
 
 DEFINE_PER_CORE(size_t, ztmp_addr, 0);
 
 size_t get_zeroed_page(void)
 {
-	#if 0
 	size_t phyaddr = get_page();
 	size_t viraddr;
 	uint8_t flags;
@@ -147,7 +129,7 @@ size_t get_zeroed_page(void)
 		set_per_core(ztmp_addr, viraddr);
 	}
 
-	__page_map(viraddr, phyaddr, 1, PG_GLOBAL|PG_RW|PG_PRESENT, 0);
+	__page_map(viraddr, phyaddr, 1, PG_GLOBAL|PG_RW|PG_PRESENT);
 
 	memset((void*) viraddr, 0x00, PAGE_SIZE);
 
@@ -155,14 +137,11 @@ novaddr:
 	irq_nested_enable(flags);
 
 	return phyaddr;
-	#endif
-	return  0;
 }
 
 /* TODO: reunion of elements is still missing */
 int put_pages(size_t phyaddr, size_t npages)
 {
-	#if 0
 	free_list_t* curr = free_start;
 
 	if (BUILTIN_EXPECT(!phyaddr, 0))
@@ -207,13 +186,10 @@ out_err:
 	spinlock_unlock(&list_lock);
 
 	return -ENOMEM;
-	#endif
-	return 0;
 }
 
 void* page_alloc(size_t sz, uint32_t flags)
 {
-	#if 0
 	size_t viraddr = 0;
 	size_t phyaddr;
 	uint32_t npages = PAGE_FLOOR(sz) >> PAGE_BITS;
@@ -249,12 +225,10 @@ void* page_alloc(size_t sz, uint32_t flags)
 
 oom:
 	return (void*) viraddr;
-	#endif
 }
 
 void page_free(void* viraddr, size_t sz)
 {
-	#if 0
 	size_t phyaddr;
 
 	if (BUILTIN_EXPECT(!viraddr || !sz, 0))
@@ -266,14 +240,18 @@ void page_free(void* viraddr, size_t sz)
 
 	if (phyaddr)
 		put_pages(phyaddr, PAGE_FLOOR(sz) >> PAGE_BITS);
-	#endif
 }
 
 int memory_init(void)
 {
-#if 0
-	size_t image_size = (size_t) &kernel_end - (size_t) &kernel_start;
+	size_t image_sz = (size_t) &kernel_end - (size_t) &kernel_start;
 	int ret = 0;
+
+	if (limit == 0) {
+		// Ok, we aren't using uhyve => guess 512M
+		limit = 512*1024*1024;
+		image_size = image_sz + PAGE_SIZE;
+	}
 
 	// enable paging and map Multiboot modules etc.
 	ret = page_init();
@@ -282,222 +260,25 @@ int memory_init(void)
 		return ret;
 	}
 
-	LOG_INFO("mb_info: 0x%zx\n", mb_info);
-	LOG_INFO("memory_init: base 0x%zx, image_size 0x%zx, limit 0x%zx\n", base, image_size, limit);
+	LOG_INFO("memory_init: base 0x%zx, image_size 0x%zx, limit 0x%zx\n", base, image_sz, limit);
 
-	if (mb_info) {
-		if (mb_info->flags & MULTIBOOT_INFO_MEM_MAP) {
-			size_t end_addr, start_addr;
-			multiboot_memory_map_t* mmap = (multiboot_memory_map_t*) ((size_t) mb_info->mmap_addr);
-			multiboot_memory_map_t* mmap_end = (void*) ((size_t) mb_info->mmap_addr + mb_info->mmap_length);
+	// determine available memory
+	atomic_int64_add(&total_pages, (limit-base) >> PAGE_BITS);
+	atomic_int64_add(&total_available_pages, (limit-base) >> PAGE_BITS);
 
-			// mark first available memory slot as free
-			for(; mmap < mmap_end; mmap = (multiboot_memory_map_t*) ((size_t) mmap + sizeof(uint32_t) + mmap->size)) {
-				if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
-					start_addr = PAGE_FLOOR(mmap->addr);
-					end_addr = PAGE_CEIL(mmap->addr + mmap->len);
-
-					LOG_INFO("Free region 0x%zx - 0x%zx\n", start_addr, end_addr);
-
-					if ((start_addr <= base) && (end_addr >= PAGE_2M_FLOOR((size_t) &kernel_end))) {
-						init_list.start = PAGE_2M_FLOOR((size_t) &kernel_end);
-						init_list.end = end_addr;
-
-						LOG_INFO("Add region 0x%zx - 0x%zx\n", init_list.start, init_list.end);
-					}
-
-					// determine available memory
-					atomic_int64_add(&total_pages, (end_addr-start_addr) >> PAGE_BITS);
-					atomic_int64_add(&total_available_pages, (end_addr-start_addr) >> PAGE_BITS);
-				}
-			}
-
-			if (!init_list.end)
-				goto oom;
-		} else {
-			goto oom;
-		}
-	} else {
-		// determine available memory
-		atomic_int64_add(&total_pages, (limit-base) >> PAGE_BITS);
-		atomic_int64_add(&total_available_pages, (limit-base) >> PAGE_BITS);
-
-		//initialize free list
-		init_list.start = PAGE_2M_FLOOR((size_t) &kernel_end);
-		init_list.end = limit;
-	}
+	//initialize free list
+	init_list.start = PAGE_FLOOR((size_t) &kernel_end + 510*PAGE_SIZE);
+	init_list.end = limit;
 
 	// determine allocated memory, we use 2MB pages to map the kernel
-	atomic_int64_add(&total_allocated_pages, PAGE_2M_FLOOR(image_size) >> PAGE_BITS);
-	atomic_int64_sub(&total_available_pages, PAGE_2M_FLOOR(image_size) >> PAGE_BITS);
+	atomic_int64_add(&total_allocated_pages, PAGE_FLOOR((size_t) &kernel_end + 510*PAGE_SIZE) >> PAGE_BITS);
+	atomic_int64_sub(&total_available_pages, PAGE_FLOOR((size_t) &kernel_end + 510*PAGE_SIZE) >> PAGE_BITS);
 
 	LOG_INFO("free list starts at 0x%zx, limit 0x%zx\n", init_list.start, init_list.end);
-
-	// init high bandwidth memory subsystem
-	hbmemory_init();
 
 	ret = vma_init();
 	if (BUILTIN_EXPECT(ret, 0))
 		LOG_WARNING("Failed to initialize VMA regions: %d\n", ret);
 
-	// add missing free regions
-	if (mb_info) {
-		if (mb_info->flags & MULTIBOOT_INFO_MEM_MAP) {
-			free_list_t* last = &init_list;
-			size_t end_addr, start_addr;
-			multiboot_memory_map_t* mmap = (multiboot_memory_map_t*) ((size_t) mb_info->mmap_addr);
-			multiboot_memory_map_t* mmap_end = (void*) ((size_t) mb_info->mmap_addr + mb_info->mmap_length);
-
-			// mark available memory as free
-			for(; mmap < mmap_end; mmap = (multiboot_memory_map_t*) ((size_t) mmap + sizeof(uint32_t) + mmap->size))
-			{
-				if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
-					start_addr = PAGE_FLOOR(mmap->addr);
-					end_addr = PAGE_CEIL(mmap->addr + mmap->len);
-
-					if ((start_addr <= base) && (end_addr >= PAGE_2M_FLOOR(base+image_size)))
-						end_addr = base;
-
-					// ignore everything below 1M => reserve for I/O devices
-					if ((start_addr < (size_t) 0x100000))
-						start_addr = 0x100000;
-
-					if (start_addr >= end_addr)
-						continue;
-
-					last->next = kmalloc(sizeof(free_list_t));
-					if (BUILTIN_EXPECT(!last->next, 0))
-						goto oom;
-
-					LOG_INFO("Add region 0x%zx - 0x%zx\n", start_addr, end_addr);
-
-					last->next->prev = last;
-					last = last->next;
-					last->next = NULL;
-					last->start = start_addr;
-					last->end = end_addr;
-				}
-			}
-
-			//TODO: mb_info and mb_info->cmdline should be marked as reserevd
-		}
-	}
-
 	return ret;
-
-oom:
-	LOG_ERROR("BUG: Failed to init mm!\n");
-	while(1) {HALT; }
-#endif
-
-	free_start = (free_list_t*) &kernel_end;
-	free_start->type = BLOCK_FREE;
-	free_start->size = 0x60000000;		// 512MB hardcoded for now
-	free_start->prev = NULL;
-	free_start->next = NULL;
-
-	LOG_INFO("memory_init() was executed and free memory initialized\n");
-
-	return 0;
-}
-
-void* kmalloc(size_t sz)
-{
-	if (BUILTIN_EXPECT(!sz, 0))
-		return NULL;
-
-	free_list_t* block = free_start;
-
-	spinlock_lock(&list_lock);
-
-	while (block != NULL) {
-		if (block->size >= sz && block->type == BLOCK_FREE) { //found block that is free and big enough
-			if (block->size > sz + BLOCK_HEADER_SIZE){ //split block if enough space for new block...
-				free_list_t* new_block = (free_list_t*) ((char*) block + BLOCK_HEADER_SIZE + sz);
-				new_block->prev = block;
-				new_block->next = block->next;
-				block->next = new_block;
-				new_block->size = block->size - sz - BLOCK_HEADER_SIZE;
-				block->size = sz;
-				new_block->type = BLOCK_FREE;
-			} //...take empty space if block not big enough
-			block->type = BLOCK_ALLOCATED;
-
-			spinlock_unlock(&list_lock);
-
-			LOG_DEBUG("kmalloc(%zd) = %p\n", sz, block + BLOCK_HEADER_SIZE);
-			return (free_list_t*) ((char*)block + BLOCK_HEADER_SIZE);
-		}
-		block = block->next;
-	}
-
-	spinlock_unlock(&list_lock);
-
-	LOG_DEBUG("kmalloc(%zd) = %p\n", sz, NULL);
-	LOG_ERROR("Out of memory!");
-
-	return NULL;
-}
-
-void kfree(void *addr)
-{
-	if (BUILTIN_EXPECT(!addr, 0))
-		return;
-
-	if (addr < free_start)
-		return;
-
-	LOG_DEBUG("kfree(%p)\n", addr);
-
-	free_list_t* block = addr - BLOCK_HEADER_SIZE;
-
-	spinlock_lock(&list_lock);
-
-	block->type = BLOCK_FREE;
-
-	//if next or previous block is free as well, merge them
-	if (block->next != NULL && block->next->type == BLOCK_FREE) {
-		block->size += block->next->size + BLOCK_HEADER_SIZE;
-		block->next->next->prev = block;
-		block->next = block->next->next;
-	}
-
-	if (block->prev != NULL && block->prev->type == BLOCK_FREE) {
-		block->prev->size += block->size + BLOCK_HEADER_SIZE;
-		block->prev->next = block->next;
-		block->next->prev = block->prev;
-	}
-
-	spinlock_unlock(&list_lock);
-
-	return;
-}
-
-void print_free_list(void) {
-	free_list_t* block = free_start;
-
-	LOG_INFO("Every block of free_list:\n");
-
-	spinlock_lock(&list_lock);
-
-	while (block != NULL) {
-		//this is the address of the block with header, not the beginning of usuable space
-		LOG_INFO("address: 0x%p\n", block);
-
-		if (block->type == BLOCK_FREE) {
-			LOG_INFO("type: free\n");
-		} else if (block->type == BLOCK_ALLOCATED) {
-			LOG_INFO("type: allocated\n");
-		} else {
-			LOG_INFO("type: UNDEFINED\n");
-		}
-
-		LOG_INFO("size: 0x%zx\n", block->size);
-		LOG_INFO("prev: 0x%zx\n", block->prev);
-		LOG_INFO("next: 0x%zx\n\n", block->next);
-
-		block = block->next;
-	}
-
-	spinlock_unlock(&list_lock);
 }

@@ -93,9 +93,6 @@ extern const void __bss_start;
 extern const void percore_start;
 extern const void percore_end0;
 extern const void percore_end;
-extern char __BUILD_DATE;
-extern size_t hbmem_base;
-extern size_t hbmem_size;
 
 /* Page frame counters */
 extern atomic_int64_t total_pages;
@@ -129,7 +126,7 @@ static int hermit_init(void)
 	koutput_init();
 
 	system_init();
-	irq_init();
+	//irq_init();
 	timer_init();
 	multitasking_init();
 	memory_init();
@@ -588,17 +585,17 @@ int hermit_main(void)
 	LOG_INFO("Per core size 0x%zx\n", (size_t) &percore_end0 - (size_t) &percore_start);
 	if (get_cpu_frequency() > 0)
 		LOG_INFO("Processor frequency: %u MHz\n", get_cpu_frequency());
-#if 0
 	LOG_INFO("Total memory: %zd MiB\n", atomic_int64_read(&total_pages) * PAGE_SIZE / (1024ULL*1024ULL));
 	LOG_INFO("Current allocated memory: %zd KiB\n", atomic_int64_read(&total_allocated_pages) * PAGE_SIZE / 1024ULL);
 	LOG_INFO("Current available memory: %zd MiB\n", atomic_int64_read(&total_available_pages) * PAGE_SIZE / (1024ULL*1024ULL));
 	LOG_INFO("Core %d is the boot processor\n", boot_processor);
 	LOG_INFO("System is able to use %d processors\n", possible_cpus);
+#if 0
 	if (get_cmdline())
 		LOG_INFO("Kernel cmdline: %s\n", get_cmdline());
-	if (hbmem_base)
-		LOG_INFO("Found high bandwidth memory at 0x%zx (size 0x%zx)\n", hbmem_base, hbmem_size);
 #endif
+	if (has_hbmem())
+		LOG_INFO("Found high bandwidth memory at 0x%zx (size 0x%zx)\n", get_hbmem_base(), get_hbmem_size());
 
 #if 0
 	print_pci_adapters();

@@ -64,6 +64,18 @@ extern "C" {
 // determine the cpu features
 int cpu_detection(void);
 
+inline static int has_hbmem(void) {
+	return 0;
+}
+
+inline static size_t get_hbmem_base(void) {
+	return 0;
+}
+
+inline static size_t get_hbmem_size(void) {
+	return 0;
+}
+
 static inline uint32_t get_isr(void)
 {
 	uint32_t status;
@@ -238,46 +250,6 @@ inline static uint64_t get_rdtsc(void) { return get_cntpct(); }
 #define PAUSE	asm volatile ("yield")
 /// The HALT instruction stops the processor until the next interrupt arrives
 #define HALT	asm volatile ("wfi")
-
-/// Send IPIs to the other core, which flush the TLB on the other cores.
-int ipi_tlb_flush(void);
-
-/** @brief Flush Translation Lookaside Buffer
- */
-static inline void tlb_flush(uint8_t with_ipi)
-{
-	asm volatile(
- 		"tlbi all\n\t"
-		"isb"
- 		:
- 		:
- 		: "memory"
- 	);
-
-#if MAX_CORES > 1
-	if (with_ipi)
-		ipi_tlb_flush();
-#endif
-}
-
-/** @brief Flush a specific page entry in TLB
- * @param addr The (virtual) address of the page to flush
- */
-static inline void tlb_flush_one_page(size_t addr, uint8_t with_ipi)
-{
-	asm volatile(
-		"tlbi vaae1, %0 \n\t"
-		"isb"
-		:
-		: "r" (addr)
-		: "memory"
-	);
-
-#if MAX_CORES > 1
-	if (with_ipi)
-		ipi_tlb_flush();
-#endif
-}
 
 /// Force strict CPU ordering, serializes load and store operations.
 static inline void mb(void) { asm volatile ("dmb sy" : : : "memory"); }

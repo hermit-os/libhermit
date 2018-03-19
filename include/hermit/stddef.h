@@ -43,7 +43,7 @@ extern "C" {
 #endif
 
 // size of the whole application
-extern const size_t image_size;
+extern size_t image_size;
 
 #define TIMER_FREQ	100 /* in HZ */
 #define CLOCK_TICK_RATE	1193182 /* 8254 chip's internal oscillator frequency */

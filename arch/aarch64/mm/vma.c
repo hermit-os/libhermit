@@ -29,5 +29,6 @@
 
 int vma_arch_init(void)
 {
-	return 0;
+	// reserve virtual address space for IO ports
+	return vma_add((size_t)0x00, 2*PAGE_SIZE, VMA_READ|VMA_WRITE);
 }

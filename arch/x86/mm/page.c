@@ -50,28 +50,9 @@
  * allocated for maintaining a value, rather their address is their value. */
 extern const void kernel_start;
 
-/// This page is reserved for copying
-#define PAGE_TMP		(PAGE_FLOOR((size_t) &kernel_start) - PAGE_SIZE)
-
 /** Single-address space operating system => one lock for all tasks */
 static spinlock_irqsave_t page_lock = SPINLOCK_IRQSAVE_INIT;
 
-/** This PGD table is initialized in entry.asm */
-extern size_t* boot_map;
-
-#if 0
-/** A self-reference enables direct access to all page tables */
-static size_t * const self[PAGE_LEVELS] = {
-	(size_t *) 0xFFC00000,
-	(size_t *) 0xFFFFF000
-};
-
-/** An other self-reference for page_map_copy() */
-static size_t * const other[PAGE_LEVELS] = {
-	(size_t *) 0xFF800000,
-	(size_t *) 0xFFFFE000
-};
-#else
 /** A self-reference enables direct access to all page tables */
 static size_t* const self[PAGE_LEVELS] = {
 	(size_t *) 0xFFFFFF8000000000,
@@ -79,17 +60,6 @@ static size_t* const self[PAGE_LEVELS] = {
 	(size_t *) 0xFFFFFFFFFFE00000,
 	(size_t *) 0xFFFFFFFFFFFFF000
 };
-
-#if 0
-/** An other self-reference for page_map_copy() */
-static size_t * const other[PAGE_LEVELS] = {
-	(size_t *) 0xFFFFFF0000000000,
-	(size_t *) 0xFFFFFFFF80000000,
-	(size_t *) 0xFFFFFFFFFFC00000,
-	(size_t *) 0xFFFFFFFFFFFFE000
-};
-#endif
-#endif
 
 static uint8_t expect_zeroed_pages = 0;
 
