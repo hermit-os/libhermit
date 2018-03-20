@@ -35,10 +35,6 @@
 #include <asm/irq.h>
 
 /* GIC related constants */
-#define GICD_BASE			0x8000000
-#define GICC_BASE			0x8010000
-#define GICD_SIZE			0x10000
-#define GICC_SIZE			0x20000
 #define GICR_BASE			0
 
 /* GIC Distributor interface register offsets that are common to GICv3 & GICv2 */
@@ -94,22 +90,26 @@ static uint32_t nr_irqs = 0;
 
 static inline uint32_t gicd_read(size_t off)
 {
-	return *((volatile uint32_t*) (gicd_base + off));
+	uint32_t value;
+	asm volatile("ldar %w0, [%1]" : "=r"(value) : "r"(gicd_base + off) : "memory");
+	return value;
 }
 
 static inline void gicd_write(size_t off, uint32_t value)
 {
-	*((volatile uint32_t*) (gicd_base + off)) = value;
+	asm volatile("str %w0, [%1]" : : "rZ" (value), "r" (gicd_base + off) : "memory");
 }
 
 static inline uint32_t gicc_read(size_t off)
 {
-	return *((volatile uint32_t*) (gicc_base + off));
+	uint32_t value;
+	asm volatile("ldar %w0, [%1]" : "=r"(value) : "r"(gicc_base + off) : "memory");
+	return value;
 }
 
 static inline void gicc_write(size_t off, uint32_t value)
 {
-	*((volatile uint32_t*) (gicc_base + off)) = value;
+	asm volatile("str %w0, [%1]" : : "rZ" (value), "r" (gicc_base + off) : "memory");
 }
 
 static void gicc_enable(void)
@@ -275,6 +275,7 @@ oom:
 
 void do_sync(void *regs)
 {
+	uint32_t iar = gicc_read(GICC_IAR);
 	uint32_t esr = read_esr();
 	uint32_t ec = esr >> 26;
 	uint32_t iss = esr & 0xFFFFFF;
@@ -290,6 +291,11 @@ void do_sync(void *regs)
 				return;
 
 			LOG_ERROR("Unable to handle page fault at 0x%llx\n", far);
+
+			// send EOI
+			gicc_write(GICC_EOIR, iar);
+			//do_abort();
+			sys_exit(-EFAULT);
 		} else {
 			LOG_ERROR("Unknown exception\n");
 		}

@@ -74,37 +74,42 @@
 #define PAGE_2M_CEIL(addr)	( (addr)                   & ((~0L) << 21))
 
 /// Page is present
-#define PG_PRESENT		(1 << 0)
+#define PG_PRESENT		(1UL << 0)
 /// Page is read- and writable
-#define PG_RW			(1 << 1)
+#define PG_RW			(1UL << 1)
 /// Page is addressable from userspace
-#define PG_USER			(1 << 2)
+#define PG_USER			(1UL << 2)
 /// Page write through is activated
-#define PG_PWT			(1 << 3)
+#define PG_PWT			(1UL << 3)
 /// Page cache is disabled
-#define PG_PCD			(1 << 4)
+#define PG_PCD			(1UL << 4)
 /// Page was recently accessed (set by CPU)
-#define PG_ACCESSED		(1 << 5)
+#define PG_ACCESSED		(1UL << 5)
 /// Page is dirty due to recent write-access (set by CPU)
-#define PG_DIRTY		(1 << 6)
+#define PG_DIRTY		(1UL << 6)
 /// Huge page: 4MB (or 2MB, 1GB)
-#define PG_PSE			(1 << 7)
+#define PG_PSE			(1UL << 7)
 /// Page attribute table
 #define PG_PAT			PG_PSE
 
-#define PG_DEVICE		(1 << 8)
+#define PG_DEVICE		(1UL << 8)
 #define PG_NX			0
 #define PG_GLOBAL		0
 
 /// This table is a self-reference and should skipped by page_map_copy()
-#define PG_SELF			(1L << 63)
+#define PG_SELF			(1UL << 63)
 
-#define PT_PT			0x713
-#define PT_MEM			0x713
-#define PT_DEVICE		0x707
-#define PT_SELF			(1L << 55)
-#define PTE_AF			(1L << 10)	/* Access Flag */
-#define PTE_CONTIG		(1L << 52)	/* Contiguous bit */
+#define PT_PT			0x713UL
+#define PT_MEM			0x713UL
+#define PT_MEM_CD		0x70FUL
+#define PT_DEVICE		0x707UL
+
+#define PT_SELF			(1UL << 55)
+#define PT_AF			(1UL << 10)	/* Access Flag */
+#define PT_CONTIG		(1UL << 52)	/* Contiguous bit */
+#define PT_S			(3UL << 8)
+#define PT_PXN			(1UL << 53)
+#define PT_UXN			(1UL << 54)
 
 /** @brief Converts a virtual address to a physical
  *

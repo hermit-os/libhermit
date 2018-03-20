@@ -35,6 +35,7 @@
 
 #include <asm/atomic.h>
 #include <asm/page.h>
+#include <asm/irq.h>
 
 extern uint64_t base;
 extern uint64_t limit;
@@ -268,7 +269,10 @@ int memory_init(void)
 
 	//initialize free list
 	init_list.start = PAGE_FLOOR((size_t) &kernel_end + 510*PAGE_SIZE);
-	init_list.end = limit;
+	if (limit < GICD_BASE)
+		init_list.end = limit;
+	else
+		init_list.end = GICD_BASE;
 
 	// determine allocated memory, we use 2MB pages to map the kernel
 	atomic_int64_add(&total_allocated_pages, PAGE_FLOOR((size_t) &kernel_end + 510*PAGE_SIZE) >> PAGE_BITS);
@@ -280,5 +284,21 @@ int memory_init(void)
 	if (BUILTIN_EXPECT(ret, 0))
 		LOG_WARNING("Failed to initialize VMA regions: %d\n", ret);
 
+	if (limit > GICD_BASE + GICD_SIZE + GICC_SIZE) {
+		init_list.next = kmalloc(sizeof(free_list_t));
+		if (BUILTIN_EXPECT(!init_list.next, 0)) {
+			LOG_ERROR("Unable to allocate new element for the free list\n");
+			goto oom;
+		}
+
+		LOG_INFO("Add region 0x%zx - 0x%zx\n", GICD_BASE + GICD_SIZE + GICC_SIZE, limit);
+
+		init_list.next->prev = &init_list;
+		init_list.next->next = NULL;
+		init_list.start = GICD_BASE + GICD_SIZE + GICC_SIZE;
+		init_list.end = limit;
+	}
+
+oom:
 	return ret;
 }

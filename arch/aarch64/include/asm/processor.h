@@ -252,11 +252,11 @@ inline static uint64_t get_rdtsc(void) { return get_cntpct(); }
 #define HALT	asm volatile ("wfi")
 
 /// Force strict CPU ordering, serializes load and store operations.
-static inline void mb(void) { asm volatile ("dmb sy" : : : "memory"); }
+static inline void mb(void) { asm volatile ("dmb ish" : : : "memory"); }
 /// Force strict CPU ordering, serializes load operations.
-static inline void rmb(void) { asm volatile ("dmb ld" : : : "memory"); }
+static inline void rmb(void) { asm volatile ("dmb ishld" : : : "memory"); }
 /// Force strict CPU ordering, serializes store operations.
-static inline void wmb(void) { asm volatile ("dmb st" : : : "memory"); }
+static inline void wmb(void) { asm volatile ("dmb ishst" : : : "memory"); }
 
 /** @brief search the first most significant bit
  *

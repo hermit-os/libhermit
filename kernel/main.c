@@ -209,6 +209,11 @@ static int init_netifs(void)
 		netifapi_netif_set_default(&default_netif);
 		netifapi_netif_set_up(&default_netif);
 	} else {
+#ifdef __aarch64__
+		LOG_ERROR("Unable to add the network interface\n");
+
+		return -ENODEV;
+#else
 		/* Clear network address because we use DHCP to get an ip address */
 		IP_ADDR4(&gw, 0,0,0,0);
 		IP_ADDR4(&ipaddr, 0,0,0,0);
@@ -216,10 +221,10 @@ static int init_netifs(void)
 
 		/* Note: Our drivers guarantee that the input function will be called in the context of the tcpip thread.
 		 * => Therefore, we are able to use ethernet_input instead of tcpip_input */
-		/*if ((err = netifapi_netif_add(&default_netif, ip_2_ip4(&ipaddr), ip_2_ip4(&netmask), ip_2_ip4(&gw), NULL, vioif_init, ethernet_input)) == ERR_OK)
+		if ((err = netifapi_netif_add(&default_netif, ip_2_ip4(&ipaddr), ip_2_ip4(&netmask), ip_2_ip4(&gw), NULL, vioif_init, ethernet_input)) == ERR_OK)
 			goto success;
 		if ((err = netifapi_netif_add(&default_netif, ip_2_ip4(&ipaddr), ip_2_ip4(&netmask), ip_2_ip4(&gw), NULL, rtl8139if_init, ethernet_input)) == ERR_OK)
-			goto success;*/
+			goto success;
 #ifdef USE_E1000
 		if ((err = netifapi_netif_add(&default_netif, ip_2_ip4(&ipaddr), ip_2_ip4(&netmask), ip_2_ip4(&gw), NULL, e1000if_init, ethernet_input)) == ERR_OK)
 			goto success;
@@ -240,13 +245,13 @@ success:
 		int ip_counter = 0;
 		/* wait for ip address */
 		while(!ip_2_ip4(&default_netif.ip_addr)->addr && (ip_counter < 20)) {
-			uint64_t end_tsc, start_tsc = rdtsc();
+			uint64_t end_tsc, start_tsc = get_rdtsc();
 
 			do {
 				if (ip_2_ip4(&default_netif.ip_addr)->addr)
 					return 0;
 				check_workqueues();
-				end_tsc = rdtsc();
+				end_tsc = get_rdtsc();
 			} while(((end_tsc - start_tsc) / (get_cpu_frequency() * 1000)) < DHCP_FINE_TIMER_MSECS);
 
 			dhcp_fine_tmr();
@@ -261,6 +266,7 @@ success:
 
 		if (!ip_2_ip4(&default_netif.ip_addr)->addr)
 			return -ENODEV;
+#endif
 	}
 
 	return 0;
@@ -350,7 +356,6 @@ static int initd(void* arg)
 	// initialize network
 	err = init_netifs();
 
-#if 0
 	if (is_uhyve()) {
 		int i;
 		uhyve_cmdsize_t uhyve_cmdsize;
@@ -556,10 +561,11 @@ out:
 
 	if (s > 0)
 		lwip_close(s);
-#endif
+
 	return 0;
 }
 
+#if 0
 int foo(void) {
 	task_t* curr_task = curr_task = per_core(current_task);
 
@@ -570,6 +576,7 @@ int foo(void) {
 
 	return 0;
 }
+#endif
 
 int hermit_main(void)
 {
@@ -613,8 +620,8 @@ int hermit_main(void)
 	//vma_dump();
 
 	create_kernel_task_on_core(NULL, initd, NULL, NORMAL_PRIO, boot_processor);
-	create_kernel_task_on_core(NULL, foo, NULL, NORMAL_PRIO, CORE_ID);
-	create_kernel_task_on_core(NULL, foo, NULL, NORMAL_PRIO, CORE_ID);
+	//create_kernel_task_on_core(NULL, foo, NULL, NORMAL_PRIO, CORE_ID);
+	//create_kernel_task_on_core(NULL, foo, NULL, NORMAL_PRIO, CORE_ID);
 
 	while(1) {
 		check_workqueues();

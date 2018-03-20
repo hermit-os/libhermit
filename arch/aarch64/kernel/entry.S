@@ -63,9 +63,10 @@
 /* Number of virtual address bits for 4KB page */
 #define VA_BITS         48
 
-#define PT_DEVICE	0x703
+#define PT_DEVICE	0x707
 #define PT_PT           0x713
 #define PT_MEM          0x713
+#define PT_MEM_CD	0x70F
 #define PT_SELF         ((1) << 55)
 
 #define ALIGN   .align 4
@@ -192,7 +193,7 @@ start64:
    *   SA      [3]  Stack Alignment check enabled
    *   C       [2]  Data and unified enabled
    *   A       [1]  Alignment fault checking disabled
-   *   M       [0]  MMU disabled
+   *   M       [0]  MMU enable
    */
   ldr x0, =0x4D5D91F
   msr sctlr_el1, x0
@@ -532,6 +533,6 @@ l2_pgtable:
     .space 510*8, 0
     .quad l0_pgtable + PT_PT + PT_SELF
 l3_pgtable:
-    .quad 0x00000000 + PT_DEVICE // map II ports
-    .quad 0x09000000 + PT_DEVICE // map QEMU's uart port
+    .quad 0x00000000 + PT_MEM_CD // map II ports
+    .quad 0x09000000 + PT_MEM_CD // map QEMU's uart port
     .space 510*8, 0

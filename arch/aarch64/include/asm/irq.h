@@ -43,6 +43,12 @@
 extern "C" {
 #endif
 
+/* GIC related constants */
+#define GICD_BASE			0x8000000
+#define GICC_BASE			0x8010000
+#define GICD_SIZE			0x10000
+#define GICC_SIZE			0x20000
+
 /* interrupts */
 #define INT_PPI_VMAINT			(16+9)
 #define INT_PPI_HYP_TIMER		(16+10)
