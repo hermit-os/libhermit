@@ -597,10 +597,8 @@ int hermit_main(void)
 	LOG_INFO("Current available memory: %zd MiB\n", atomic_int64_read(&total_available_pages) * PAGE_SIZE / (1024ULL*1024ULL));
 	LOG_INFO("Core %d is the boot processor\n", boot_processor);
 	LOG_INFO("System is able to use %d processors\n", possible_cpus);
-#if 0
 	if (get_cmdline())
 		LOG_INFO("Kernel cmdline: %s\n", get_cmdline());
-#endif
 	if (has_hbmem())
 		LOG_INFO("Found high bandwidth memory at 0x%zx (size 0x%zx)\n", get_hbmem_base(), get_hbmem_size());
 

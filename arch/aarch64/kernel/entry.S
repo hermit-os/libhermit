@@ -396,7 +396,18 @@ el1_irq:
       trap_entry 1
       mov     x0, sp
       bl      do_irq
-      trap_exit 1
+      cmp     x0, 0
+      b.eq    1f
+
+      mov x1, sp
+      str x1, [x0]                  /* store old sp */
+      bl get_current_stack          /* get new sp   */
+      mov sp, x0
+
+      /* call cleanup code */
+      bl finish_task_switch
+
+1:    trap_exit 1
       eret
 ENDPROC(el1_irq)
 

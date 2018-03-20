@@ -314,7 +314,7 @@ size_t** do_fiq(void *regs)
 	uint32_t iar = gicc_read(GICC_IAR);
 	uint32_t vector = iar & 0x3ff;
 
-	LOG_INFO("fiq %d\n", vector);
+	LOG_INFO("Receive fiq %d\n", vector);
 
 	if (vector < MAX_HANDLERS && irq_routines[vector]) {
 		(irq_routines[vector])(regs);
@@ -338,19 +338,30 @@ size_t** do_fiq(void *regs)
 	return ret;
 }
 
-void do_irq (void *regs)
+size_t** do_irq(void *regs)
 {
+	size_t** ret = NULL;
 	uint32_t iar = gicc_read(GICC_IAR);
 	uint32_t vector = iar & 0x3ff;
 
-	LOG_INFO("receive interrupt %d\n", vector);
+	LOG_INFO("Receive interrupt %d\n", vector);
+
+	// Check if timers have expired that would unblock tasks
+	check_workqueues_in_irqhandler(vector);
+
+	if (get_highest_priority() > per_core(current_task)->prio) {
+		// there's a ready task with higher priority
+		ret = scheduler();
+	}
 
 	gicc_write(GICC_EOIR, iar);
+
+	return ret;
 }
 
 void do_error(void *regs)
 {
-	LOG_ERROR("receive error\n");
+	LOG_ERROR("Receive error interrupt\n");
 
 	while (1) {
 		HALT;
