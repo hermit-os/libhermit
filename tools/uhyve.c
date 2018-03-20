@@ -73,8 +73,8 @@ static int* vcpu_fds = NULL;
 static pthread_mutex_t kvm_lock = PTHREAD_MUTEX_INITIALIZER;
 
 extern bool verbose;
-extern size_t guest_size;
 
+size_t guest_size = 0x20000000ULL;
 bool full_checkpoint = false;
 pthread_barrier_t barrier;
 pthread_t* vcpu_threads = NULL;

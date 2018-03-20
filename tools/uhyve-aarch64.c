@@ -78,7 +78,7 @@
 static bool cap_irqfd = false;
 static bool cap_read_only = false;
 
-size_t guest_size = 0x60000000ULL;
+extern size_t guest_size;
 extern uint64_t elf_entry;
 extern uint8_t* klog;
 extern bool verbose;

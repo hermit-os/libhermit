@@ -155,7 +155,7 @@ static bool cap_adjust_clock_stable = false;
 static bool cap_irqfd = false;
 static bool cap_vapic = false;
 
-size_t guest_size = 0x20000000ULL;
+extern size_t guest_size;
 extern pthread_barrier_t barrier;
 extern pthread_t* vcpu_threads;
 extern uint64_t elf_entry;
