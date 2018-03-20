@@ -86,7 +86,6 @@
 */
 static irq_handler_t irq_routines[MAX_HANDLERS] = {[0 ... MAX_HANDLERS-1] = NULL};
 
-static spinlock_irqsave_t handle_lock = SPINLOCK_IRQSAVE_INIT;
 static spinlock_irqsave_t mask_lock = SPINLOCK_IRQSAVE_INIT;
 
 static size_t gicd_base = GICD_BASE;
@@ -191,10 +190,8 @@ int irq_install_handler(unsigned int irq, irq_handler_t handler)
 	if (irq >= MAX_HANDLERS)
 		return -EINVAL;
 
-	spinlock_irqsave_lock(&handle_lock);
 	irq_routines[irq] = handler;
-	spinlock_irqsave_unlock(&handle_lock);
-
+	
 	unmask_interrupt(irq);
 
 	return 0;
@@ -206,9 +203,7 @@ int irq_uninstall_handler(unsigned int irq)
 	if (irq >= MAX_HANDLERS)
 		return -EINVAL;
 
-	spinlock_irqsave_lock(&handle_lock);
 	irq_routines[irq] = NULL;
-	spinlock_irqsave_unlock(&handle_lock);
 
 	mask_interrupt(irq);
 

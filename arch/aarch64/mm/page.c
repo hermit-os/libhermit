@@ -134,6 +134,9 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits)
 				else
 					self[lvl][vpn] = phyaddr | PT_MEM;
 
+				if (bits & PG_DEVICE)
+					kprintf("viradd 0x%zx, reference 0x%zx\n", viraddr, self[lvl][vpn]);
+
 				phyaddr += PAGE_SIZE;
 			}
 		}
