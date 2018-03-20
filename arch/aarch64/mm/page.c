@@ -67,33 +67,11 @@ static uint8_t expect_zeroed_pages = 0;
 
 size_t virt_to_phys(size_t addr)
 {
-	void check_pagetables(size_t vaddr)
-        {
-                int lvl;
-                long vpn = vaddr >> PAGE_BITS;
-                long index[PAGE_LEVELS];
-
-                /* Calculate index boundaries for page map traversal */
-                for (lvl=0; lvl<PAGE_LEVELS; lvl++)
-                        index[lvl] = vpn >> (lvl * PAGE_MAP_BITS);
-
-                /* do we have already a valid entry in the page tables */
-                for (lvl=PAGE_LEVELS-1; lvl>=0; lvl--) {
-                        vpn = index[lvl];
-
-                        if (!self[lvl][vpn])
-                                return;
-			kprintf("self[%zd][%zd] 0x%zx\n", lvl, vpn, self[lvl][vpn]);
-                }
-        }
-
 	size_t vpn   = addr >> PAGE_BITS;	// virtual page number
 	size_t entry = self[0][vpn];		// page table entry
 	size_t off   = addr  & ~PAGE_MASK;	// offset within page
 	size_t phy   = entry &  PAGE_MASK;	// physical page frame number
 
-check_pagetables(addr);
-kprintf("entry 0x%zx\n", entry);
 	return phy | off;
 }
 
