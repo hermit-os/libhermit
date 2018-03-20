@@ -129,7 +129,7 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits)
 					kprintf("Remap address 0x%zx at core %d\n", viraddr, CORE_ID);
 				}*/
 
-				if (bits & PG_PCD)
+				if (bits & PG_DEVICE)
 					self[lvl][vpn] = phyaddr | PT_DEVICE;
 				else
 					self[lvl][vpn] = phyaddr | PT_MEM;

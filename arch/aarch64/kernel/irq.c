@@ -214,7 +214,7 @@ int irq_post_init(void)
 	if (BUILTIN_EXPECT(!gicd_base, 0))
                 goto oom;
 
-        ret = page_map(gicd_base, GICD_BASE, GICD_SIZE >> PAGE_BITS, PG_GLOBAL|PG_RW|PG_PCD);
+        ret = page_map(gicd_base, GICD_BASE, GICD_SIZE >> PAGE_BITS, PG_GLOBAL|PG_RW|PG_DEVICE);
         if (BUILTIN_EXPECT(ret, 0))
                 goto oom;
 
@@ -224,7 +224,7 @@ int irq_post_init(void)
 	if (BUILTIN_EXPECT(!gicc_base, 0))
                 goto oom;
 
-        ret = page_map(gicc_base, GICC_BASE, GICC_SIZE >> PAGE_BITS, PG_GLOBAL|PG_RW|PG_PCD);
+        ret = page_map(gicc_base, GICC_BASE, GICC_SIZE >> PAGE_BITS, PG_GLOBAL|PG_RW|PG_DEVICE);
         if (BUILTIN_EXPECT(ret, 0))
                 goto oom;
 

@@ -92,6 +92,7 @@
 /// Page attribute table
 #define PG_PAT			PG_PSE
 
+#define PG_DEVICE		(1 << 8)
 #define PG_NX			0
 #define PG_GLOBAL		0
 
