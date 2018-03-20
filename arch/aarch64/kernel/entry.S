@@ -279,7 +279,7 @@ _setup_pgtable:
     and     x0, x0, x1
     mov     x3, x0  // x3 := address of the first allocated page table
 
-    // create page tables for the first GB
+    // create page table entries for the 1st GB
     ldr     x1, =l2_pgtable
     add     x1, x1, 8
     add     x0, x0, PT_PT
@@ -288,7 +288,7 @@ _setup_pgtable:
     str     x0, [x1], 8
     add     x0, x0, PAGE_SIZE
     add     x2, x2, 1
-    cmp     x2, 510
+    cmp     x2, 511
     b.lo    1b
 
     // create identity mapping
@@ -309,7 +309,7 @@ _setup_pgtable:
 3:
     str     xzr, [x3], 8
     add     x7, x7, 1
-    cmp     x7, 510*PAGE_SIZE
+    cmp     x7, 511*PAGE_SIZE
     b.lo    3b
 
     ret
@@ -537,12 +537,10 @@ l0_pgtable:
     .quad l0_pgtable + PT_PT + PT_SELF
 l1_pgtable:
     .quad l2_pgtable + PT_PT
-    .space 510*8, 0
-    .quad l0_pgtable + PT_PT + PT_SELF
+    .space 511*8, 0
 l2_pgtable:
     .quad l3_pgtable + PT_PT
-    .space 510*8, 0
-    .quad l0_pgtable + PT_PT + PT_SELF
+    .space 511*8, 0
 l3_pgtable:
     .quad 0x00000000 + PT_MEM_CD // map II ports
     .quad 0x09000000 + PT_MEM_CD // map QEMU's uart port

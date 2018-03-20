@@ -268,15 +268,15 @@ int memory_init(void)
 	atomic_int64_add(&total_available_pages, (limit-base) >> PAGE_BITS);
 
 	//initialize free list
-	init_list.start = PAGE_FLOOR((size_t) &kernel_end + 510*PAGE_SIZE);
+	init_list.start = PAGE_FLOOR((size_t) &kernel_end + 511*PAGE_SIZE);
 	if (limit < GICD_BASE)
 		init_list.end = limit;
 	else
 		init_list.end = GICD_BASE;
 
 	// determine allocated memory, we use 2MB pages to map the kernel
-	atomic_int64_add(&total_allocated_pages, PAGE_FLOOR((size_t) &kernel_end + 510*PAGE_SIZE) >> PAGE_BITS);
-	atomic_int64_sub(&total_available_pages, PAGE_FLOOR((size_t) &kernel_end + 510*PAGE_SIZE) >> PAGE_BITS);
+	atomic_int64_add(&total_allocated_pages, PAGE_FLOOR((size_t) &kernel_end + 511*PAGE_SIZE) >> PAGE_BITS);
+	atomic_int64_sub(&total_available_pages, PAGE_FLOOR((size_t) &kernel_end + 511*PAGE_SIZE) >> PAGE_BITS);
 
 	LOG_INFO("free list starts at 0x%zx, limit 0x%zx\n", init_list.start, init_list.end);
 
