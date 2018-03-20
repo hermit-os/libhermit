@@ -94,28 +94,22 @@ static uint32_t nr_irqs = 0;
 
 static inline uint32_t gicd_read(size_t off)
 {
-	uint32_t value = *((volatile uint32_t*) (gicd_base + off));
-	rmb();
-	return value;
+	return *((volatile uint32_t*) (gicd_base + off));
 }
 
 static inline void gicd_write(size_t off, uint32_t value)
 {
 	*((volatile uint32_t*) (gicd_base + off)) = value;
-	wmb();
 }
 
 static inline uint32_t gicc_read(size_t off)
 {
-	uint32_t value = *((volatile uint32_t*) (gicc_base + off));
-	rmb();
-	return value;
+	return *((volatile uint32_t*) (gicc_base + off));
 }
 
 static inline void gicc_write(size_t off, uint32_t value)
 {
 	*((volatile uint32_t*) (gicc_base + off)) = value;
-	wmb();
 }
 
 static void gicc_enable(void)
@@ -212,13 +206,15 @@ int irq_uninstall_handler(unsigned int irq)
 
 int irq_post_init(void)
 {
+	int ret = -EINVAL;
+
 	LOG_INFO("Enable interrupt handling\n");
 
 	gicd_base = (size_t) vma_alloc(GICD_SIZE, VMA_READ|VMA_WRITE);
 	if (BUILTIN_EXPECT(!gicd_base, 0))
                 goto oom;
 
-        int ret = page_map(gicd_base, GICD_BASE, GICD_SIZE >> PAGE_BITS, PG_GLOBAL|PG_RW|PG_PCD);
+        ret = page_map(gicd_base, GICD_BASE, GICD_SIZE >> PAGE_BITS, PG_GLOBAL|PG_RW|PG_PCD);
         if (BUILTIN_EXPECT(ret, 0))
                 goto oom;
 
@@ -367,5 +363,5 @@ void do_bad_mode(void *regs, int reason)
 void reschedule(void)
 {
 	// (2 << 24) = Forward the interrupt only to the CPU interface of the PE that requested the interrupt
-	//gicd_write(GICD_SGIR, (2 << 24) | RESCHED_INT);
+	gicd_write(GICD_SGIR, (2 << 24) | RESCHED_INT);
 }
