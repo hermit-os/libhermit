@@ -30,6 +30,7 @@
 #include <hermit/logging.h>
 #include <hermit/errno.h>
 #include <hermit/tasks.h>
+#include <hermit/spinlock.h>
 #include <asm/processor.h>
 #include <asm/page.h>
 #include <asm/irq.h>
@@ -73,6 +74,7 @@
 #define GICC_CTLR_ENABLEGRP0		(1 << 0)
 #define GICC_CTLR_ENABLEGRP1		(1 << 1)
 #define GICC_CTLR_FIQEN			(1 << 3)
+#define GICC_CTLR_ACKCTL		(1 << 2)
 
 #define MAX_HANDLERS			256
 #define RESCHED_INT			1
@@ -84,64 +86,63 @@
 */
 static irq_handler_t irq_routines[MAX_HANDLERS] = {[0 ... MAX_HANDLERS-1] = NULL};
 
+static spinlock_irqsave_t handle_lock = SPINLOCK_IRQSAVE_INIT;
+static spinlock_irqsave_t mask_lock = SPINLOCK_IRQSAVE_INIT;
+
 static size_t gicd_base = GICD_BASE;
 static size_t gicc_base = GICC_BASE;
 static uint32_t nr_irqs = 0;
 
 static inline uint32_t gicd_read(size_t off)
 {
-	uint32_t value;
+	/*uint32_t value;
 	asm volatile("ldar %w0, [%1]" : "=r"(value) : "r"(gicd_base + off) : "memory");
-	return value;
+	return value;*/
+	return *((volatile uint32_t*) (gicd_base + off));
 }
 
 static inline void gicd_write(size_t off, uint32_t value)
 {
-	asm volatile("str %w0, [%1]" : : "rZ" (value), "r" (gicd_base + off) : "memory");
+	//asm volatile("str %w0, [%1]" : : "rZ" (value), "r" (gicd_base + off) : "memory");
+	*((volatile uint32_t*) (gicd_base + off)) = value;
 }
 
 static inline uint32_t gicc_read(size_t off)
 {
-	uint32_t value;
+	/*uint32_t value;
 	asm volatile("ldar %w0, [%1]" : "=r"(value) : "r"(gicc_base + off) : "memory");
-	return value;
+	return value;*/
+	return *((volatile uint32_t*) (gicc_base + off));
 }
 
 static inline void gicc_write(size_t off, uint32_t value)
 {
-	asm volatile("str %w0, [%1]" : : "rZ" (value), "r" (gicc_base + off) : "memory");
+	//asm volatile("str %w0, [%1]" : : "rZ" (value), "r" (gicc_base + off) : "memory");
+	*((volatile uint32_t*) (gicc_base + off)) = value;
 }
 
 static void gicc_enable(void)
 {
 	// Global enable signalling of interrupt from the cpu interface
-	uint32_t ctlr = gicc_read(GICC_CTLR);
-	ctlr |= GICC_CTLR_ENABLEGRP0 | GICC_CTLR_ENABLEGRP1 | GICC_CTLR_FIQEN | 0x1<<2 /* AckCtl */;
-	gicc_write(GICC_CTLR, ctlr);
+	gicc_write(GICC_CTLR, GICC_CTLR_ENABLEGRP0 | GICC_CTLR_ENABLEGRP1 | GICC_CTLR_FIQEN | GICC_CTLR_ACKCTL);
 }
 
 static void gicc_disable(void)
 {
 	// Global disable signalling of interrupt from the cpu interface
-	uint32_t ctlr = gicc_read(GICC_CTLR);
-	ctlr = ctlr & ~(GICC_CTLR_ENABLEGRP0 | GICC_CTLR_ENABLEGRP1 | GICC_CTLR_FIQEN | 0x1<<2 /* AckCtl */);
-	gicc_write(GICC_CTLR, ctlr);
+	gicc_write(GICC_CTLR, 0);
 }
 
 static void gicd_enable(void)
 {
 	// Global enable forwarding interrupts from distributor to cpu interface
-	uint32_t ctlr = gicd_read(GICD_CTLR);
-	ctlr |= GICD_CTLR_ENABLEGRP0 | GICD_CTLR_ENABLEGRP1;
-	gicd_write(GICD_CTLR, ctlr);
+	gicd_write(GICD_CTLR, GICD_CTLR_ENABLEGRP0 | GICD_CTLR_ENABLEGRP1);
 }
 
 static void gicd_disable(void)
 {
 	// Global disable forwarding interrupts from distributor to cpu interface
-	uint32_t ctlr = gicd_read(GICD_CTLR);
-	ctlr = ctlr & ~(GICD_CTLR_ENABLEGRP0|GICD_CTLR_ENABLEGRP1);
-	gicd_write(GICD_CTLR, ctlr);
+	gicd_write(GICD_CTLR, 0);
 }
 
 static void gicc_set_priority(uint32_t priority)
@@ -165,7 +166,9 @@ static int unmask_interrupt(uint32_t vector)
 	if (vector >= nr_irqs)
 		return -EINVAL;
 
+	spinlock_irqsave_lock(&mask_lock);
 	gic_set_enable(vector, 1);
+	spinlock_irqsave_unlock(&mask_lock);
 
 	return 0;
 }
@@ -175,7 +178,9 @@ static int mask_interrupt(uint32_t vector)
 	if (vector >= nr_irqs)
 		return -EINVAL;
 
+	spinlock_irqsave_lock(&mask_lock);
 	gic_set_enable(vector, 0);
+	spinlock_irqsave_unlock(&mask_lock);
 
 	return 0;
 }
@@ -186,7 +191,10 @@ int irq_install_handler(unsigned int irq, irq_handler_t handler)
 	if (irq >= MAX_HANDLERS)
 		return -EINVAL;
 
+	spinlock_irqsave_lock(&handle_lock);
 	irq_routines[irq] = handler;
+	spinlock_irqsave_unlock(&handle_lock);
+
 	unmask_interrupt(irq);
 
 	return 0;
@@ -198,7 +206,10 @@ int irq_uninstall_handler(unsigned int irq)
 	if (irq >= MAX_HANDLERS)
 		return -EINVAL;
 
+	spinlock_irqsave_lock(&handle_lock);
 	irq_routines[irq] = NULL;
+	spinlock_irqsave_unlock(&handle_lock);
+
 	mask_interrupt(irq);
 
 	return 0;
@@ -264,6 +275,8 @@ int irq_post_init(void)
 
 	gicc_set_priority(0xF0);
 	gicc_enable();
+
+	unmask_interrupt(RESCHED_INT);
 
 	return 0;
 
