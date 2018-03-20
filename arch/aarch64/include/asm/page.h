@@ -101,7 +101,7 @@
 
 #define PT_PT			0x713
 #define PT_MEM			0x713
-#define PT_DEVICE		0x703
+#define PT_DEVICE		0x707
 #define PT_SELF			(1L << 55)
 #define PTE_AF			(1L << 10)	/* Access Flag */
 #define PTE_CONTIG		(1L << 52)	/* Contiguous bit */
