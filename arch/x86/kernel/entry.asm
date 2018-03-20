@@ -116,12 +116,10 @@ boot_pml4:
     DQ boot_pml4 + 0x223 ; PG_PRESENT | PG_RW | PG_ACCESSED | PG_SELF (self-reference)
 boot_pdpt:
     DQ boot_pgd + 0x23   ; PG_PRESENT | PG_RW | PG_ACCESSED
-    times 510 DQ 0       ; PAGE_MAP_ENTRIES - 2
-    DQ boot_pml4 + 0x223 ; PG_PRESENT | PG_RW | PG_ACCESSED | PG_SELF (self-reference)
+    times 511 DQ 0       ; PAGE_MAP_ENTRIES - 1
 boot_pgd:
     DQ boot_pgt + 0x23   ; PG_PRESENT | PG_RW | PG_ACCESSED
-    times 510 DQ 0       ; PAGE_MAP_ENTRIES - 2
-    DQ boot_pml4 + 0x223 ; PG_PRESENT | PG_RW | PG_ACCESSED | PG_SELF (self-reference)
+    times 511 DQ 0       ; PAGE_MAP_ENTRIES - 1
 boot_pgt:
     times 512 DQ 0
 
