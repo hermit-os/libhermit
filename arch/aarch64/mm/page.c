@@ -57,10 +57,10 @@ static spinlock_irqsave_t page_lock = SPINLOCK_IRQSAVE_INIT;
 
 /** A self-reference enables direct access to all page tables */
 static size_t* const self[PAGE_LEVELS] = {
-	(size_t *) 0x0000FF8000000000,
-	(size_t *) 0x0000FFFFC0000000,
-	(size_t *) 0x0000FFFFFFE00000,
-	(size_t *) 0x0000FFFFFFFFF000
+	(size_t *) 0x0000FF8000000000ULL,
+	(size_t *) 0x0000FFFFC0000000ULL,
+	(size_t *) 0x0000FFFFFFE00000ULL,
+	(size_t *) 0x0000FFFFFFFFF000ULL
 };
 
 static uint8_t expect_zeroed_pages = 0;
@@ -72,7 +72,7 @@ size_t virt_to_phys(size_t addr)
 	size_t off   = addr  & ~PAGE_MASK;	// offset within page
 	size_t phy   = entry &  PAGE_MASK;	// physical page frame number
 
-	return phy | off;
+	return (phy | off) & ((1ULL << VIRT_BITS) - 1);
 }
 
 /*
@@ -94,6 +94,8 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits)
 	int lvl, ret = -ENOMEM;
 	long vpn = viraddr >> PAGE_BITS;
 	long first[PAGE_LEVELS], last[PAGE_LEVELS];
+	size_t page_counter = 0;
+	size_t cflags = 0;
 
 	//kprintf("Map %d pages at 0x%zx\n", npages, viraddr);
 
@@ -129,15 +131,25 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits)
 					kprintf("Remap address 0x%zx at core %d\n", viraddr, CORE_ID);
 				}*/
 
+				if (!cflags && !(viraddr & 0XFFFFULL) && (npages-page_counter >= 16))
+					cflags = PT_CONTIG;
+				else if (cflags && !(viraddr & 0xFFFFULL) && (npages-page_counter < 16))
+					cflags = 0;
+
 				if (bits & PG_DEVICE)
-					self[lvl][vpn] = phyaddr | PT_DEVICE;
+					self[lvl][vpn] = phyaddr | PT_DEVICE | cflags;
 				else
-					self[lvl][vpn] = phyaddr | PT_MEM;
+					self[lvl][vpn] = phyaddr | PT_MEM | cflags;
 
-				if (bits & PG_DEVICE)
-					kprintf("viradd 0x%zx, reference 0x%zx\n", viraddr, self[lvl][vpn]);
+				//if (bits & PG_DEVICE)
+				//	kprintf("viradd 0x%zx, reference 0x%zx\n", viraddr, self[lvl][vpn]);
 
+				//if (cflags && !(viraddr & 0xFFFFULL))
+				//	kprintf("usre PT_CONTIG for 0x%zx, reference 0x%zx\n", viraddr, self[lvl][vpn]);
+
+				page_counter++;
 				phyaddr += PAGE_SIZE;
+				viraddr += PAGE_SIZE;
 			}
 		}
 	}
