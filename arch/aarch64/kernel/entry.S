@@ -274,8 +274,9 @@ _setup_cpu:
 
 _setup_pgtable:
     ldr     x0, =kernel_end
-    add     x0, x0, PAGE_SIZE
-    mov     x1, ~(PAGE_SIZE-1)
+    /* align to a 16KByte boundary */
+    add     x0, x0, 0x10000
+    mov     x1, ~0xFFFF
     and     x0, x0, x1
     mov     x3, x0  // x3 := address of the first allocated page table
 
@@ -294,8 +295,12 @@ _setup_pgtable:
     // create identity mapping
     ldr     x5, =kernel_start
     mov     x6, x5
-    add     x5, x5, PT_MEM
-    ldr     x0, =kernel_end
+    // Create contiguous bit
+    mov     x7, 1
+    lsl     x7, x7, 52
+    add     x7, x7, PT_MEM
+    orr     x5, x5, x7
+    mov     x0, x3  // map until the first page table
     mov     x7, xzr
 2:
     str     x5, [x3], 8
