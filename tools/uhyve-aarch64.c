@@ -67,9 +67,14 @@
 #endif
 
 #define GUEST_OFFSET		0x0
-#define GICD_BASE		0x8000000
-#define GICC_BASE		0x8010000
+
 #define GIC_SPI_IRQ_BASE	32
+#define GICD_BASE		(0x8000000ULL - GICD_SIZE)
+#define GICC_BASE		(GICD_BASE - GICC_SIZE)
+#define GIC_SIZE		(GICD_SIZE + GICC_SIZE)
+#define GICD_SIZE		0x10000ULL
+#define GICC_SIZE		0x20000ULL
+
 
 #define KVM_GAP_SIZE		(2*(GICC_BASE-GICD_BASE))
 #define KVM_GAP_START		GICD_BASE
@@ -189,6 +194,7 @@ void init_cpu_state(uint64_t elf_entry)
 	reg.addr = (uint64_t)&data;
 	kvm_ioctl(vcpufd, KVM_SET_ONE_REG, &reg);
 
+#if 0
 	/* x0...x3 = 0 */
 	data    = 0;
         reg.id  = ARM64_CORE_REG(regs.regs[0]);
@@ -202,6 +208,7 @@ void init_cpu_state(uint64_t elf_entry)
 
 	reg.id	= ARM64_CORE_REG(regs.regs[3]);
 	kvm_ioctl(vcpufd, KVM_SET_ONE_REG, &reg);
+#endif
 
 	/* set start address */
 	data	= elf_entry;
@@ -319,6 +326,9 @@ void init_kvm_arch(void)
 	gic_fd = gic_device.fd;
 	kvm_ioctl(gic_fd, KVM_SET_DEVICE_ATTR, &cpu_if_attr);
 	kvm_ioctl(gic_fd, KVM_SET_DEVICE_ATTR, &dist_attr);
+
+	//fprintf(stderr, "Create gicd at 0x%llx\n", GICD_BASE);
+	//fprintf(stderr, "Create gicc at 0x%llx\n", GICC_BASE);
 
 	cap_irqfd = kvm_ioctl(vmfd, KVM_CHECK_EXTENSION, KVM_CAP_IRQFD) <= 0 ? false : true;
 	if (!cap_irqfd)

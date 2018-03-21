@@ -40,7 +40,10 @@
 extern "C" {
 #endif
 
-inline static void uhyve_send(unsigned short _port, unsigned int _data) {}
+inline static void uhyve_send(unsigned short _port, unsigned int _data)
+{
+	*((unsigned int*)(size_t)_port) = _data;
+}
 
 #ifdef __cplusplus
 }

@@ -155,7 +155,8 @@ static void close_fd(int* fd)
 
 static void uhyve_exit(void* arg)
 {
-print_registers();
+	//print_registers();
+
 	if (pthread_mutex_trylock(&kvm_lock))
 	{
 		close_fd(&vcpufd);
@@ -302,9 +303,10 @@ static int vcpu_loop(void)
 			return 0;
 
 		case KVM_EXIT_MMIO:
-			fprintf(stderr, "KVM: handled KVM_EXIT_MMIO at 0x%llx\n", run->mmio.phys_addr);
 			port = run->mmio.phys_addr;
-			raddr = *((unsigned*) (guest_mem+run->mmio.phys_addr));
+			if (run->mmio.is_write)
+				memcpy(&raddr, run->mmio.data, sizeof(raddr) /*run->mmio.len*/);
+			//printf("KVM: handled KVM_EXIT_MMIO at 0x%lx (data %u)\n", port, raddr);
 
 		case KVM_EXIT_IO:
 			if (!port) {
