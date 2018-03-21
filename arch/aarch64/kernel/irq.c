@@ -88,8 +88,8 @@ static irq_handler_t irq_routines[MAX_HANDLERS] = {[0 ... MAX_HANDLERS-1] = NULL
 
 static spinlock_irqsave_t mask_lock = SPINLOCK_IRQSAVE_INIT;
 
-static size_t gicd_base = GICD_BASE;
-static size_t gicc_base = GICC_BASE;
+static size_t gicd_base = 0;
+static size_t gicc_base = 0;
 static uint32_t nr_irqs = 0;
 
 static inline uint32_t gicd_read(size_t off)
@@ -212,29 +212,26 @@ int irq_uninstall_handler(unsigned int irq)
 
 int irq_post_init(void)
 {
-	int ret = -EINVAL;
+	int ret;
 
 	LOG_INFO("Enable interrupt handling\n");
 
-	gicd_base = (size_t) vma_alloc(GICD_SIZE, VMA_READ|VMA_WRITE);
-	if (BUILTIN_EXPECT(!gicd_base, 0))
-                goto oom;
+	gicc_base = (size_t) vma_alloc(GICD_SIZE+GICC_SIZE+0x10000ULL, VMA_READ|VMA_WRITE);
+	if (BUILTIN_EXPECT(!gicc_base, 0)) {
+		ret = -ENOMEM;
+		goto oom;
+	}
 
-        ret = page_map(gicd_base, GICD_BASE, GICD_SIZE >> PAGE_BITS, PG_GLOBAL|PG_RW|PG_DEVICE);
-        if (BUILTIN_EXPECT(ret, 0))
-                goto oom;
+	// align to a 16Kbyte boundary
+	gicc_base = (gicc_base+0x10000ULL) & ~0xFFFFULL;
 
-	LOG_INFO("Map gicd at 0x%zx\n", gicd_base);
+	ret = page_map(gicc_base, GICC_BASE, (GICD_SIZE+GICC_SIZE) >> PAGE_BITS, PG_GLOBAL|PG_RW|PG_DEVICE);
+	if (BUILTIN_EXPECT(ret, 0))
+		goto oom;
+	gicd_base = gicc_base + GICC_SIZE;
 
-	gicc_base = (size_t) vma_alloc(GICC_SIZE, VMA_READ|VMA_WRITE);
-	if (BUILTIN_EXPECT(!gicc_base, 0))
-                goto oom;
-
-        ret = page_map(gicc_base, GICC_BASE, GICC_SIZE >> PAGE_BITS, PG_GLOBAL|PG_RW|PG_DEVICE);
-        if (BUILTIN_EXPECT(ret, 0))
-                goto oom;
-
-	LOG_INFO("Map gicc at 0x%zx\n", gicc_base);
+	LOG_INFO("Map gicd 0x%zx at 0x%zx\n", GICD_BASE, gicd_base);
+	LOG_INFO("Map gicc 0x%zx at 0x%zx\n", GICC_BASE, gicc_base);
 
 	gicc_disable();
 	gicd_disable();

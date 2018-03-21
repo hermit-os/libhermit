@@ -248,12 +248,6 @@ int memory_init(void)
 	size_t image_sz = (size_t) &kernel_end - (size_t) &kernel_start;
 	int ret = 0;
 
-	if (limit == 0) {
-		// Ok, we aren't using uhyve => guess 512M
-		limit = 512*1024*1024;
-		image_size = image_sz + PAGE_SIZE;
-	}
-
 	// enable paging and map Multiboot modules etc.
 	ret = page_init();
 	if (BUILTIN_EXPECT(ret, 0)) {

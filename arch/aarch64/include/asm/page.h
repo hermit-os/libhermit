@@ -223,7 +223,7 @@ static inline void tlb_flush_one_page(size_t addr)
  */
 static inline void tlb_flush_range(size_t start, size_t end)
 {
-	if ((end - start) > (1024UL << PAGE_BITS)) {
+	if ((end - start) > (1024ULL << PAGE_BITS)) {
 		tlb_flush();
 		return;
 	}

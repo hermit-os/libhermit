@@ -195,7 +195,7 @@ start64:
    *   A       [1]  Alignment fault checking disabled
    *   M       [0]  MMU enable
    */
-  ldr x0, =0x4D5D91F
+  ldr x0, =0x4D5D91D
   msr sctlr_el1, x0
 
   ldr     x0, =mmu_on
@@ -348,7 +348,7 @@ ldr     \xreg, [sp], #8
      stp x5, x6, [sp, #-16]!
      stp x3, x4, [sp, #-16]!
      stp x1, x2, [sp, #-16]!
-	 str x0, [sp, #-16]!
+     str x0, [sp, #-16]!
 
      mrs x22, elr_el1
      mrs x23, spsr_el1
