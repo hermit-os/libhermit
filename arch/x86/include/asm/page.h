@@ -108,8 +108,10 @@ static inline size_t sign_extend(ssize_t addr, int bits)
 
 /// Align to next 2M boundary
 #define PAGE_2M_CEIL(addr)	(((addr) + (1L << 21) - 1) & ((~0L) << 21))
-/// Align to nex 2M boundary
+/// Align to next 2M boundary
 #define PAGE_2M_FLOOR(addr)	( (addr)                   & ((~0L) << 21))
+/// Align end of the kernel
+#define KERNEL_END_CEIL(addr)   (PAGE_2M_CEIL((addr)))
 
 /// Page is present
 #define PG_PRESENT		(1 << 0)

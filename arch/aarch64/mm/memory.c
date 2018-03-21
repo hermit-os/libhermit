@@ -262,7 +262,7 @@ int memory_init(void)
 	atomic_int64_add(&total_available_pages, (limit-base) >> PAGE_BITS);
 
 	//initialize free list
-	init_list.start = PAGE_FLOOR((size_t) &kernel_end + 511*PAGE_SIZE);
+	init_list.start = PAGE_FLOOR((size_t) &kernel_end + (16+511)*PAGE_SIZE);
 	if (limit < GICD_BASE)
 		init_list.end = limit;
 	else
