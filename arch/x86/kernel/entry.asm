@@ -75,6 +75,7 @@ align 4
     global hcip
     global hcgateway
     global hcmask
+    global host_logical_addr
     base dq 0
     limit dq 0
     cpu_freq dd 0
@@ -105,6 +106,7 @@ align 4
     hcip db  10,0,5,2
     hcgateway db 10,0,5,1
     hcmask db 255,255,255,0
+    host_logical_addr dq 0
 
 ; Bootstrap page tables are used during the initialization.
 align 4096
@@ -114,12 +116,10 @@ boot_pml4:
     DQ boot_pml4 + 0x223 ; PG_PRESENT | PG_RW | PG_ACCESSED | PG_SELF (self-reference)
 boot_pdpt:
     DQ boot_pgd + 0x23   ; PG_PRESENT | PG_RW | PG_ACCESSED
-    times 510 DQ 0       ; PAGE_MAP_ENTRIES - 2
-    DQ boot_pml4 + 0x223 ; PG_PRESENT | PG_RW | PG_ACCESSED | PG_SELF (self-reference)
+    times 511 DQ 0       ; PAGE_MAP_ENTRIES - 1
 boot_pgd:
     DQ boot_pgt + 0x23   ; PG_PRESENT | PG_RW | PG_ACCESSED
-    times 510 DQ 0       ; PAGE_MAP_ENTRIES - 2
-    DQ boot_pml4 + 0x223 ; PG_PRESENT | PG_RW | PG_ACCESSED | PG_SELF (self-reference)
+    times 511 DQ 0       ; PAGE_MAP_ENTRIES - 1
 boot_pgt:
     times 512 DQ 0
 

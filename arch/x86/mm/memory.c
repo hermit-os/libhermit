@@ -38,6 +38,7 @@
 #include <asm/multiboot.h>
 
 #define GAP_BELOW	0x100000ULL
+#define IB_POOL_SIZE 0x400000ULL
 
 extern uint64_t base;
 extern uint64_t limit;
@@ -53,6 +54,9 @@ typedef struct free_list {
  * maintaining a value, rather their address is their value.
  */
 extern const void kernel_start;
+
+extern void* host_logical_addr;
+uint64_t ib_pool_addr = 0;
 
 static spinlock_t list_lock = SPINLOCK_INIT;
 
@@ -363,6 +367,17 @@ int memory_init(void)
 
 	// Ok, we are now able to use our memory management => update tss
 	tss_init(0);
+
+	if (host_logical_addr) {
+		LOG_INFO("Host has its guest logical address at %p\n", host_logical_addr);
+		size_t phyaddr = get_pages(IB_POOL_SIZE >> PAGE_BITS);
+		LOG_INFO("Allocate %d MB at physical address 0x%zx for the IB pool\n", IB_POOL_SIZE >> 20, phyaddr);
+		if (BUILTIN_EXPECT(!page_map((size_t)host_logical_addr+phyaddr, phyaddr, IB_POOL_SIZE >> PAGE_BITS, PG_GLOBAL|PG_RW), 1)) {
+			vma_add((size_t)host_logical_addr+phyaddr, (size_t)host_logical_addr+phyaddr+IB_POOL_SIZE, VMA_READ|VMA_WRITE|VMA_CACHEABLE);
+			ib_pool_addr = (size_t)host_logical_addr+phyaddr;
+			LOG_INFO("Map IB pool at 0x%zx\n", ib_pool_addr);
+		}
+	}
 
 	return ret;
 
