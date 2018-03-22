@@ -353,8 +353,12 @@ static int initd(void* arg)
 	vma_free(curr_task->heap->start, curr_task->heap->start+PAGE_SIZE);
 	vma_add(curr_task->heap->start, curr_task->heap->start+PAGE_SIZE, VMA_HEAP|VMA_USER);
 
+#ifndef __aarch64__
 	// initialize network
 	err = init_netifs();
+#else
+	err = -EINVAL;
+#endif
 
 	if (is_uhyve()) {
 		int i;
@@ -391,10 +395,10 @@ static int initd(void* arg)
 		LOG_INFO("Boot time: %d ms\n", (get_clock_tick() * 1000) / TIMER_FREQ);
 		libc_start(uhyve_cmdsize.argc, uhyve_cmdval.argv, uhyve_cmdval.envp);
 
-		for(i=0; i<argc; i++)
+		for(i=0; i<uhyve_cmdsize.argc; i++)
 			kfree(uhyve_cmdval.argv[i]);
 		kfree(uhyve_cmdval.argv);
-		for(i=0; i<envc; i++)
+		for(i=0; i<uhyve_cmdsize.envc; i++)
 			kfree(uhyve_cmdval.envp[i]);
 		kfree(uhyve_cmdval.envp);
 		kfree(argv_virt);
@@ -565,19 +569,6 @@ out:
 	return 0;
 }
 
-#if 0
-int foo(void) {
-	task_t* curr_task = curr_task = per_core(current_task);
-
-	for(int i=0; i<4; i++) {
-		LOG_INFO("Hello from foo %d\n", curr_task->id);
-		reschedule();
-	}
-
-	return 0;
-}
-#endif
-
 int hermit_main(void)
 {
 	hermit_init();
@@ -618,8 +609,6 @@ int hermit_main(void)
 	//vma_dump();
 
 	create_kernel_task_on_core(NULL, initd, NULL, NORMAL_PRIO, boot_processor);
-	//create_kernel_task_on_core(NULL, foo, NULL, NORMAL_PRIO, CORE_ID);
-	//create_kernel_task_on_core(NULL, foo, NULL, NORMAL_PRIO, CORE_ID);
 
 	while(1) {
 		check_workqueues();

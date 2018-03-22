@@ -174,6 +174,11 @@ int timer_wait(unsigned int ticks)
 
 int timer_init(void)
 {
+#ifdef DYNAMIC_TICKS
+	boot_tsc = get_cntpct();
+	set_per_core(last_tsc, boot_tsc);
+#endif
+
 	return 0;
 }
 
@@ -188,10 +193,7 @@ int timer_calibration(void)
 
 	irq_install_handler(INT_PPI_NSPHYS_TIMER, timer_handler);
 
-#ifdef DYNAMIC_TICKS
-	boot_tsc = get_cntpct();
-	set_per_core(last_tsc, boot_tsc);
-#else
+#ifndef DYNAMIC_TICKS
 	restart_periodic_timer();
 #endif
 
