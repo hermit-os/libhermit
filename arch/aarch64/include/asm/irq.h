@@ -44,8 +44,8 @@ extern "C" {
 #endif
 
 /* GIC related constants */
-#define GICD_BASE			(0x8000000ULL - GICD_SIZE)
-#define GICC_BASE			(GICD_BASE - GICC_SIZE)
+#define GICD_BASE			(1ULL << 39)
+#define GICC_BASE			(GICD_BASE + GICD_SIZE)
 #define GIC_SIZE			(GICD_SIZE + GICC_SIZE)
 #define GICD_SIZE			0x010000ULL
 #define GICC_SIZE			0x020000ULL

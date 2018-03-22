@@ -139,6 +139,7 @@ int create_default_frame(task_t* task, entry_point_t ep, void* arg, uint32_t cor
 
 	/* Only marker for debugging purposes, ... */
 	*stack-- = 0xDEADBEEF;
+	*stack-- = 0xDEADBEEF;
 
 	/* Next bunch on the stack is the initial register state.
 	 * The stack must look like the stack of a task which was

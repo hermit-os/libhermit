@@ -88,36 +88,32 @@ static irq_handler_t irq_routines[MAX_HANDLERS] = {[0 ... MAX_HANDLERS-1] = NULL
 
 static spinlock_irqsave_t mask_lock = SPINLOCK_IRQSAVE_INIT;
 
-static size_t gicd_base = 0;
-static size_t gicc_base = 0;
+static size_t gicd_base = GICD_BASE;
+static size_t gicc_base = GICC_BASE;
 static uint32_t nr_irqs = 0;
 
 static inline uint32_t gicd_read(size_t off)
 {
-	/*uint32_t value;
+	uint32_t value;
 	asm volatile("ldar %w0, [%1]" : "=r"(value) : "r"(gicd_base + off) : "memory");
-	return value;*/
-	return *((volatile uint32_t*) (gicd_base + off));
+	return value;
 }
 
 static inline void gicd_write(size_t off, uint32_t value)
 {
-	//asm volatile("str %w0, [%1]" : : "rZ" (value), "r" (gicd_base + off) : "memory");
-	*((volatile uint32_t*) (gicd_base + off)) = value;
+	asm volatile("str %w0, [%1]" : : "rZ" (value), "r" (gicd_base + off) : "memory");
 }
 
 static inline uint32_t gicc_read(size_t off)
 {
-	/*uint32_t value;
+	uint32_t value;
 	asm volatile("ldar %w0, [%1]" : "=r"(value) : "r"(gicc_base + off) : "memory");
-	return value;*/
-	return *((volatile uint32_t*) (gicc_base + off));
+	return value;
 }
 
 static inline void gicc_write(size_t off, uint32_t value)
 {
-	//asm volatile("str %w0, [%1]" : : "rZ" (value), "r" (gicc_base + off) : "memory");
-	*((volatile uint32_t*) (gicc_base + off)) = value;
+	asm volatile("str %w0, [%1]" : : "rZ" (value), "r" (gicc_base + off) : "memory");
 }
 
 static void gicc_enable(void)
@@ -216,19 +212,13 @@ int irq_post_init(void)
 
 	LOG_INFO("Enable interrupt handling\n");
 
-	gicc_base = (size_t) vma_alloc(GICD_SIZE+GICC_SIZE+0x10000ULL, VMA_READ|VMA_WRITE);
-	if (BUILTIN_EXPECT(!gicc_base, 0)) {
-		ret = -ENOMEM;
-		goto oom;
-	}
-
-	// align to a 16Kbyte boundary
-	gicc_base = (gicc_base+0x10000ULL) & ~0xFFFFULL;
-
-	ret = page_map(gicc_base, GICC_BASE, (GICD_SIZE+GICC_SIZE) >> PAGE_BITS, PG_GLOBAL|PG_RW|PG_DEVICE);
+	ret = vma_add(GICD_BASE, GICD_BASE+GIC_SIZE, VMA_READ|VMA_WRITE);
 	if (BUILTIN_EXPECT(ret, 0))
 		goto oom;
-	gicd_base = gicc_base + GICC_SIZE;
+
+	ret = page_map(gicd_base, GICD_BASE, GIC_SIZE >> PAGE_BITS, PG_GLOBAL|PG_RW|PG_DEVICE);
+        if (BUILTIN_EXPECT(ret, 0))
+                goto oom;
 
 	LOG_INFO("Map gicd 0x%zx at 0x%zx\n", GICD_BASE, gicd_base);
 	LOG_INFO("Map gicc 0x%zx at 0x%zx\n", GICC_BASE, gicc_base);
@@ -319,7 +309,7 @@ size_t** do_fiq(void *regs)
 	uint32_t iar = gicc_read(GICC_IAR);
 	uint32_t vector = iar & 0x3ff;
 
-	LOG_INFO("Receive fiq %d\n", vector);
+	//LOG_INFO("Receive fiq %d\n", vector);
 
 	if (vector < MAX_HANDLERS && irq_routines[vector]) {
 		(irq_routines[vector])(regs);

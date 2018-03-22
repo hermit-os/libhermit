@@ -60,23 +60,16 @@
 #include "uhyve.h"
 #include "proxy.h"
 
-#ifndef KVM_ARM_VCPU_TIMER_CTRL
-#define KVM_ARM_VCPU_TIMER_CTRL         1
-#define   KVM_ARM_VCPU_TIMER_IRQ_VTIMER         0
-#define   KVM_ARM_VCPU_TIMER_IRQ_PTIMER         1
-#endif
-
 #define GUEST_OFFSET		0x0
 
 #define GIC_SPI_IRQ_BASE	32
-#define GICD_BASE		(0x8000000ULL - GICD_SIZE)
-#define GICC_BASE		(GICD_BASE - GICC_SIZE)
+#define GICD_BASE		(1ULL << 39)
+#define GICC_BASE		(GICD_BASE + GICD_SIZE)
 #define GIC_SIZE		(GICD_SIZE + GICC_SIZE)
 #define GICD_SIZE		0x10000ULL
 #define GICC_SIZE		0x20000ULL
 
-
-#define KVM_GAP_SIZE		(2*(GICC_BASE-GICD_BASE))
+#define KVM_GAP_SIZE		(GIC_SIZE)
 #define KVM_GAP_START		GICD_BASE
 
 #define PAGE_SIZE		0x1000
@@ -215,36 +208,21 @@ void init_cpu_state(uint64_t elf_entry)
 	reg.id	= ARM64_CORE_REG(regs.pc);
 	kvm_ioctl(vcpufd, KVM_SET_ONE_REG, &reg);
 
-	int lines = 1;
-	uint32_t nr_irqs = lines * 32 + GIC_SPI_IRQ_BASE;
-	struct kvm_device_attr nr_irqs_attr = {
-		.group	= KVM_DEV_ARM_VGIC_GRP_NR_IRQS,
-		.addr	= (uint64_t)&nr_irqs,
-	};
-	struct kvm_device_attr vgic_init_attr = {
-		.group	= KVM_DEV_ARM_VGIC_GRP_CTRL,
-		.attr	= KVM_DEV_ARM_VGIC_CTRL_INIT,
-	};
+	if (gic_fd > 0) {
+		int lines = 1;
+		uint32_t nr_irqs = lines * 32 + GIC_SPI_IRQ_BASE;
+		struct kvm_device_attr nr_irqs_attr = {
+			.group	= KVM_DEV_ARM_VGIC_GRP_NR_IRQS,
+			.addr	= (uint64_t)&nr_irqs,
+		};
+		struct kvm_device_attr vgic_init_attr = {
+			.group	= KVM_DEV_ARM_VGIC_GRP_CTRL,
+			.attr	= KVM_DEV_ARM_VGIC_CTRL_INIT,
+		};
 
-	if (gic_fd < 0)
-		fprintf(stderr, "Invalid gic file descriptor\n");
-
-	kvm_ioctl(gic_fd, KVM_SET_DEVICE_ATTR, &nr_irqs_attr);
-	kvm_ioctl(gic_fd, KVM_SET_DEVICE_ATTR, &vgic_init_attr);
-
-#if 0
-	uint32_t int_no = 30;
-	struct kvm_device_attr timer_attr = {
-		.group = KVM_ARM_VCPU_TIMER_CTRL,
-		.attr = KVM_ARM_VCPU_TIMER_IRQ_PTIMER,
-		.addr = (uint64_t) &int_no,
-	};
-	kvm_ioctl(vcpufd, KVM_SET_DEVICE_ATTR, &timer_attr);
-
-	int_no = 27;
-	timer_attr.attr = KVM_ARM_VCPU_TIMER_IRQ_VTIMER;
-	kvm_ioctl(vcpufd, KVM_SET_DEVICE_ATTR, &timer_attr);
-#endif
+		kvm_ioctl(gic_fd, KVM_SET_DEVICE_ATTR, &nr_irqs_attr);
+		kvm_ioctl(gic_fd, KVM_SET_DEVICE_ATTR, &vgic_init_attr);
+	}
 
 	// only one core is able to enter startup code
 	// => the wait for the predecessor core
@@ -304,6 +282,7 @@ void init_kvm_arch(void)
 	};
 	kvm_ioctl(vmfd, KVM_SET_USER_MEMORY_REGION, &kvm_region);
 
+#if 0
 	/* Create interrupt controller GICv2 */
 	uint64_t cpu_if_addr = GICC_BASE;
 	uint64_t dist_addr = GICD_BASE;
@@ -326,11 +305,30 @@ void init_kvm_arch(void)
 	gic_fd = gic_device.fd;
 	kvm_ioctl(gic_fd, KVM_SET_DEVICE_ATTR, &cpu_if_attr);
 	kvm_ioctl(gic_fd, KVM_SET_DEVICE_ATTR, &dist_attr);
+#else
+	/* Create interrupt controller GICv2 */
+	struct kvm_arm_device_addr gic_addr[] = {
+		[0] = {
+			.id = KVM_VGIC_V2_ADDR_TYPE_DIST |
+			(KVM_ARM_DEVICE_VGIC_V2 << KVM_ARM_DEVICE_ID_SHIFT),
+			.addr = GICD_BASE,
+		},
+		[1] = {
+			.id = KVM_VGIC_V2_ADDR_TYPE_CPU |
+			(KVM_ARM_DEVICE_VGIC_V2 << KVM_ARM_DEVICE_ID_SHIFT),
+			.addr = GICC_BASE,
+		}
+	};
+
+	kvm_ioctl(vmfd, KVM_CREATE_IRQCHIP, NULL);
+	kvm_ioctl(vmfd, KVM_ARM_SET_DEVICE_ADDR, &gic_addr[0]);
+	kvm_ioctl(vmfd, KVM_ARM_SET_DEVICE_ADDR, &gic_addr[1]);
+#endif
 
 	//fprintf(stderr, "Create gicd at 0x%llx\n", GICD_BASE);
 	//fprintf(stderr, "Create gicc at 0x%llx\n", GICC_BASE);
 
-	cap_irqfd = kvm_ioctl(vmfd, KVM_CHECK_EXTENSION, KVM_CAP_IRQFD) <= 0 ? false : true;
+	cap_irqfd = ioctl(vmfd, KVM_CHECK_EXTENSION, KVM_CAP_IRQFD) <= 0 ? false : true;
 	if (!cap_irqfd)
             err(1, "the support of KVM_CAP_IRQFD is curently required");
 }
