@@ -123,7 +123,9 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits)
 					self[lvl][vpn] = phyaddr | PT_PT;
 
 					/* Fill new table with zeros */
-					LOG_INFO("Clear new page table at %p\n", &self[lvl-1][vpn<<PAGE_MAP_BITS]);
+					//LOG_INFO("Clear new page table at %p\n", &self[lvl-1][vpn<<PAGE_MAP_BITS]);
+					tlb_flush_range((size_t) (&self[lvl-1][vpn<<PAGE_MAP_BITS]),
+						((size_t)(&self[lvl-1][vpn<<PAGE_MAP_BITS]))+PAGE_SIZE);
 					memset(&self[lvl-1][vpn<<PAGE_MAP_BITS], 0, PAGE_SIZE);
 				}
 			} else { /* page table */
