@@ -328,7 +328,7 @@ void finish_task_switch(void)
 		if (old->status == TASK_FINISHED) {
 			/* cleanup task */
 			if (old->stack) {
-				LOG_INFO("Release stack at 0x%zx\n", old->stack);
+				//LOG_INFO("Release stack at 0x%zx\n", old->stack);
 				destroy_stack(old->stack, DEFAULT_STACK_SIZE);
 				old->stack = NULL;
 			}
@@ -378,11 +378,12 @@ void NORETURN do_exit(int arg)
 	// do we need to release the TLS?
 	tls_addr = (void*)get_tls();
 	if (tls_addr) {
-		LOG_INFO("Release TLS at %p\n", (char*)tls_addr - curr_task->tls_size);
+		//LOG_INFO("Release TLS at %p\n", (char*)tls_addr - curr_task->tls_size);
 		kfree((char*)tls_addr - curr_task->tls_size - TLS_OFFSET);
 	}
 
 	curr_task->status = TASK_FINISHED;
+
 	reschedule();
 
 	irq_nested_enable(flags);
@@ -842,6 +843,7 @@ size_t** scheduler(void)
 		curr_task = task_list_pop_front(&readyqueues[core_id].queue[prio-1]);
 
 		if(BUILTIN_EXPECT(curr_task == NULL, 0)) {
+			kputs("Kernel panic: No task in readyqueue\n");
 			LOG_ERROR("Kernel panic: No task in readyqueue\n");
 			while(1);
 		}
@@ -894,16 +896,4 @@ int get_task(tid_t id, task_t** task)
 	*task = &task_table[id];
 
 	return 0;
-}
-
-
-void reschedule(void)
-{
-	size_t** stack;
-	uint8_t flags;
-
-	flags = irq_nested_disable();
-	if ((stack = scheduler()))
-		switch_context(stack);
-	irq_nested_enable(flags);
 }

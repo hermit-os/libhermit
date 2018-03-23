@@ -307,6 +307,21 @@ int reset_fsgs(int32_t core_id);
 // determine the cpu features
 int cpu_detection(void);
 
+extern size_t hbmem_base;
+extern size_t hbmem_size;
+
+inline static int has_hbmem(void) {
+	return (hbmem_base != 0);
+}
+
+inline static size_t get_hbmem_base(void) {
+	return hbmem_base;
+}
+
+inline static size_t get_hbmem_size(void) {
+	return hbmem_base;
+}
+
 inline static uint32_t has_fpu(void) {
 	return (cpu_info.feature1 & CPU_FEATURE_FPU);
 }

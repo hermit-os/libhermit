@@ -11,16 +11,16 @@
 #cmakedefine DYNAMIC_TICKS
 
 /* Define to use machine specific version of memcpy */
-#cmakedefine HAVE_ARCH_MEMCPY
+#cmakedefine HAVE_ARCH_MEMCPY		(@HAVE_ARCH_MEMCPY@)
 
 /* Define to use machine specific version of memset */
-#cmakedefine HAVE_ARCH_MEMSET
+#cmakedefine HAVE_ARCH_MEMSET		(@HAVE_ARCH_MEMSET@)
 
 /* Define to use machine specific version of strcpy */
-#cmakedefine HAVE_ARCH_STRCPY
+#cmakedefine HAVE_ARCH_STRCPY		(@HAVE_ARCH_STRCPY@)
 
 /* Define to use machine specific version of strlen */
-#cmakedefine HAVE_ARCH_STRLEN
+#cmakedefine HAVE_ARCH_STRLEN		(@HAVE_ARCH_STRLEN@)
 
 /* Define to use machine specific version of strncpy */
-#cmakedefine HAVE_ARCH_STRNCPY
+#cmakedefine HAVE_ARCH_STRNCPY		(@HAVE_ARCH_STRNCPY@)

@@ -32,6 +32,10 @@
 #include <hermit/processor.h>
 #include <hermit/tasks.h>
 #include <hermit/logging.h>
+#include <hermit/spinlock.h>
+#include <hermit/rcce.h>
+#include <hermit/islelock.h>
+#include <asm/page.h>
 #include <asm/multiboot.h>
 
 /*
@@ -46,7 +50,49 @@ extern void* Lpatch1;
 extern void* Lpatch2;
 extern atomic_int32_t current_boot_id;
 
+islelock_t* rcce_lock = NULL;
+rcce_mpb_t* rcce_mpb = NULL;
+
 extern void isrsyscall(void);
+
+const char* get_cmdline(void)
+{
+	if (mb_info)
+		return (char*) (size_t) mb_info->cmdline;
+
+	return NULL;
+}
+
+int init_rcce(void)
+{
+	size_t addr, flags = PG_GLOBAL|PG_RW;
+
+	addr = vma_alloc(PAGE_SIZE, VMA_READ|VMA_WRITE|VMA_CACHEABLE);
+	if (BUILTIN_EXPECT(!addr, 0))
+		return -ENOMEM;
+	if (has_nx())
+		flags |= PG_XD;
+	if (page_map(addr, phy_rcce_internals, 1, flags)) {
+		vma_free(addr, addr + PAGE_SIZE);
+		return -ENOMEM;
+	}
+
+	rcce_lock = (islelock_t*) addr;
+	rcce_mpb = (rcce_mpb_t*) (addr + CACHE_LINE*(RCCE_MAXNP+1));
+
+	LOG_INFO("Map rcce_lock at %p and rcce_mpb at %p\n", rcce_lock, rcce_mpb);
+
+	return 0;
+}
+
+void print_cpu_status(int isle)
+{
+	static spinlock_t status_lock = SPINLOCK_INIT;
+
+	spinlock_lock(&status_lock);
+	LOG_INFO("CPU %d of isle %d is now online (CR0 0x%zx, CR4 0x%zx)\n", CORE_ID, isle, read_cr0(), read_cr4());
+	spinlock_unlock(&status_lock);
+}
 
 cpu_info_t cpu_info = { 0, 0, 0, 0, 0};
 static char cpu_vendor[13] = {[0 ... 12] = 0};

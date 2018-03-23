@@ -1,0 +1,8 @@
+arch/arm64/kernel/tasks.o: arch/arm64/kernel/tasks.c \
+ /home/stefan/HermitCore/include/hermit/stdio.h \
+ /home/stefan/HermitCore/include/hermit/config.h \
+ /home/stefan/HermitCore/include/hermit/stddef.h \
+ /home/stefan/HermitCore/arch/arm64/include/asm/stddef.h \
+ /home/stefan/HermitCore/arch/arm64/include/asm/irqflags.h \
+ /home/stefan/HermitCore/include/hermit/stdarg.h \
+ /home/stefan/HermitCore/include/hermit/stdlib.h

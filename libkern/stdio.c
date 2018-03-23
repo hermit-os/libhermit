@@ -42,7 +42,7 @@ spinlock_irqsave_t stdio_lock = SPINLOCK_IRQSAVE_INIT;
    the binary. => no valid kernel messages */
 /* static */ unsigned char kmessages[KMSG_SIZE+1] __attribute__ ((section(".kmsg"))) = {[0 ... KMSG_SIZE] = 0x00};
 
-int koutput_init(void)
+	int koutput_init(void)
 {
 	if (is_single_kernel())
 		uart_init();

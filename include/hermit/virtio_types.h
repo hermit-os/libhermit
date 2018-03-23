@@ -39,11 +39,10 @@
  * - __le{16,32,64} for standard-compliant virtio devices
  */
 
-typedef uint8_t	__u8;
+typedef uint8_t		__u8;
 typedef uint16_t	__u16;
 typedef uint32_t	__u32;
 typedef uint64_t	__u64;
-typedef size_t	uintptr_t;
 
 #define __bitwise__
 

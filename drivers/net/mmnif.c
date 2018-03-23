@@ -70,7 +70,9 @@
 #include <asm/page.h>
 #include <asm/irq.h>
 #include <asm/irqflags.h>
+#if __x86_64__
 #include <asm/apic.h>
+#endif
 
 #include <net/mmnif.h>
 
@@ -230,7 +232,6 @@ inline static int mmnif_trigger_irq(int dest_ip)
 		dest = 0;
 	else
 		dest = 0;	// TODO: determine physical apic id of the destination
-
 	return apic_send_ipi(dest, MMNIF_IRQ);
 }
 
@@ -602,8 +603,10 @@ err_t mmnif_init(struct netif *netif)
 
 	// protect mmnif shared segments by the NX flag
 	flags = PG_RW|PG_GLOBAL;
+#if __x86_64__
 	if (has_nx())
 		flags |= PG_XD;
+#endif
 
 	// map physical address in the virtual address space
 	err = page_map((size_t) header_start_address, (size_t) header_phy_start_address, (nodes * header_size) >> PAGE_BITS, flags);

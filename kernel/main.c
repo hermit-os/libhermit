@@ -34,13 +34,13 @@
 #include <hermit/tasks.h>
 #include <hermit/syscall.h>
 #include <hermit/memory.h>
-#include <hermit/spinlock.h>
-#include <hermit/rcce.h>
 #include <hermit/logging.h>
 #include <asm/irq.h>
 #include <asm/page.h>
 #include <asm/uart.h>
+#ifdef __x86_64__
 #include <asm/multiboot.h>
+#endif
 #include <asm/uhyve.h>
 
 #include <lwip/init.h>
@@ -65,10 +65,6 @@
 
 #define HERMIT_PORT	0x494E
 #define HERMIT_MAGIC	0x7E317
-
-/* Ports and data structures for command line args + envp forwarding to uhyve */
-#define UHYVE_PORT_CMDSIZE	0x509
-#define UHYVE_PORT_CMDVAL	0x510
 
 typedef struct {
 	int argc;
@@ -97,9 +93,6 @@ extern const void __bss_start;
 extern const void percore_start;
 extern const void percore_end0;
 extern const void percore_end;
-extern char __BUILD_DATE;
-extern size_t hbmem_base;
-extern size_t hbmem_size;
 
 /* Page frame counters */
 extern atomic_int64_t total_pages;
@@ -116,9 +109,6 @@ extern uint8_t hcip[4];
 extern uint8_t hcgateway[4];
 extern uint8_t hcmask[4];
 
-islelock_t* rcce_lock = NULL;
-rcce_mpb_t* rcce_mpb = NULL;
-
 extern void signal_init();
 
 static int hermit_init(void)
@@ -134,6 +124,7 @@ static int hermit_init(void)
 		memcpy((char*) &percore_start + i*sz, (char*) &percore_start, sz);
 
 	koutput_init();
+
 	system_init();
 	irq_init();
 	timer_init();
@@ -142,15 +133,6 @@ static int hermit_init(void)
 	signal_init();
 
 	return 0;
-}
-
-static void print_status(void)
-{
-	static spinlock_t status_lock = SPINLOCK_INIT;
-
-	spinlock_lock(&status_lock);
-	LOG_INFO("CPU %d of isle %d is now online (CR0 0x%zx, CR4 0x%zx)\n", CORE_ID, isle, read_cr0(), read_cr4());
-	spinlock_unlock(&status_lock);
 }
 
 static void tcpip_init_done(void* arg)
@@ -227,6 +209,11 @@ static int init_netifs(void)
 		netifapi_netif_set_default(&default_netif);
 		netifapi_netif_set_up(&default_netif);
 	} else {
+#ifdef __aarch64__
+		LOG_ERROR("Unable to add the network interface\n");
+
+		return -ENODEV;
+#else
 		/* Clear network address because we use DHCP to get an ip address */
 		IP_ADDR4(&gw, 0,0,0,0);
 		IP_ADDR4(&ipaddr, 0,0,0,0);
@@ -258,13 +245,13 @@ success:
 		int ip_counter = 0;
 		/* wait for ip address */
 		while(!ip_2_ip4(&default_netif.ip_addr)->addr && (ip_counter < 20)) {
-			uint64_t end_tsc, start_tsc = rdtsc();
+			uint64_t end_tsc, start_tsc = get_rdtsc();
 
 			do {
 				if (ip_2_ip4(&default_netif.ip_addr)->addr)
 					return 0;
 				check_workqueues();
-				end_tsc = rdtsc();
+				end_tsc = get_rdtsc();
 			} while(((end_tsc - start_tsc) / (get_cpu_frequency() * 1000)) < DHCP_FINE_TIMER_MSECS);
 
 			dhcp_fine_tmr();
@@ -279,6 +266,7 @@ success:
 
 		if (!ip_2_ip4(&default_netif.ip_addr)->addr)
 			return -ENODEV;
+#endif
 	}
 
 	return 0;
@@ -294,7 +282,7 @@ int network_shutdown(void)
 		lwip_close(s);
 	}
 
-	mmnif_shutdown();
+	//mmnif_shutdown();
 	//stats_display();
 
 	return 0;
@@ -308,7 +296,7 @@ int smp_main(void)
 	enable_dynticks();
 #endif
 
-	print_status();
+	print_cpu_status(isle);
 
 	/* wait for the other cpus */
 	while(atomic_int32_read(&cpu_online) < atomic_int32_read(&possible_cpus)) {
@@ -324,31 +312,11 @@ int smp_main(void)
 }
 #endif
 
-static int init_rcce(void)
-{
-	size_t addr, flags = PG_GLOBAL|PG_RW;
-
-	addr = vma_alloc(PAGE_SIZE, VMA_READ|VMA_WRITE|VMA_CACHEABLE);
-	if (BUILTIN_EXPECT(!addr, 0))
-		return -ENOMEM;
-	if (has_nx())
-		flags |= PG_XD;
-	if (page_map(addr, phy_rcce_internals, 1, flags)) {
-		vma_free(addr, addr + PAGE_SIZE);
-		return -ENOMEM;
-	}
-
-	rcce_lock = (islelock_t*) addr;
-	rcce_mpb = (rcce_mpb_t*) (addr + CACHE_LINE*(RCCE_MAXNP+1));
-
-	LOG_INFO("Map rcce_lock at %p and rcce_mpb at %p\n", rcce_lock, rcce_mpb);
-
-	return 0;
-}
-
 int libc_start(int argc, char** argv, char** env);
 
-// init task => creates all other tasks an initialize the LwIP
+char* itoa(uint64_t input, char* str);
+
+// init task => creates all other tasks and initializes the LwIP
 static int initd(void* arg)
 {
 	int s = -1, c = -1;
@@ -385,8 +353,12 @@ static int initd(void* arg)
 	vma_free(curr_task->heap->start, curr_task->heap->start+PAGE_SIZE);
 	vma_add(curr_task->heap->start, curr_task->heap->start+PAGE_SIZE, VMA_HEAP|VMA_USER);
 
+#ifndef __aarch64__
 	// initialize network
 	err = init_netifs();
+#else
+	err = -EINVAL;
+#endif
 
 	if (is_uhyve()) {
 		int i;
@@ -423,10 +395,10 @@ static int initd(void* arg)
 		LOG_INFO("Boot time: %d ms\n", (get_clock_tick() * 1000) / TIMER_FREQ);
 		libc_start(uhyve_cmdsize.argc, uhyve_cmdval.argv, uhyve_cmdval.envp);
 
-		for(i=0; i<argc; i++)
+		for(i=0; i<uhyve_cmdsize.argc; i++)
 			kfree(uhyve_cmdval.argv[i]);
 		kfree(uhyve_cmdval.argv);
-		for(i=0; i<envc; i++)
+		for(i=0; i<uhyve_cmdsize.envc; i++)
 			kfree(uhyve_cmdval.envp[i]);
 		kfree(uhyve_cmdval.envp);
 		kfree(argv_virt);
@@ -602,23 +574,24 @@ int hermit_main(void)
 	hermit_init();
 	system_calibration(); // enables also interrupts
 
-	LOG_INFO("This is Hermit %s, build date %u\n", PACKAGE_VERSION, &__DATE__);
-	LOG_INFO("Isle %d of %d possible isles\n", isle, possible_isles);
+	LOG_INFO("This is Hermit %s, build on %s\n", PACKAGE_VERSION, __DATE__);
+	//LOG_INFO("Isle %d of %d possible isles\n", isle, possible_isles);
 	LOG_INFO("Kernel starts at %p and ends at %p\n", &kernel_start, (size_t)&kernel_start + image_size);
-	LOG_INFO("TLS image starts at %p and ends at %p (size 0x%zx)\n", &tls_start, &tls_end, ((size_t) &tls_end) - ((size_t) &tls_start));
+	//LOG_INFO("TLS image starts at %p and ends at %p (size 0x%zx)\n", &tls_start, &tls_end, ((size_t) &tls_end) - ((size_t) &tls_start));
 	LOG_INFO("BBS starts at %p and ends at %p\n", &hbss_start, (size_t)&kernel_start + image_size);
 	LOG_INFO("Per core data starts at %p and ends at %p\n", &percore_start, &percore_end);
 	LOG_INFO("Per core size 0x%zx\n", (size_t) &percore_end0 - (size_t) &percore_start);
-	LOG_INFO("Processor frequency: %u MHz\n", get_cpu_frequency());
+	if (get_cpu_frequency() > 0)
+		LOG_INFO("Processor frequency: %u MHz\n", get_cpu_frequency());
 	LOG_INFO("Total memory: %zd MiB\n", atomic_int64_read(&total_pages) * PAGE_SIZE / (1024ULL*1024ULL));
 	LOG_INFO("Current allocated memory: %zd KiB\n", atomic_int64_read(&total_allocated_pages) * PAGE_SIZE / 1024ULL);
 	LOG_INFO("Current available memory: %zd MiB\n", atomic_int64_read(&total_available_pages) * PAGE_SIZE / (1024ULL*1024ULL));
 	LOG_INFO("Core %d is the boot processor\n", boot_processor);
 	LOG_INFO("System is able to use %d processors\n", possible_cpus);
-	if (mb_info)
-		LOG_INFO("Kernel cmdline: %s\n", (char*) (size_t) mb_info->cmdline);
-	if (hbmem_base)
-		LOG_INFO("Found high bandwidth memory at 0x%zx (size 0x%zx)\n", hbmem_base, hbmem_size);
+	if (get_cmdline())
+		LOG_INFO("Kernel cmdline: %s\n", get_cmdline());
+	if (has_hbmem())
+		LOG_INFO("Found high bandwidth memory at 0x%zx (size 0x%zx)\n", get_hbmem_base(), get_hbmem_size());
 
 #if 0
 	print_pci_adapters();
@@ -632,7 +605,7 @@ int hermit_main(void)
 	while(atomic_int32_read(&cpu_online) < atomic_int32_read(&possible_cpus))
 		PAUSE;
 
-	print_status();
+	print_cpu_status(isle);
 	//vma_dump();
 
 	create_kernel_task_on_core(NULL, initd, NULL, NORMAL_PRIO, boot_processor);

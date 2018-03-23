@@ -38,6 +38,7 @@
 #include <hermit/signal.h>
 #include <hermit/logging.h>
 #include <asm/uhyve.h>
+#include <asm/io.h>
 #include <sys/poll.h>
 
 #include <lwip/sockets.h>

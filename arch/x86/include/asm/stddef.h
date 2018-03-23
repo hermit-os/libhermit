@@ -82,6 +82,7 @@ typedef long off_t;
 typedef unsigned long long size_t;
 /// Pointer differences
 typedef long long ptrdiff_t;
+typedef unsigned long uintptr_t;
 #ifdef __KERNEL__
 typedef long long ssize_t;
 typedef long long off_t;
@@ -207,6 +208,10 @@ typedef struct {
 
 const int32_t is_uhyve(void);
 const int32_t is_single_kernel(void);
+
+const char* get_cmdline(void);
+int init_rcce(void);
+void print_cpu_status(int isle);
 
 #ifdef __cplusplus
 }
