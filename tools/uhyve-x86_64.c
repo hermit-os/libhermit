@@ -702,7 +702,7 @@ nextslot:
 	fprintf(f, "number of cores: %u\n", ncores);
 	fprintf(f, "memory size: 0x%zx\n", guest_size);
 	fprintf(f, "checkpoint number: %u\n", no_checkpoint);
-	fprintf(f, "entry point: 0x%zx", elf_entry);
+	fprintf(f, "entry point: 0x%zx\n", elf_entry);
 	if (full_checkpoint)
 		fprintf(f, "full checkpoint: 1");
 	else
