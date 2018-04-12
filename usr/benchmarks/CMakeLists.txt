@@ -17,5 +17,7 @@ add_executable(stream stream.c)
 target_compile_options(stream PRIVATE -fopenmp)
 target_link_libraries(stream -fopenmp)
 
+add_executable(taskswitch taskswitch.c)
+
 # deployment
 install_local_targets(extra/benchmarks)
