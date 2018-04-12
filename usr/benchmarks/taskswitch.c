@@ -21,28 +21,29 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-///////////////////////////////////////
-//// HERMITCORE RUST-SPECIFIC CODE ////
+////////////////////////////////////
+//// HERMITCORE C-SPECIFIC CODE ////
 
 #include <hermit/syscall.h>
 
+#define NORMAL_PRIO     8
+typedef int (*entry_point_t)(void*);
+int create_kernel_task_on_core(tid_t* id, entry_point_t ep, void* args, uint8_t prio, uint32_t core_id);
+void reschedule(void);
+
 inline static void create_second_task(void (*entry_point)(void*))
 {
-	sys_spawn(NULL, entry_point, NULL, HIGH_PRIO, 0);
+	create_kernel_task_on_core(NULL, (entry_point_t)entry_point, NULL, NORMAL_PRIO, 0);
 }
 
 inline static void consume_task_time(void)
 {
-	// Spending >10ms in the second task guarantees that the scheduler
-	// switches back to the first task on sys_yield().
-	// Calling sys_msleep(ms) with ms < 10 enforces busy-waiting!
-	sys_msleep(6);
-	sys_msleep(6);
+	// Not required for the HermitCore C version.
 }
 
 inline static void switch_task(void)
 {
-	sys_yield();
+	reschedule();
 }
 
 
