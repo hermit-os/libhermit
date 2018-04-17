@@ -43,6 +43,8 @@
  * Note that linker symbols are not variables, they have no memory allocated for
  * maintaining a value, rather their address is their value.
  */
+extern const void percore_start;
+extern const void percore_end0;
 extern atomic_int32_t cpu_online;
 
 volatile uint32_t go_down = 0;
@@ -513,7 +515,8 @@ int clone_task(tid_t* id, entry_point_t ep, void* arg, uint8_t prio)
 				readyqueues[core_id].queue[prio-1].last = task_table+i;
 			}
 			// should we wakeup the core?
-			if (readyqueues[core_id].nr_tasks == 1)
+			volatile task_t* running_task = (volatile task_t*) ((size_t)current_task + core_id * ((size_t) &percore_end0 - (size_t) &percore_start));
+			if (running_task->status != TASK_RUNNING)
 				wakeup_core(core_id);
 			spinlock_irqsave_unlock(&readyqueues[core_id].lock);
  			break;
@@ -687,7 +690,8 @@ int wakeup_task(tid_t id)
 		readyqueues[core_id].nr_tasks++;
 
 		// should we wakeup the core?
-		if (readyqueues[core_id].nr_tasks == 1)
+		volatile task_t* running_task = (volatile task_t*) ((size_t)current_task + core_id * ((size_t) &percore_end0 - (size_t) &percore_start));
+		if (running_task->status != TASK_RUNNING)
 			wakeup_core(core_id);
 
 		LOG_DEBUG("update nr_tasks on core %d to %d\n", core_id, readyqueues[core_id].nr_tasks);
