@@ -24,7 +24,7 @@ static void* perform_work( void* argument )
     int passed_in_value;
 
     passed_in_value = *( ( int* )argument );
-    printf( "Hello World! It's me, thread %d with argument %d!\n", getpid(), passed_in_value );
+    printf("Hello World! It's me, thread %d with argument %d!\n", getpid(), passed_in_value );
 
     /* optionally: insert more useful stuff here */
     for(int i=0; i<NUM_ITER; i++)
@@ -32,7 +32,9 @@ static void* perform_work( void* argument )
         buf = malloc(SIZE*i);
         free(buf);
     }
+    printf("malloc_stats from thread %d\n", getpid());
     malloc_stats();
+    printf("thread %d leaves thread function\n", getpid());
 
     return NULL;
 }
