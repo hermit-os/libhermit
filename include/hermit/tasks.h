@@ -236,7 +236,7 @@ void NORETURN leave_kernel_task(void);
 
 /** @brief if a task exists with higher priority, HermitCore switch to it.
  */
-void check_scheduling(void);
+int check_scheduling(void);
 
 /** @brief This function shutdowns the (ip) network
  */

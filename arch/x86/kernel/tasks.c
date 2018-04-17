@@ -197,11 +197,15 @@ int create_default_frame(task_t* task, entry_point_t ep, void* arg, uint32_t cor
 
 void wait_for_task(void)
 {
+	irq_disable();
+	while (check_scheduling() != 0)
+		;
+
 #ifndef USE_MWAIT
-	HALT;
+	asm volatile ("sti; hlt" ::: "memory");
 #else
 	if (!has_mwait()) {
-		HALT;
+		asm volatile ("sti; hlt" ::: "memory");
 	} else {
 		void* queue = get_readyqueue();
 
@@ -209,6 +213,7 @@ void wait_for_task(void)
 			clflush(queue);
 
 		monitor(queue, 0, 0);
+		irq_enable();
 		mwait(0x2 /* 0x2 = c3, 0xF = c0 */, 1 /* break on interrupt flag */);
 	}
 #endif

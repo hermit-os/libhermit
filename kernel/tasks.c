@@ -212,16 +212,15 @@ void fpu_handler(void)
 	restore_fpu_state(&task->fpu);
 }
 
-void check_scheduling(void)
+int check_scheduling(void)
 {
-	if (!is_irq_enabled())
-		return;
-
 	uint32_t prio = get_highest_priority();
 	task_t* curr_task = per_core(current_task);
 
 	if (prio > curr_task->prio) {
 		reschedule();
+
+		return 1;
 #ifdef DYNAMIC_TICKS
 	} else if ((prio > 0) && (prio == curr_task->prio)) {
 		// if a task is ready, check if the current task runs already one tick (one time slice)
@@ -234,8 +233,12 @@ void check_scheduling(void)
 			LOG_DEBUG("Time slice expired for task %d on core %d. New task has priority %u.\n", curr_task->id, CORE_ID, prio);
 			reschedule();
 		}
+
+		return 1;
 #endif
 	}
+
+	return 0;
 }
 
 
