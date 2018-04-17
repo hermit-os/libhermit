@@ -213,8 +213,13 @@ void wait_for_task(void)
 			clflush(queue);
 
 		monitor(queue, 0, 0);
-		irq_enable();
-		mwait(0x2 /* 0x2 = c3, 0xF = c0 */, 1 /* break on interrupt flag */);
+
+		/*
+		 * NOTE: we use the ecx=0 => we
+		 * handle the IRQ and not just wake from it.
+		 */
+		asm volatile("sti; mwait" :: "a" (0x2) /* 0x2 = c3, 0xF = c0 */ ,
+			"c" (0) /* break on interrupt flag */ : "memory");
 	}
 #endif
 }
