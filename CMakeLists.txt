@@ -63,8 +63,8 @@ add_subdirectory(arch/aarch64)
 list(APPEND KERNEL_OBJECTS
 	$<TARGET_OBJECTS:${AARCH64_KERNEL_C_TARGET}>)
 else()
-# add arch/x86 and its objects
-add_subdirectory(arch/x86)
+# add arch/x86_64 and its objects
+add_subdirectory(arch/x86_64)
 list(APPEND KERNEL_OBJECTS
 	$<TARGET_OBJECTS:${X86_KERNEL_ASM_TARGET}>
 	$<TARGET_OBJECTS:${X86_KERNEL_C_TARGET}>)
@@ -154,7 +154,7 @@ build_external(tools ${HERMIT_ROOT}/tools "")
 
 if("${TARGET_ARCH}" STREQUAL "x86_64-hermit")
 
-build_external(arch_x86_loader ${HERMIT_ROOT}/arch/x86/loader "")
+build_external(arch_x86_loader ${HERMIT_ROOT}/arch/x86_64/loader "")
 
 ## Intel's OpenMP runtime for x86 (libomp)
 build_external(libiomp ${HERMIT_ROOT}/usr/libomp ""
