@@ -31,7 +31,7 @@ cmake/
 ├── HermitCore-Application.cmake
 ├── HermitCore.cmake
 ├── HermitCore-Paths.cmake
-├── HermitCore-Toolchain-x86.cmake
+├── HermitCore-Toolchain-x86_64.cmake
 ├── HermitCore-Utils.cmake
 ├── local-cmake.sh
 └── README.md

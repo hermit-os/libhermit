@@ -74,7 +74,7 @@ typedef enum {
 
 bool verbose = false;
 
-static monitor_t monitor = BAREMETAL;
+static monitor_t monitor = UHYVE;
 static int sobufsize = 131072;
 static unsigned int isle_nr = 0;
 static unsigned int port = HERMIT_PORT;

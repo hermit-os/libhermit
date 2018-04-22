@@ -8,7 +8,7 @@ include(${CMAKE_CURRENT_LIST_DIR}/HermitCore-Configuration.cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/golang/)
 
 if(NOT HERMIT_ARCH)
-	set(HERMIT_ARCH x86)
+	execute_process(COMMAND uname -m OUTPUT_VARIABLE HERMIT_ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
 endif()
 
 if(PROFILING)
@@ -35,7 +35,7 @@ if(NOT CMAKE_TOOLCHAIN_FILE)
 endif()
 
 # NASM is only required on x86_64
-if("${HERMIT_ARCH}" STREQUAL "x86")
+if("${HERMIT_ARCH}" STREQUAL "x86_64")
 # NASM detection will change binary format depending on host system, but
 # we only want to generate elf64 for HermitCore
 # Note: Has to be set *before* ASM_NASM is enabled
