@@ -602,6 +602,17 @@ int uhyve_init(char *path)
 	/* Create the virtual machine */
 	vmfd = kvm_ioctl(kvm, KVM_CREATE_VM, 0);
 
+#ifdef __x86_64__
+	init_kvm_arch();
+	if (restart) {
+		if (load_checkpoint(guest_mem, path) != 0)
+			exit(EXIT_FAILURE);
+	} else {
+		if (load_kernel(guest_mem, path) != 0)
+			exit(EXIT_FAILURE);
+	}
+#endif
+
 	pthread_barrier_init(&barrier, NULL, ncores);
 	cpuid = 0;
 
@@ -664,6 +675,7 @@ int uhyve_loop(int argc, char **argv)
 
 	pthread_barrier_wait(&barrier);
 
+#ifdef __aarch64__
 	init_kvm_arch();
 	if (restart) {
 		if (load_checkpoint(guest_mem, guest_path) != 0)
@@ -672,6 +684,7 @@ int uhyve_loop(int argc, char **argv)
 		if (load_kernel(guest_mem, guest_path) != 0)
 			exit(EXIT_FAILURE);
 	}
+#endif
 
 	*((uint32_t*) (mboot+0x24)) = ncores;
 
