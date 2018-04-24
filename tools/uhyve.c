@@ -74,6 +74,7 @@ static pthread_mutex_t kvm_lock = PTHREAD_MUTEX_INITIALIZER;
 
 extern bool verbose;
 
+static char* guest_path = NULL;
 size_t guest_size = 0x20000000ULL;
 bool full_checkpoint = false;
 pthread_barrier_t barrier;
@@ -263,11 +264,15 @@ static int vcpu_loop(void)
 {
 	int ret;
 
-	if (restart) {
-		pthread_barrier_wait(&barrier);
-		if (cpuid == 0)
-			no_checkpoint++;
-	}
+	pthread_barrier_wait(&barrier);
+
+	if (restart)
+		restore_cpu_state();
+	else
+		init_cpu_state(elf_entry);
+
+	if (restart && (cpuid == 0))
+		no_checkpoint++;
 
 	while (1) {
 		ret = ioctl(vcpufd, KVM_RUN, NULL);
@@ -288,7 +293,7 @@ static int vcpu_loop(void)
 			}
 
 			default:
-				err(1, "KVM: ioctl KVM_RUN in vcpu_loop failed");
+				err(1, "KVM: ioctl KVM_RUN in vcpu_loop for cpuid %d failed", cpuid);
 				break;
 			}
 		}
@@ -495,12 +500,6 @@ static int vcpu_init(void)
 	if (run == MAP_FAILED)
 		err(1, "KVM: VCPU mmap failed");
 
-	if (restart) {
-		restore_cpu_state();
-	} else {
-		init_cpu_state(elf_entry);
-	}
-
 	return 0;
 }
 
@@ -530,6 +529,8 @@ static void* uhyve_thread(void* arg)
 	// create new cpu
 	vcpu_init();
 
+	pthread_barrier_wait(&barrier);
+
 	// run cpu loop until thread gets killed
 	ret = vcpu_loop();
 
@@ -545,6 +546,8 @@ void sigterm_handler(int signum)
 
 int uhyve_init(char *path)
 {
+	guest_path = path;
+
 	signal(SIGTERM, sigterm_handler);
 
 	// register routine to close the VM
@@ -599,15 +602,6 @@ int uhyve_init(char *path)
 	/* Create the virtual machine */
 	vmfd = kvm_ioctl(kvm, KVM_CREATE_VM, 0);
 
-	init_kvm_arch();
-	if (restart) {
-		if (load_checkpoint(guest_mem, path) != 0)
-			exit(EXIT_FAILURE);
-	} else {
-		if (load_kernel(guest_mem, path) != 0)
-			exit(EXIT_FAILURE);
-	}
-
 	pthread_barrier_init(&barrier, NULL, ncores);
 	cpuid = 0;
 
@@ -660,8 +654,6 @@ int uhyve_loop(int argc, char **argv)
 	if (hermit_check)
 		ts = atoi(hermit_check);
 
-	*((uint32_t*) (mboot+0x24)) = ncores;
-
 	// First CPU is special because it will boot the system. Other CPUs will
 	// be booted linearily after the first one.
 	vcpu_threads[0] = pthread_self();
@@ -669,6 +661,19 @@ int uhyve_loop(int argc, char **argv)
 	// start threads to create VCPUs
 	for(size_t i = 1; i < ncores; i++)
 		pthread_create(&vcpu_threads[i], NULL, uhyve_thread, (void*) i);
+
+	pthread_barrier_wait(&barrier);
+
+	init_kvm_arch();
+	if (restart) {
+		if (load_checkpoint(guest_mem, guest_path) != 0)
+			exit(EXIT_FAILURE);
+	} else {
+		if (load_kernel(guest_mem, guest_path) != 0)
+			exit(EXIT_FAILURE);
+	}
+
+	*((uint32_t*) (mboot+0x24)) = ncores;
 
 	if (ts > 0)
 	{

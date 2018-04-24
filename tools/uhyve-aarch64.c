@@ -88,6 +88,7 @@ extern size_t guest_size;
 extern uint64_t elf_entry;
 extern uint8_t* klog;
 extern bool verbose;
+extern uint32_t ncores;
 extern uint8_t* guest_mem;
 extern size_t guest_size;
 extern int kvm, vmfd, netfd, efd;
@@ -411,7 +412,7 @@ int load_kernel(uint8_t* mem, char* path)
 			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x100)) = paddr; // physical start address
 			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x108)) = guest_size - PAGE_SIZE;   // physical limit
 			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x110)) = get_cpufreq();
-			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x128)) = 1; // number of used cpus
+			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x128)) = ncores; // number of used cpus
 			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x130)) = 0; // cpuid
 			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x148)) = 1; // announce uhyve
 
