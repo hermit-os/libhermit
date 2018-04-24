@@ -175,6 +175,9 @@ int timer_wait(unsigned int ticks)
 int timer_init(void)
 {
 #ifdef DYNAMIC_TICKS
+	if (boot_tsc)
+		return 0;
+
 	boot_tsc = get_cntpct();
 	set_per_core(last_tsc, boot_tsc);
 #endif
