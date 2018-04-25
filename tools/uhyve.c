@@ -34,6 +34,7 @@
 
 #define _GNU_SOURCE
 
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,10 +65,12 @@
 
 #include "uhyve.h"
 #include "uhyve-syscalls.h"
+#include "uhyve-migration.h"
 #include "uhyve-net.h"
 #include "proxy.h"
 
 static bool restart = false;
+static bool migration = false;
 static pthread_t net_thread;
 static int* vcpu_fds = NULL;
 static pthread_mutex_t kvm_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -78,6 +81,7 @@ static char* guest_path = NULL;
 size_t guest_size = 0x20000000ULL;
 bool full_checkpoint = false;
 pthread_barrier_t barrier;
+pthread_barrier_t migration_barrier;
 pthread_t* vcpu_threads = NULL;
 uint8_t* klog = NULL;
 uint8_t* guest_mem = NULL;
@@ -96,6 +100,9 @@ int uhyve_envc = -1;
 char **uhyve_argv = NULL;
 extern char **environ;
 char **uhyve_envp = NULL;
+
+vcpu_state_t *vcpu_thread_states = NULL;
+static sigset_t   signal_mask;
 
 typedef struct {
 	int argc;
@@ -266,13 +273,23 @@ static int vcpu_loop(void)
 
 	pthread_barrier_wait(&barrier);
 
-	if (restart)
-		restore_cpu_state();
-	else
+	if (restart) {
+		vcpu_state_t cpu_state = read_cpu_state();
+		restore_cpu_state(cpu_state);
+	} else if (vcpu_thread_states) {
+		restore_cpu_state(vcpu_thread_states[cpuid]);
+	} else {
 		init_cpu_state(elf_entry);
+	}
 
-	if (restart && (cpuid == 0))
-		no_checkpoint++;
+	if (cpuid == 0) {
+		if (restart) {
+			no_checkpoint++;
+		} else if (migration) {
+			free(vcpu_thread_states);
+			vcpu_thread_states = NULL;
+		}
+	}
 
 	while (1) {
 		ret = ioctl(vcpufd, KVM_RUN, NULL);
@@ -506,10 +523,27 @@ static int vcpu_init(void)
 static void sigusr_handler(int signum)
 {
 	pthread_barrier_wait(&barrier);
-
-	save_cpu_state();
+	write_cpu_state();
 
 	pthread_barrier_wait(&barrier);
+}
+
+static void vcpu_thread_mig_handler(int signum)
+{
+	/* memory should be allocated at this point */
+	assert(vcpu_thread_states != NULL);
+
+	/* ensure consistency among VCPUs */
+	pthread_barrier_wait(&barrier);
+
+	/* save state */
+	vcpu_thread_states[cpuid] = save_cpu_state();
+
+	/* synchronize with migration thread */
+	pthread_barrier_wait(&migration_barrier);
+
+	/* wait to be killed */
+	pthread_barrier_wait(&migration_barrier);
 }
 
 static void* uhyve_thread(void* arg)
@@ -521,10 +555,15 @@ static void* uhyve_thread(void* arg)
 
 	cpuid = (size_t) arg;
 
-	/* Install timer_handler as the signal handler for SIGVTALRM. */
+	/* install signal handler for checkpoint */
 	memset(&sa, 0x00, sizeof(sa));
 	sa.sa_handler = &sigusr_handler;
-	sigaction(SIGRTMIN, &sa, NULL);
+	sigaction(SIGTHRCHKP, &sa, NULL);
+
+	/* install signal handler for migration */
+	memset(&sa, 0x00, sizeof(sa));
+	sa.sa_handler = &vcpu_thread_mig_handler;
+	sigaction(SIGTHRMIG, &sa, NULL);
 
 	// create new cpu
 	vcpu_init();
@@ -546,6 +585,7 @@ void sigterm_handler(int signum)
 
 int uhyve_init(char *path)
 {
+	FILE *f = NULL;
 	guest_path = path;
 
 	signal(SIGTERM, sigterm_handler);
@@ -553,8 +593,24 @@ int uhyve_init(char *path)
 	// register routine to close the VM
 	atexit(uhyve_atexit);
 
-	FILE* f = fopen("checkpoint/chk_config.txt", "r");
-	if (f != NULL) {
+	const char *start_mig_server = getenv("HERMIT_MIGRATION_SERVER");
+
+	/*
+	 * Three startups
+	 * a) incoming migration
+	 * b) load existing checkpoint
+	 * c) normal run
+	 */
+ 	if (start_mig_server) {
+		migration = true;
+		migration_metadata_t metadata;
+		wait_for_incomming_migration(&metadata, MIGRATION_PORT);
+
+		ncores = metadata.ncores;
+		guest_size = metadata.guest_size;
+		elf_entry = metadata.elf_entry;
+		full_checkpoint = metadata.full_checkpoint;
+	} else if ((f = fopen("checkpoint/chk_config.txt", "r")) != NULL) {
 		int tmp = 0;
 		restart = true;
 
@@ -566,7 +622,10 @@ int uhyve_init(char *path)
 		full_checkpoint = tmp ? true : false;
 
 		if (verbose)
-			fprintf(stderr, "Restart from checkpoint %u (ncores %d, mem size 0x%zx)\n", no_checkpoint, ncores, guest_size);
+			fprintf(stderr,
+				"Restart from checkpoint %u "
+				"(ncores %d, mem size 0x%zx)\n",
+				no_checkpoint, ncores, guest_size);
 		fclose(f);
 	} else {
 		const char* hermit_memory = getenv("HERMIT_MEM");
@@ -607,6 +666,9 @@ int uhyve_init(char *path)
 	if (restart) {
 		if (load_checkpoint(guest_mem, path) != 0)
 			exit(EXIT_FAILURE);
+	} else if (start_mig_server) {
+		load_migration_data(guest_mem);
+		close_migration_channel();
 	} else {
 		if (load_kernel(guest_mem, path) != 0)
 			exit(EXIT_FAILURE);
@@ -614,6 +676,7 @@ int uhyve_init(char *path)
 #endif
 
 	pthread_barrier_init(&barrier, NULL, ncores);
+	pthread_barrier_init(&migration_barrier, NULL, ncores+1);
 	cpuid = 0;
 
 	// create first CPU, it will be the boot processor by default
@@ -635,6 +698,8 @@ int uhyve_init(char *path)
 int uhyve_loop(int argc, char **argv)
 {
 	const char* hermit_check = getenv("HERMIT_CHECKPOINT");
+	const char* hermit_mig_support = getenv("HERMIT_MIGRATION_SUPPORT");
+	const char* hermit_mig_type = getenv("HERMIT_MIGRATION_TYPE");
 	int ts = 0, i = 0;
 
 	/* argv[0] is 'proxy', do not count it */
@@ -664,6 +729,27 @@ int uhyve_loop(int argc, char **argv)
 
 	if (hermit_check)
 		ts = atoi(hermit_check);
+
+	if (hermit_mig_support) {
+		set_migration_target(hermit_mig_support, MIGRATION_PORT);
+		set_migration_type(hermit_mig_type);
+
+		/* block SIGUSR1 in main thread */
+		sigemptyset (&signal_mask);
+		sigaddset (&signal_mask, SIGUSR1);
+		pthread_sigmask (SIG_BLOCK, &signal_mask, NULL);
+
+		/* start migration thread; handles SIGUSR1 */
+		pthread_t sig_thr_id;
+		pthread_create (&sig_thr_id, NULL, migration_handler,  (void *)&signal_mask);
+
+		/* install signal handler for migration */
+		struct sigaction sa;
+		memset(&sa, 0x00, sizeof(sa));
+		sa.sa_handler = &vcpu_thread_mig_handler;
+		sigaction(SIGTHRMIG, &sa, NULL);
+	}
+
 
 	// First CPU is special because it will boot the system. Other CPUs will
 	// be booted linearily after the first one.

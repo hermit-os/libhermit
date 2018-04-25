@@ -61,14 +61,15 @@
 #include "uhyve.h"
 #include "uhyve-x86_64.h"
 #include "uhyve-syscalls.h"
+#include "uhyve-migration.h"
 #include "uhyve-net.h"
 #include "proxy.h"
 
 // define this macro to create checkpoints with KVM's dirty log
 //#define USE_DIRTY_LOG
+#define MIG_ITERS 4
 
 #define MAX_FNAME       256
-#define MAX_MSR_ENTRIES 25
 
 #define GUEST_OFFSET		0x0
 #define CPUID_FUNC_PERFMON	0x0A
@@ -149,14 +150,18 @@
 #define IOAPIC_DEFAULT_BASE	0xfec00000
 #define APIC_DEFAULT_BASE	0xfee00000
 
+
 static bool cap_tsc_deadline = false;
 static bool cap_irqchip = false;
 static bool cap_adjust_clock_stable = false;
 static bool cap_irqfd = false;
 static bool cap_vapic = false;
 
+FILE *chk_file = NULL;
+
 extern size_t guest_size;
 extern pthread_barrier_t barrier;
+extern pthread_barrier_t migration_barrier;
 extern pthread_t* vcpu_threads;
 extern uint64_t elf_entry;
 extern uint8_t* klog;
@@ -171,6 +176,8 @@ extern uint8_t* mboot;
 extern __thread struct kvm_run *run;
 extern __thread int vcpufd;
 extern __thread uint32_t cpuid;
+
+extern vcpu_state_t *vcpu_thread_states;
 
 static inline void show_dtable(const char *name, struct kvm_dtable *dtable)
 {
@@ -380,6 +387,17 @@ static void setup_cpuid(int kvm, int vcpufd)
 	free(kvm_cpuid);
 }
 
+size_t determine_dest_offset(size_t src_addr)
+{
+	size_t ret = 0;
+	if (src_addr & PG_PSE) {
+		ret = src_addr & PAGE_2M_MASK;
+	} else {
+		ret = src_addr & PAGE_MASK;
+	}
+	return ret;
+}
+
 void init_cpu_state(uint64_t elf_entry)
 {
 	struct kvm_regs regs = {
@@ -416,110 +434,82 @@ void init_cpu_state(uint64_t elf_entry)
 	*((volatile uint32_t*) (mboot + 0x30)) = cpuid;
 }
 
-void restore_cpu_state(void)
-{
-	struct kvm_regs regs;
-	struct kvm_mp_state mp_state = { KVM_MP_STATE_RUNNABLE };
+vcpu_state_t read_cpu_state() {
+	vcpu_state_t cpu_state;
 	char fname[MAX_FNAME];
-	struct kvm_sregs sregs;
-	struct kvm_fpu fpu;
-	struct {
-		struct kvm_msrs info;
-		struct kvm_msr_entry entries[MAX_MSR_ENTRIES];
-	} msr_data;
-	struct kvm_lapic_state lapic;
-	struct kvm_xsave xsave;
-	struct kvm_xcrs xcrs;
-	struct kvm_vcpu_events events;
-
-	run->apic_base = APIC_DEFAULT_BASE;
-        setup_cpuid(kvm, vcpufd);
-
 	snprintf(fname, MAX_FNAME, "checkpoint/chk%u_core%u.dat", no_checkpoint, cpuid);
 
 	FILE* f = fopen(fname, "r");
 	if (f == NULL)
 		err(1, "fopen: unable to open file");
 
-	if (fread(&sregs, sizeof(sregs), 1, f) != 1)
-		err(1, "fread failed\n");
-	if (fread(&regs, sizeof(regs), 1, f) != 1)
-		err(1, "fread failed\n");
-	if (fread(&fpu, sizeof(fpu), 1, f) != 1)
-		err(1, "fread failed\n");
-	if (fread(&msr_data, sizeof(msr_data), 1, f) != 1)
-		err(1, "fread failed\n");
-	if (fread(&lapic, sizeof(lapic), 1, f) != 1)
-		err(1, "fread failed\n");
-	if (fread(&xsave, sizeof(xsave), 1, f) != 1)
-		err(1, "fread failed\n");
-	if (fread(&xcrs, sizeof(xcrs), 1, f) != 1)
-		err(1, "fread failed\n");
-	if (fread(&events, sizeof(events), 1, f) != 1)
-		err(1, "fread failed\n");
-	if (fread(&mp_state, sizeof(mp_state), 1, f) != 1)
+	if (fread(&cpu_state, sizeof(cpu_state), 1, f) != 1)
 		err(1, "fread failed\n");
 
 	fclose(f);
 
-	kvm_ioctl(vcpufd, KVM_SET_SREGS, &sregs);
-	kvm_ioctl(vcpufd, KVM_SET_REGS, &regs);
-	kvm_ioctl(vcpufd, KVM_SET_MSRS, &msr_data);
-	kvm_ioctl(vcpufd, KVM_SET_XCRS, &xcrs);
-	kvm_ioctl(vcpufd, KVM_SET_MP_STATE, &mp_state);
-	kvm_ioctl(vcpufd, KVM_SET_LAPIC, &lapic);
-	kvm_ioctl(vcpufd, KVM_SET_FPU, &fpu);
-	kvm_ioctl(vcpufd, KVM_SET_XSAVE, &xsave);
-	kvm_ioctl(vcpufd, KVM_SET_VCPU_EVENTS, &events);
-
+	return cpu_state;
 }
 
-void save_cpu_state(void)
+void restore_cpu_state(vcpu_state_t cpu_state)
 {
-	struct {
-		struct kvm_msrs info;
-		struct kvm_msr_entry entries[MAX_MSR_ENTRIES];
-	} msr_data;
-	struct kvm_msr_entry *msrs = msr_data.entries;
-	struct kvm_regs regs;
-	struct kvm_sregs sregs;
-	struct kvm_fpu fpu;
-	struct kvm_lapic_state lapic;
-	struct kvm_xsave xsave;
-	struct kvm_xcrs xcrs;
-	struct kvm_vcpu_events events;
-	struct kvm_mp_state mp_state;
-	char fname[MAX_FNAME];
+	cpu_state.mp_state.mp_state = KVM_MP_STATE_RUNNABLE;
+
+	run->apic_base = APIC_DEFAULT_BASE;
+        setup_cpuid(kvm, vcpufd);
+
+
+	kvm_ioctl(vcpufd, KVM_SET_SREGS, &cpu_state.sregs);
+	kvm_ioctl(vcpufd, KVM_SET_REGS, &cpu_state.regs);
+	kvm_ioctl(vcpufd, KVM_SET_MSRS, &cpu_state.msr_data);
+	kvm_ioctl(vcpufd, KVM_SET_XCRS, &cpu_state.xcrs);
+	kvm_ioctl(vcpufd, KVM_SET_MP_STATE, &cpu_state.mp_state);
+	kvm_ioctl(vcpufd, KVM_SET_LAPIC, &cpu_state.lapic);
+	kvm_ioctl(vcpufd, KVM_SET_FPU, &cpu_state.fpu);
+	kvm_ioctl(vcpufd, KVM_SET_XSAVE, &cpu_state.xsave);
+	kvm_ioctl(vcpufd, KVM_SET_VCPU_EVENTS, &cpu_state.events);
+}
+
+vcpu_state_t save_cpu_state(void)
+{
 	int n = 0;
+	vcpu_state_t cpu_state;
 
 	/* define the list of required MSRs */
-	msrs[n++].index = MSR_IA32_APICBASE;
-	msrs[n++].index = MSR_IA32_SYSENTER_CS;
-	msrs[n++].index = MSR_IA32_SYSENTER_ESP;
-	msrs[n++].index = MSR_IA32_SYSENTER_EIP;
-	msrs[n++].index = MSR_IA32_CR_PAT;
-	msrs[n++].index = MSR_IA32_MISC_ENABLE;
-	msrs[n++].index = MSR_IA32_TSC;
-	msrs[n++].index = MSR_CSTAR;
-	msrs[n++].index = MSR_STAR;
-	msrs[n++].index = MSR_EFER;
-	msrs[n++].index = MSR_LSTAR;
-	msrs[n++].index = MSR_GS_BASE;
-	msrs[n++].index = MSR_FS_BASE;
-	msrs[n++].index = MSR_KERNEL_GS_BASE;
+	cpu_state.msr_data.entries[n++].index = MSR_IA32_APICBASE;
+	cpu_state.msr_data.entries[n++].index = MSR_IA32_SYSENTER_CS;
+	cpu_state.msr_data.entries[n++].index = MSR_IA32_SYSENTER_ESP;
+	cpu_state.msr_data.entries[n++].index = MSR_IA32_SYSENTER_EIP;
+	cpu_state.msr_data.entries[n++].index = MSR_IA32_CR_PAT;
+	cpu_state.msr_data.entries[n++].index = MSR_IA32_MISC_ENABLE;
+	cpu_state.msr_data.entries[n++].index = MSR_IA32_TSC;
+	cpu_state.msr_data.entries[n++].index = MSR_CSTAR;
+	cpu_state.msr_data.entries[n++].index = MSR_STAR;
+	cpu_state.msr_data.entries[n++].index = MSR_EFER;
+	cpu_state.msr_data.entries[n++].index = MSR_LSTAR;
+	cpu_state.msr_data.entries[n++].index = MSR_GS_BASE;
+	cpu_state.msr_data.entries[n++].index = MSR_FS_BASE;
+	cpu_state.msr_data.entries[n++].index = MSR_KERNEL_GS_BASE;
 	//msrs[n++].index = MSR_IA32_FEATURE_CONTROL;
-	msr_data.info.nmsrs = n;
+	cpu_state.msr_data.info.nmsrs = n;
 
-	kvm_ioctl(vcpufd, KVM_GET_SREGS, &sregs);
-	kvm_ioctl(vcpufd, KVM_GET_REGS, &regs);
-	kvm_ioctl(vcpufd, KVM_GET_MSRS, &msr_data);
-	kvm_ioctl(vcpufd, KVM_GET_XCRS, &xcrs);
-	kvm_ioctl(vcpufd, KVM_GET_LAPIC, &lapic);
-	kvm_ioctl(vcpufd, KVM_GET_FPU, &fpu);
-	kvm_ioctl(vcpufd, KVM_GET_XSAVE, &xsave);
-	kvm_ioctl(vcpufd, KVM_GET_VCPU_EVENTS, &events);
-	kvm_ioctl(vcpufd, KVM_GET_MP_STATE, &mp_state);
+	kvm_ioctl(vcpufd, KVM_GET_SREGS, &cpu_state.sregs);
+	kvm_ioctl(vcpufd, KVM_GET_REGS, &cpu_state.regs);
+	kvm_ioctl(vcpufd, KVM_GET_MSRS, &cpu_state.msr_data);
+	kvm_ioctl(vcpufd, KVM_GET_XCRS, &cpu_state.xcrs);
+	kvm_ioctl(vcpufd, KVM_GET_LAPIC, &cpu_state.lapic);
+	kvm_ioctl(vcpufd, KVM_GET_FPU, &cpu_state.fpu);
+	kvm_ioctl(vcpufd, KVM_GET_XSAVE, &cpu_state.xsave);
+	kvm_ioctl(vcpufd, KVM_GET_VCPU_EVENTS, &cpu_state.events);
+	kvm_ioctl(vcpufd, KVM_GET_MP_STATE, &cpu_state.mp_state);
 
+	return cpu_state;
+}
+
+void write_cpu_state(void)
+{
+	vcpu_state_t cpu_state = save_cpu_state();
+	char fname[MAX_FNAME];
 	snprintf(fname, MAX_FNAME, "checkpoint/chk%u_core%u.dat", no_checkpoint, cpuid);
 
 	FILE* f = fopen(fname, "w");
@@ -527,73 +517,14 @@ void save_cpu_state(void)
 		err(1, "fopen: unable to open file\n");
 	}
 
-	if (fwrite(&sregs, sizeof(sregs), 1, f) != 1)
-		err(1, "fwrite failed\n");
-	if (fwrite(&regs, sizeof(regs), 1, f) != 1)
-		err(1, "fwrite failed\n");
-	if (fwrite(&fpu, sizeof(fpu), 1, f) != 1)
-		err(1, "fwrite failed\n");
-	if (fwrite(&msr_data, sizeof(msr_data), 1, f) != 1)
-		err(1, "fwrite failed\n");
-	if (fwrite(&lapic, sizeof(lapic), 1, f) != 1)
-		err(1, "fwrite failed\n");
-	if (fwrite(&xsave, sizeof(xsave), 1, f) != 1)
-		err(1, "fwrite failed\n");
-	if (fwrite(&xcrs, sizeof(xcrs), 1, f) != 1)
-		err(1, "fwrite failed\n");
-	if (fwrite(&events, sizeof(events), 1, f) != 1)
-		err(1, "fwrite failed\n");
-	if (fwrite(&mp_state, sizeof(mp_state), 1, f) != 1)
+	if (fwrite(&cpu_state, sizeof(cpu_state), 1, f) != 1)
 		err(1, "fwrite failed\n");
 
 	fclose(f);
 }
 
-void timer_handler(int signum)
+void scan_dirty_log(void (*save_page)(void*, size_t, void*, size_t))
 {
-	struct stat st = {0};
-	const size_t flag = (!full_checkpoint && (no_checkpoint > 0)) ? PG_DIRTY : PG_ACCESSED;
-	char fname[MAX_FNAME];
-	struct timeval begin, end;
-
-	if (verbose)
-		gettimeofday(&begin, NULL);
-
-	if (stat("checkpoint", &st) == -1)
-		mkdir("checkpoint", 0700);
-
-	for(size_t i = 0; i < ncores; i++)
-		if (vcpu_threads[i] != pthread_self())
-			pthread_kill(vcpu_threads[i], SIGRTMIN);
-
-	pthread_barrier_wait(&barrier);
-
-	save_cpu_state();
-
-	snprintf(fname, MAX_FNAME, "checkpoint/chk%u_mem.dat", no_checkpoint);
-
-	FILE* f = fopen(fname, "w");
-	if (f == NULL) {
-		err(1, "fopen: unable to open file");
-	}
-
-	/*struct kvm_irqchip irqchip = {};
-	if (cap_irqchip)
-		kvm_ioctl(vmfd, KVM_GET_IRQCHIP, &irqchip);
-	else
-		memset(&irqchip, 0x00, sizeof(irqchip));
-	if (fwrite(&irqchip, sizeof(irqchip), 1, f) != 1)
-		err(1, "fwrite failed");*/
-
-	struct kvm_clock_data clock = {};
-	kvm_ioctl(vmfd, KVM_GET_CLOCK, &clock);
-	if (fwrite(&clock, sizeof(clock), 1, f) != 1)
-		err(1, "fwrite failed");
-
-#if 0
-	if (fwrite(guest_mem, guest_size, 1, f) != 1)
-		err(1, "fwrite failed");
-#elif defined(USE_DIRTY_LOG)
 	static struct kvm_dirty_log dlog = {
 		.slot = 0,
 		.dirty_bitmap = NULL
@@ -601,8 +532,7 @@ void timer_handler(int signum)
 	size_t dirty_log_size = (guest_size >> PAGE_BITS) / sizeof(size_t);
 
 	// do we create our first checkpoint
-	if (dlog.dirty_bitmap == NULL)
-	{
+	if (dlog.dirty_bitmap == NULL) {
 		// besure that all paddings are zero
 		memset(&dlog, 0x00, sizeof(dlog));
 
@@ -616,24 +546,17 @@ void timer_handler(int signum)
 nextslot:
 	kvm_ioctl(vmfd, KVM_GET_DIRTY_LOG, &dlog);
 
-	for(size_t i=0; i<dirty_log_size; i++)
-	{
+	for(size_t i=0; i<dirty_log_size; i++) {
 		size_t value = ((size_t*) dlog.dirty_bitmap)[i];
 
-		if (value)
-		{
-			for(size_t j=0; j<sizeof(size_t)*8; j++)
-			{
+		if (value) {
+			for(size_t j=0; j<sizeof(size_t)*8; j++) {
 				size_t test = 1ULL << j;
 
-				if ((value & test) == test)
-				{
+				if ((value & test) == test) {
 					size_t addr = (i*sizeof(size_t)*8+j)*PAGE_SIZE;
 
-					if (fwrite(&addr, sizeof(size_t), 1, f) != 1)
-						err(1, "fwrite failed");
-					if (fwrite((size_t*) (guest_mem + addr), PAGE_SIZE, 1, f) != 1)
-						err(1, "fwrite failed");
+					save_page(&addr, sizeof(size_t), (void*)((uint64_t)guest_mem+(uint64_t)addr), PAGE_SIZE);
 				}
 			}
 		}
@@ -645,7 +568,12 @@ nextslot:
 		memset(dlog.dirty_bitmap, 0x00, dirty_log_size * sizeof(size_t));
 		goto nextslot;
 	}
-#else
+}
+
+void scan_page_tables(void (*save_page)(void*, size_t, void*, size_t))
+{
+	const size_t flag = (!full_checkpoint && (no_checkpoint > 0)) ? PG_DIRTY : PG_ACCESSED;
+
 	size_t* pml4 = (size_t*) (guest_mem+elf_entry+PAGE_SIZE);
 	for(size_t i=0; i<(1 << PAGE_MAP_BITS); i++) {
 		if ((pml4[i] & PG_PRESENT) != PG_PRESENT)
@@ -669,32 +597,101 @@ nextslot:
 							if (!full_checkpoint)
 								pgt[l] = pgt[l] & ~(PG_DIRTY|PG_ACCESSED);
 							size_t pgt_entry = pgt[l] & ~PG_PSE; // because PAT use the same bit as PSE
-							if (fwrite(&pgt_entry, sizeof(size_t), 1, f) != 1)
-								err(1, "fwrite failed");
-							if (fwrite((size_t*) (guest_mem + (pgt[l] & PAGE_MASK)), (1UL << PAGE_BITS), 1, f) != 1)
-								err(1, "fwrite failed");
+
+							save_page(&pgt_entry, sizeof(size_t), (void*) (guest_mem + (pgt[l] & PAGE_MASK)), (1UL << PAGE_BITS));
 						}
 					}
 				} else if ((pgd[k] & flag) == flag) {
 					//printf("\t\t*pgd[%zd] 0x%zx, 2MB\n", k, pgd[k] & ~PG_XD);
 					if (!full_checkpoint)
 						pgd[k] = pgd[k] & ~(PG_DIRTY|PG_ACCESSED);
-					if (fwrite(pgd+k, sizeof(size_t), 1, f) != 1)
-						err(1, "fwrite failed");
-					if (fwrite((size_t*) (guest_mem + (pgd[k] & PAGE_2M_MASK)), (1UL << PAGE_2M_BITS), 1, f) != 1)
-						err(1, "fwrite failed");
+
+						save_page(pgd+k, sizeof(size_t), (void*) (guest_mem + (pgd[k] & PAGE_2M_MASK)), (1UL << PAGE_2M_BITS));
 				}
 			}
 		}
 	}
+}
+void open_chk_file(char *fname) {
+	chk_file = fopen(fname, "w");
+	if (chk_file == NULL) {
+		err(1, "fopen: unable to open file");
+	}
+}
+
+void close_chk_file(void) {
+	fclose(chk_file);
+}
+
+void write_chk_file(void *addr, size_t bytes) {
+	if (fwrite(addr, bytes, 1, chk_file) != 1) {
+		err(1, "fwrite failed");
+	}
+}
+
+void write_mem_page_to_chk_file(void *entry, size_t entry_size, void *page, size_t page_size) {
+	write_chk_file(entry, entry_size);
+	write_chk_file(page, page_size);
+}
+
+void determine_dirty_pages(void (*save_page_handler)(void*, size_t, void*, size_t))
+{
+#ifdef USE_DIRTY_LOG
+	scan_dirty_log(save_page_handler);
+#else
+	scan_page_tables(save_page_handler);
 #endif
 
-	fclose(f);
+}
+
+void timer_handler(int signum)
+{
+
+	struct stat st = {0};
+	char fname[MAX_FNAME];
+	struct timeval begin, end;
+
+	if (verbose)
+		gettimeofday(&begin, NULL);
+
+	if (stat("checkpoint", &st) == -1)
+		mkdir("checkpoint", 0700);
+
+	for(size_t i = 0; i < ncores; i++)
+		if (vcpu_threads[i] != pthread_self())
+			pthread_kill(vcpu_threads[i], SIGTHRCHKP);
 
 	pthread_barrier_wait(&barrier);
 
+	write_cpu_state();
+
+	snprintf(fname, MAX_FNAME, "checkpoint/chk%u_mem.dat", no_checkpoint);
+
+	open_chk_file(fname);
+
+	/*struct kvm_irqchip irqchip = {};
+	if (cap_irqchip)
+		kvm_ioctl(vmfd, KVM_GET_IRQCHIP, &irqchip);
+	else
+		memset(&irqchip, 0x00, sizeof(irqchip));
+	if (fwrite(&irqchip, sizeof(irqchip), 1, f) != 1)
+		err(1, "fwrite failed");*/
+
+	struct kvm_clock_data clock = {};
+	kvm_ioctl(vmfd, KVM_GET_CLOCK, &clock);
+	write_chk_file(&clock, sizeof(clock));
+
+#if 0
+	if (fwrite(guest_mem, guest_size, 1, f) != 1)
+		err(1, "fwrite failed");
+#else
+	determine_dirty_pages(write_mem_page_to_chk_file);
+#endif
+	close_chk_file();
+	pthread_barrier_wait(&barrier);
+
 	// update configuration file
-	f = fopen("checkpoint/chk_config.txt", "w");
+	FILE *f = fopen("checkpoint/chk_config.txt", "w");
 	if (f == NULL) {
 		err(1, "fopen: unable to open file");
 	}
@@ -718,6 +715,97 @@ nextslot:
 	}
 
 	no_checkpoint++;
+}
+
+void *migration_handler(void *arg)
+{
+	sigset_t *signal_mask = (sigset_t *)arg;
+	int res = 0;
+	size_t i = 0;
+
+	int       sig_caught;    /* signal caught       */
+
+	/* Use same mask as the set of signals that we'd like to know about! */
+	sigwait(signal_mask, &sig_caught);
+	connect_to_server();
+
+	/* send metadata */
+	migration_metadata_t metadata = {
+		ncores,
+		guest_size,
+	       	0, /* no_checkpoint */
+		elf_entry,
+		full_checkpoint};
+
+	res = send_data(&metadata, sizeof(migration_metadata_t));
+      	fprintf(stderr, "Metadata sent! (%d bytes)\n", res);
+
+	if (get_migration_type() == MIG_TYPE_LIVE) {
+		/* resend rounds */
+		for (i=0; i<MIG_ITERS; ++i) {
+			send_guest_mem(MIG_MODE_INCREMENTAL_DUMP, 0);
+		}
+	}
+
+	/* synchronize VCPU threads */
+	assert(vcpu_thread_states == NULL);
+	vcpu_thread_states = (vcpu_state_t*)calloc(ncores, sizeof(vcpu_state_t));
+	for(i = 0; i < ncores; i++)
+		pthread_kill(vcpu_threads[i], SIGTHRMIG);
+	pthread_barrier_wait(&migration_barrier);
+
+	/* send the final dump */
+	send_guest_mem(MIG_MODE_INCREMENTAL_DUMP, 1);
+
+	/* send CPU state */
+	res = send_data(vcpu_thread_states, sizeof(vcpu_state_t)*ncores);
+      	fprintf(stderr, "CPU state sent! (%d bytes)\n", res);
+
+	/* free vcpu_thread_states */
+	free(vcpu_thread_states);
+	vcpu_thread_states = NULL;
+
+	/* send clock */
+	if (cap_adjust_clock_stable) {
+		struct kvm_clock_data clock = {};
+		kvm_ioctl(vmfd, KVM_GET_CLOCK, &clock);
+		res = send_data(&clock, sizeof(clock));
+		fprintf(stderr, "Clock sent! (%d bytes)\n", res);
+	}
+
+	/* close socket */
+	close_migration_channel();
+
+	exit(EXIT_SUCCESS);
+}
+
+int load_migration_data(uint8_t* mem)
+{
+	size_t paddr = elf_entry;
+	int res = 0;
+	if (!klog)
+		klog = mem+paddr+0x5000-GUEST_OFFSET;
+	if (!mboot)
+		mboot = mem+paddr-GUEST_OFFSET;
+
+
+	recv_guest_mem();
+
+	/* receive cpu state */
+	assert(vcpu_thread_states == NULL);
+	vcpu_thread_states = (vcpu_state_t*)calloc(ncores, sizeof(vcpu_state_t));
+	res = recv_data(vcpu_thread_states, sizeof(vcpu_state_t)*ncores);
+	fprintf(stderr, "CPU states received! (%d bytes)\n", res);
+
+	/* receive clock */
+	if (cap_adjust_clock_stable) {
+		struct kvm_clock_data clock = {}, data = {};
+		res = recv_data(&clock, sizeof(clock));
+		fprintf(stderr, "Clock received! (%d bytes)\n", res);
+
+		data.clock = clock.clock;
+		kvm_ioctl(vmfd, KVM_SET_CLOCK, &data);
+	}
 }
 
 int load_checkpoint(uint8_t* mem, char* path)
@@ -783,10 +871,11 @@ int load_checkpoint(uint8_t* mem, char* path)
 
 		while (fread(&location, sizeof(location), 1, f) == 1) {
 			//printf("location 0x%zx\n", location);
+			size_t *dest_addr = (size_t*) (mem + determine_dest_offset(location));
 			if (location & PG_PSE)
-				ret = fread((size_t*) (mem + (location & PAGE_2M_MASK)), (1UL << PAGE_2M_BITS), 1, f);
+				ret = fread(dest_addr, (1UL << PAGE_2M_BITS), 1, f);
 			else
-				ret = fread((size_t*) (mem + (location & PAGE_MASK)), (1UL << PAGE_BITS), 1, f);
+				ret = fread(dest_addr, (1UL << PAGE_BITS), 1, f);
 
 			if (ret != 1) {
 				fprintf(stderr, "Unable to read checkpoint: ret = %d", ret);
@@ -806,6 +895,19 @@ int load_checkpoint(uint8_t* mem, char* path)
 	}
 
 	return 0;
+}
+
+void wait_for_incomming_migration(migration_metadata_t *metadata, uint16_t listen_portno)
+{
+	int res = 0, com_sock = 0;
+
+	wait_for_client(listen_portno);
+
+	/* receive metadata state */
+	res = recv_data(metadata, sizeof(migration_metadata_t));
+	fprintf(stderr, "Metadata received! (%d bytes)\n", res);
+	fprintf(stderr, "NCORES = %u; GUEST_SIZE = %llu; NO_CHKPOINT = %u; ELF_ENTRY = 0x%x; FULL_CHKPT = %d\n",
+			metadata->ncores, metadata->guest_size, metadata->no_checkpoint, metadata->elf_entry, metadata->full_checkpoint);
 }
 
 void init_kvm_arch(void)
@@ -1042,7 +1144,7 @@ int load_kernel(uint8_t* mem, char* path)
 				*((uint8_t*) (mem+paddr-GUEST_OFFSET + 0xBB)) = (uint8_t) ip[3];
 			}
 
-			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0xbc)) = guest_mem;
+			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0xbc)) = (uint64_t)guest_mem;
 		}
 		*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x38)) += memsz; // total kernel size
 	}
