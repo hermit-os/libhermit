@@ -782,19 +782,14 @@ static inline void  clflushopt(volatile void *addr)
 	asm volatile("clflushopt %0" : "+m" (*(volatile char *)addr));
 }
 
-#if 0
-// the old way to serialize the store and load operations
-static inline void mb(void) { asm volatile ("lock; addl $0,0(%%esp)" ::: "memory", "cc"); }
-static inline void rmb(void) { asm volatile ("lock; addl $0,0(%%esp)" ::: "memory", "cc"); }
-static inline void wmb(void) { asm volatile ("lock; addl $0,0(%%esp)" ::: "memory", "cc"); }
-#else
+/// Force strict SMP-aware CPU ordering, serializes load and store operations.
+static inline void smp_mb(void) { asm volatile ("lock; addq $0,0(%%rsp)" ::: "memory", "cc"); }
 /// Force strict CPU ordering, serializes load and store operations.
 static inline void mb(void) { asm volatile("mfence":::"memory"); }
 /// Force strict CPU ordering, serializes load operations.
 static inline void rmb(void) { asm volatile("lfence":::"memory"); }
 /// Force strict CPU ordering, serializes store operations.
 static inline void wmb(void) { asm volatile("sfence" ::: "memory"); }
-#endif
 
 /** @brief Get Extended Control Register
  *
@@ -952,11 +947,11 @@ static inline size_t lsb(size_t i)
 void dump_pstate(void);
 
 /// A one-instruction-do-nothing
-#define NOP	asm  volatile ("nop")
+#define NOP	asm  volatile ("nop" ::: "memory")
 /// The PAUSE instruction provides a hint to the processor that the code sequence is a spin-wait loop.
-#define PAUSE	asm volatile ("pause")
+#define PAUSE	asm volatile ("pause" ::: "memory")
 /// The HALT instruction stops the processor until the next interrupt arrives
-#define HALT	asm volatile ("hlt")
+#define HALT	asm volatile ("hlt" ::: "memory")
 
 /** @brief Init several subsystems
  *

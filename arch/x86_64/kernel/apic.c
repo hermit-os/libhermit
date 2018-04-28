@@ -90,8 +90,6 @@ static uint8_t online[MAX_APIC_CORES] = {[0 ... MAX_APIC_CORES-1] = 0};
  */
 #define traditional_delay 0
 
-spinlock_t bootlock = SPINLOCK_INIT;
-
 // forward declaration
 static int lapic_reset(void);
 
@@ -1032,7 +1030,7 @@ int apic_send_ipi(uint64_t dest, uint8_t irq)
 		 * Make previous memory operations globally visible before
 		 * sending the IPI through x2apic wrmsr. => serializing
 		 */
-		mb();
+		smp_mb();
 		wrmsr(0x830, (dest << 32)|APIC_INT_ASSERT|APIC_DM_FIXED|irq);
 		irq_nested_enable(flags);
 	} else {
