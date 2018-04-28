@@ -43,8 +43,6 @@
  * Note that linker symbols are not variables, they have no memory allocated for
  * maintaining a value, rather their address is their value.
  */
-extern const void percore_start;
-extern const void percore_end0;
 extern atomic_int32_t cpu_online;
 
 volatile uint32_t go_down = 0;
@@ -214,15 +212,20 @@ void fpu_handler(void)
 	restore_fpu_state(&task->fpu);
 }
 
-int check_scheduling(void)
+int is_task_available(void)
+{
+	uint32_t core_id = CORE_ID;
+
+	return readyqueues[core_id].nr_tasks > 0 ? 1 : 0;
+}
+
+void check_scheduling(void)
 {
 	uint32_t prio = get_highest_priority();
 	task_t* curr_task = per_core(current_task);
 
 	if (prio > curr_task->prio) {
 		reschedule();
-
-		return 1;
 #ifdef DYNAMIC_TICKS
 	} else if ((prio > 0) && (prio == curr_task->prio)) {
 		// if a task is ready, check if the current task runs already one tick (one time slice)
@@ -235,12 +238,8 @@ int check_scheduling(void)
 			LOG_DEBUG("Time slice expired for task %d on core %d. New task has priority %u.\n", curr_task->id, CORE_ID, prio);
 			reschedule();
 		}
-
-		return 1;
 #endif
 	}
-
-	return 0;
 }
 
 
@@ -515,8 +514,7 @@ int clone_task(tid_t* id, entry_point_t ep, void* arg, uint8_t prio)
 				readyqueues[core_id].queue[prio-1].last = task_table+i;
 			}
 			// should we wakeup the core?
-			volatile task_t* running_task = (volatile task_t*) ((size_t)current_task + core_id * ((size_t) &percore_end0 - (size_t) &percore_start));
-			if (running_task->status != TASK_RUNNING)
+			if (readyqueues[core_id].nr_tasks == 1)
 				wakeup_core(core_id);
 			spinlock_irqsave_unlock(&readyqueues[core_id].lock);
  			break;
@@ -661,10 +659,8 @@ int wakeup_task(tid_t id)
 	task_t* task;
 	uint32_t core_id;
 	int ret = -EINVAL;
-	uint8_t flags;
 
-	flags = irq_nested_disable();
-
+	spinlock_irqsave_lock(&table_lock);
 	task = &task_table[id];
 	core_id = task->last_core;
 
@@ -672,6 +668,8 @@ int wakeup_task(tid_t id)
 		LOG_DEBUG("wakeup task %d on core %d\n", id, core_id);
 
 		task->status = TASK_READY;
+		spinlock_irqsave_unlock(&table_lock);
+
 		ret = 0;
 
 		spinlock_irqsave_lock(&readyqueues[core_id].lock);
@@ -690,16 +688,15 @@ int wakeup_task(tid_t id)
 		readyqueues[core_id].nr_tasks++;
 
 		// should we wakeup the core?
-		volatile task_t* running_task = (volatile task_t*) ((size_t)current_task + core_id * ((size_t) &percore_end0 - (size_t) &percore_start));
-		if (running_task->status != TASK_RUNNING)
+		if (readyqueues[core_id].nr_tasks == 1)
 			wakeup_core(core_id);
 
 		LOG_DEBUG("update nr_tasks on core %d to %d\n", core_id, readyqueues[core_id].nr_tasks);
 
 		spinlock_irqsave_unlock(&readyqueues[core_id].lock);
+	} else {
+		spinlock_irqsave_unlock(&table_lock);
 	}
-
-	irq_nested_enable(flags);
 
 	return ret;
 }

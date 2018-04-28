@@ -198,8 +198,10 @@ int create_default_frame(task_t* task, entry_point_t ep, void* arg, uint32_t cor
 void wait_for_task(void)
 {
 	irq_disable();
-	while (check_scheduling() != 0)
-		;
+	if (is_task_available()) {
+		irq_enable();
+		return;
+	}
 
 #ifndef USE_MWAIT
 	asm volatile ("sti; hlt" ::: "memory");
@@ -218,7 +220,7 @@ void wait_for_task(void)
 		 * NOTE: we use the ecx=0 => we
 		 * handle the IRQ and not just wake from it.
 		 */
-		asm volatile("sti; mwait" :: "a" (0x2) /* 0x2 = c3, 0xF = c0 */ ,
+		asm volatile("sti; mwait" :: "a" (0x2) /* 0x2 = c3, 0xF = c0 */,
 			"c" (0) /* break on interrupt flag */ : "memory");
 	}
 #endif
