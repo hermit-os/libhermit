@@ -477,6 +477,8 @@ int load_kernel(uint8_t* mem, char* path)
 			}
 
 			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0xbc)) = (uint64_t) guest_mem;
+			if (verbose)
+				*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x174)) = (uint32_t) UHYVE_UART_PORT;
 		}
 		*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x158)) += memsz; // total kernel size
 	}

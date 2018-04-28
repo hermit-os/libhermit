@@ -123,6 +123,9 @@ hcmask: .byte 255,255,255,0
 .global host_logical_addr
 host_logical_addr: .quad 0
 
+.global uart_mmio
+uart_mmio: .dword 0
+
 start64:
   //mrs x0, s3_1_c15_c3_0 // Read EL1 Configuration Base Address Register
 

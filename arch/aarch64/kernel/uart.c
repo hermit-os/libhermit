@@ -33,6 +33,7 @@
 #include <asm/uart.h>
 
 volatile static unsigned int* mmio = NULL;
+extern unsigned int uart_mmio;
 
 /* Puts a single character on a serial device */
 int uart_putchar(unsigned char c)
@@ -59,21 +60,23 @@ int uart_puts(const char *text)
 
 int uart_early_init(char* cmdline)
 {
-	if (is_uhyve())
-		return 0;
-
-	// default value of our QEMU configuration
-	mmio = (unsigned int*) 0x09000000;
+	if (is_uhyve()) {
+		mmio = (unsigned int*) uart_mmio;
+	} else {
+		// default value of our QEMU configuration
+		mmio = (unsigned int*) 0x09000000;
+	}
 
 	return 0;
 }
 
 int uart_init(void)
 {
-	if (is_uhyve())
-		return 0;
-
-	mmio = (unsigned int*) 0x09000000;
+	if (is_uhyve()) {
+		mmio = (unsigned int*) uart_mmio;
+	} else {
+		mmio = (unsigned int*) 0x09000000;
+	}
 
 	return 0;
 }
