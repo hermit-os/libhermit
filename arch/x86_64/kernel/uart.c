@@ -105,7 +105,7 @@ static inline unsigned char read_from_uart(uint32_t off)
 {
 	uint8_t c = 0;
 
-	if (uartport)
+	if (!is_uhyve() && uartport)
 		c = inportb(uartport + off);
 
 	return c;
@@ -113,6 +113,9 @@ static inline unsigned char read_from_uart(uint32_t off)
 
 static inline int is_transmit_empty(void)
 {
+	if (is_uhyve())
+		return 1;
+
 	if (uartport)
 		return inportb(uartport + UART_LSR) & 0x20;
 

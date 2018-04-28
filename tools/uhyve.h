@@ -48,6 +48,8 @@
 #define UHYVE_PORT_CMDSIZE		0x740
 #define UHYVE_PORT_CMDVAL		0x780
 
+#define UHYVE_UART_PORT			0x800
+
 #define UHYVE_IRQ       11
 
 #define kvm_ioctl(fd, cmd, arg) ({ \

@@ -1008,7 +1008,7 @@ int load_kernel(uint8_t* mem, char* path)
 			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x30)) = 0; // apicid
 			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x60)) = 1; // numa nodes
 			*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x94)) = 1; // announce uhyve
-
+			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x98)) = UHYVE_UART_PORT	; // announce uhyve
 
 			char* str = getenv("HERMIT_IP");
 			if (str) {
@@ -1042,7 +1042,8 @@ int load_kernel(uint8_t* mem, char* path)
 				*((uint8_t*) (mem+paddr-GUEST_OFFSET + 0xBB)) = (uint8_t) ip[3];
 			}
 
-			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0xbc)) = guest_mem;
+			if (verbose)
+				*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0xbc)) = (uint64_t) guest_mem;
 		}
 		*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x38)) += memsz; // total kernel size
 	}

@@ -180,16 +180,6 @@ static void uhyve_exit(void* arg)
 	close_fd(&vcpufd);
 }
 
-static void dump_log(void)
-{
-	if (klog && verbose)
-	{
-		fputs("\nDump kernel log:\n", stderr);
-		fputs("================\n", stderr);
-		fprintf(stderr, "%s\n", klog);
-	}
-}
-
 static void uhyve_atexit(void)
 {
 	uhyve_exit(NULL);
@@ -206,8 +196,6 @@ static void uhyve_atexit(void)
 
 	if (vcpu_fds)
 		free(vcpu_fds);
-
-	dump_log();
 
 	// clean up and close KVM
 	close_fd(&vmfd);
@@ -321,6 +309,10 @@ static int vcpu_loop(void)
 
 			//printf("port 0x%x\n", run->io.port);
 			switch (port) {
+			case UHYVE_UART_PORT:
+				if (verbose)
+					putc((unsigned char) raddr, stderr);
+				break;
 			case UHYVE_PORT_WRITE: {
 					uhyve_write_t* uhyve_write = (uhyve_write_t*) (guest_mem+raddr);
 
@@ -471,7 +463,6 @@ static int vcpu_loop(void)
 
 		case KVM_EXIT_DEBUG:
 			print_registers();
-			dump_log();
 			exit(EXIT_FAILURE);
 
 		default:
