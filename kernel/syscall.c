@@ -38,6 +38,7 @@
 #include <hermit/signal.h>
 #include <hermit/logging.h>
 #include <asm/uhyve.h>
+#include <asm/io.h>
 #include <sys/poll.h>
 
 #include <lwip/sockets.h>
@@ -166,7 +167,9 @@ ssize_t sys_read(int fd, char* buf, size_t len)
 
 	// do we have an LwIP file descriptor?
 	if (fd & LWIP_FD_BIT) {
+		spinlock_irqsave_lock(&lwip_lock);
 		ret = lwip_read(fd & ~LWIP_FD_BIT, buf, len);
+		spinlock_irqsave_unlock(&lwip_lock);
 		if (ret < 0)
 			return -errno;
 
@@ -181,23 +184,25 @@ ssize_t sys_read(int fd, char* buf, size_t len)
 		return uhyve_args.ret;
 	}
 
-	spinlock_irqsave_lock(&lwip_lock);
-	if (libc_sd < 0) {
-		spinlock_irqsave_unlock(&lwip_lock);
+	if (libc_sd < 0)
 		return -ENOSYS;
-	}
+
+	spinlock_irqsave_lock(&lwip_lock);
 
 	int s = libc_sd;
 	socket_send(s, &sysargs, sizeof(sysargs));
-
 	socket_recv(s, &j, sizeof(j));
-	if (j > 0)
+
+	ssize_t i=0;
+	while(i < j)
 	{
-		ret = socket_recv(s, buf, j);
+		ret = lwip_read(s, (char*)buf+i, j-i);
 		if (ret < 0) {
 			spinlock_irqsave_unlock(&lwip_lock);
 			return ret;
 		}
+
+		i += ret;
 	}
 
 	spinlock_irqsave_unlock(&lwip_lock);
@@ -232,7 +237,9 @@ ssize_t sys_write(int fd, const char* buf, size_t len)
 
 	// do we have an LwIP file descriptor?
 	if (fd & LWIP_FD_BIT) {
+		spinlock_irqsave_lock(&lwip_lock);
 		ret = lwip_write(fd & ~LWIP_FD_BIT, buf, len);
+		spinlock_irqsave_unlock(&lwip_lock);
 		if (ret < 0)
 			return -errno;
 
@@ -247,11 +254,8 @@ ssize_t sys_write(int fd, const char* buf, size_t len)
 		return uhyve_args.len;
 	}
 
-	spinlock_irqsave_lock(&lwip_lock);
 	if (libc_sd < 0)
 	{
-		spinlock_irqsave_unlock(&lwip_lock);
-
 		spinlock_irqsave_lock(&stdio_lock);
 		for(i=0; i<len; i++)
 			kputchar(buf[i]);
@@ -260,13 +264,15 @@ ssize_t sys_write(int fd, const char* buf, size_t len)
 		return len;
 	}
 
+	spinlock_irqsave_lock(&lwip_lock);
+
 	int s = libc_sd;
 	socket_send(s, &sysargs, sizeof(sysargs));
 
 	i=0;
 	while(i < len)
 	{
-		ret = socket_send(s, (char*)buf+i, len-i);
+		ret = lwip_write(s, (char*)buf+i, len-i);
 		if (ret < 0) {
 			spinlock_irqsave_unlock(&lwip_lock);
 			return ret;
@@ -804,4 +810,28 @@ int sys_kill(tid_t dest, int signum)
 int sys_signal(signal_handler_t handler)
 {
 	return hermit_signal(handler);
+}
+
+static spinlock_irqsave_t malloc_lock = SPINLOCK_IRQSAVE_INIT;
+
+void __sys_malloc_lock(void)
+{
+	spinlock_irqsave_lock(&malloc_lock);
+}
+
+void __sys_malloc_unlock(void)
+{
+	spinlock_irqsave_unlock(&malloc_lock);
+}
+
+static spinlock_irqsave_t env_lock = SPINLOCK_IRQSAVE_INIT;
+
+void __sys_env_lock(void)
+{
+	spinlock_irqsave_lock(&env_lock);
+}
+
+void __sys_env_unlock(void)
+{
+	spinlock_irqsave_unlock(&env_lock);
 }

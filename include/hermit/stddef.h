@@ -43,12 +43,12 @@ extern "C" {
 #endif
 
 // size of the whole application
-extern const size_t image_size;
+extern size_t image_size;
 
 #define TIMER_FREQ	100 /* in HZ */
 #define CLOCK_TICK_RATE	1193182 /* 8254 chip's internal oscillator frequency */
 #define CACHE_LINE	64
-#define HEAP_START	(PAGE_2M_CEIL((size_t)&kernel_start + image_size) + 4*PAGE_SIZE)
+#define HEAP_START	(PAGE_2M_CEIL(((size_t)&kernel_start + image_size + (16ULL << 10))))
 #define HEAP_SIZE	(1ULL << 32)
 #define KMSG_SIZE	0x1000
 #define INT_SYSCALL	0x80
@@ -59,12 +59,24 @@ extern const size_t image_size;
 
 #define DYNAMIC_TICKS
 
-#define UHYVE_PORT_WRITE	0x499
-#define UHYVE_PORT_OPEN		0x500
-#define UHYVE_PORT_CLOSE	0x501
-#define UHYVE_PORT_READ		0x502
-#define UHYVE_PORT_EXIT		0x503
-#define UHYVE_PORT_LSEEK	0x504
+#define UHYVE_PORT_WRITE		0x400
+#define UHYVE_PORT_OPEN			0x440
+#define UHYVE_PORT_CLOSE		0x480
+#define UHYVE_PORT_READ			0x500
+#define UHYVE_PORT_EXIT			0x540
+#define UHYVE_PORT_LSEEK		0x580
+
+// Networkports
+#define UHYVE_PORT_NETINFO		0x600
+#define UHYVE_PORT_NETWRITE		0x640
+#define UHYVE_PORT_NETREAD		0x680
+#define UHYVE_PORT_NETSTAT		0x700
+
+/* Ports and data structures for uhyve command line arguments and envp
+ * forwarding */
+#define UHYVE_PORT_CMDSIZE		0x740
+#define UHYVE_PORT_CMDVAL		0x780
+
 
 #define BUILTIN_EXPECT(exp, b)		__builtin_expect((exp), (b))
 //#define BUILTIN_EXPECT(exp, b)	(exp)

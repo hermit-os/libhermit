@@ -78,7 +78,7 @@ int hbmem_put_pages(size_t phyaddr, size_t npages);
  */
 static inline int hbmem_put_page(size_t phyaddr) { return hbmem_put_pages(phyaddr, 1); }
 
-/** @brief check if high memory bandwidth is available */ 
+/** @brief check if high memory bandwidth is available */
 int is_hbmem_available(void);
 
 /** @brief Initialize the high bandwidth memory subsystem */

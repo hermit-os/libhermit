@@ -8,7 +8,7 @@ include(${CMAKE_CURRENT_LIST_DIR}/HermitCore-Configuration.cmake)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/golang/)
 
 if(NOT HERMIT_ARCH)
-	set(HERMIT_ARCH x86)
+	execute_process(COMMAND uname -m OUTPUT_VARIABLE HERMIT_ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
 endif()
 
 if(PROFILING)
@@ -34,6 +34,8 @@ if(NOT CMAKE_TOOLCHAIN_FILE)
 	set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_LIST_DIR}/HermitCore-Toolchain-${HERMIT_ARCH}${_BOOTSTRAP_ARCH_SUFFIX}.cmake)
 endif()
 
+# NASM is only required on x86_64
+if("${HERMIT_ARCH}" STREQUAL "x86_64")
 # NASM detection will change binary format depending on host system, but
 # we only want to generate elf64 for HermitCore
 # Note: Has to be set *before* ASM_NASM is enabled
@@ -46,22 +48,7 @@ enable_language(ASM_NASM)
 # Note: Has to be set *after* ASM_NASM is enabled
 set(CMAKE_ASM_NASM_FLAGS
 	"${CMAKE_ASM_NASM_FLAGS} -I ${CMAKE_BINARY_DIR}/include/")
-
-set(HERMIT_KERNEL_FLAGS
-					-m64 -Wall -O2 -mno-red-zone
-					-fno-var-tracking-assignments -fstrength-reduce
-					-fomit-frame-pointer -finline-functions -ffreestanding
-					-nostdinc -fno-stack-protector -mno-sse -mno-mmx
-					-mno-sse2 -mno-3dnow -mno-avx
-					-fno-delete-null-pointer-checks
-					-falign-jumps=1 -falign-loops=1
-					-mno-80387 -mno-fp-ret-in-387 -mskip-rax-setup
-					-fno-common -Wframe-larger-than=1024
-					-fno-strict-aliasing -fno-asynchronous-unwind-tables
-					-fno-strict-overflow -maccumulate-outgoing-args)
-
-set(HERMIT_APP_FLAGS
-					-m64 -mtls-direct-seg-refs -O3 -ftree-vectorize)
+endif()
 
 if(MTUNE)
 	set(HERMIT_KERNEL_FLAGS ${HERMIT_KERNEL_FLAGS} -mtune=${MTUNE})

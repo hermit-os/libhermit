@@ -1,0 +1,13 @@
+arch/arm64/kernel/uart.o: arch/arm64/kernel/uart.c \
+ /home/stefan/HermitCore/include/hermit/stdlib.h \
+ /home/stefan/HermitCore/include/hermit/config.h \
+ /home/stefan/HermitCore/include/hermit/stddef.h \
+ /home/stefan/HermitCore/arch/arm64/include/asm/stddef.h \
+ /home/stefan/HermitCore/arch/arm64/include/asm/irqflags.h \
+ /home/stefan/HermitCore/include/hermit/stdio.h \
+ /home/stefan/HermitCore/include/hermit/stdarg.h \
+ /home/stefan/HermitCore/include/hermit/errno.h \
+ /home/stefan/HermitCore/include/hermit/string.h \
+ /home/stefan/HermitCore/arch/arm64/include/asm/string.h \
+ /home/stefan/HermitCore/include/hermit/ctype.h \
+ /home/stefan/HermitCore/arch/arm64/include/asm/uart.h

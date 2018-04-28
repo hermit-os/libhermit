@@ -1,0 +1,9 @@
+arch/arm64/mm/vma.o: arch/arm64/mm/vma.c \
+ /home/stefan/HermitCore/include/hermit/vma.h \
+ /home/stefan/HermitCore/include/hermit/stddef.h \
+ /home/stefan/HermitCore/include/hermit/config.h \
+ /home/stefan/HermitCore/arch/arm64/include/asm/stddef.h \
+ /home/stefan/HermitCore/arch/arm64/include/asm/irqflags.h \
+ /home/stefan/HermitCore/arch/arm64/include/asm/page.h \
+ /home/stefan/HermitCore/include/hermit/stdlib.h \
+ /home/stefan/HermitCore/arch/arm64/include/asm/processor.h

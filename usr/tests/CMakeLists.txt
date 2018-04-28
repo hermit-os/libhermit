@@ -5,9 +5,14 @@ project(hermit_tests C CXX Fortran Go)
 
 add_executable(hello hello.c)
 add_executable(jacobi jacobi.c)
+add_executable(argv_envp argv_envp.c)
 add_executable(hello++ hello++.cpp)
 add_executable(hellof hellof.f90)
 add_executable(pi pi.go)
+
+add_executable(endless endless.c)
+target_compile_options(endless PRIVATE -fopenmp)
+target_link_libraries(endless -fopenmp)
 
 add_executable(test-malloc test-malloc.c)
 add_executable(test-malloc-mt test-malloc-mt.c)

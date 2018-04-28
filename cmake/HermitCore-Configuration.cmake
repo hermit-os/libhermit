@@ -1,4 +1,4 @@
-set(PACKAGE_VERSION "0.2.5" CACHE STRING
+set(PACKAGE_VERSION "0.2.6" CACHE STRING
 	"HermitCore current version")
 
 set(MAX_CORES "512" CACHE STRING
@@ -19,14 +19,30 @@ set(KERNEL_STACK_SIZE 8192 CACHE STRING
 set(DEFAULT_STACK_SIZE 262144 CACHE STRING
 	"Task stack size in bytes")
 
+set(MAX_ARGC_ENVC 128 CACHE STRING
+	"Maximum number of command line parameters and enviroment variables
+	forwarded to uhyve")
+
 option(DYNAMIC_TICKS
 	"Don't use a periodic timer event to keep track of time" ON)
 
 option(SAVE_FPU
 	"Save FPU registers on context switch" ON)
 
-option(HAVE_ARCH_MEMSET	 "Use machine specific version of memset"  OFF)
-option(HAVE_ARCH_MEMCPY	 "Use machine specific version of memcpy"  OFF)
-option(HAVE_ARCH_STRLEN	 "Use machine specific version of strlen"  OFF)
-option(HAVE_ARCH_STRCPY	 "Use machine specific version of strcpy"  OFF)
-option(HAVE_ARCH_STRNCPY "Use machine specific version of strncpy" OFF)
+set(HAVE_ARCH_MEMSET "1" CACHE STRING
+	"Use machine specific version of memset")
+set(HAVE_ARCH_MEMCPY "1" CACHE STRING
+	"Use machine specific version of memcpy")
+set(HAVE_ARCH_STRLEN "1" CACHE STRING
+	"Use machine specific version of strlen")
+if("${HERMIT_ARCH}" STREQUAL "aarch64")
+set(HAVE_ARCH_STRCPY "0" CACHE STRING
+	"Use machine specific version of strcpy")
+set(HAVE_ARCH_STRNCPY "0" CACHE STRING
+	"Use machine specific version of strncpy")
+else()
+set(HAVE_ARCH_STRCPY  "0" CACHE STRING
+	"Use machine specific version of strcpy")
+set(HAVE_ARCH_STRNCPY "0" CACHE STRING
+	"Use machine specific version of strncpy")
+endif()

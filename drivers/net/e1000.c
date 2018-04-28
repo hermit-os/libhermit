@@ -105,7 +105,7 @@ static struct netif* mynetif = NULL;
 
 static inline uint32_t e1000_read(volatile uint8_t* base, uint32_t off)
 {
-#if 1
+#if __x86_64__
 	uint32_t ret;
 
 	asm volatile ("movl (%1), %0" : "=r"(ret) : "r"(base+off));

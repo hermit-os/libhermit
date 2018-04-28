@@ -3,11 +3,35 @@ project(hermit_tools)
 
 include(../cmake/HermitCore-Paths.cmake)
 
+option(ENABLE_RDMA_MIGRATION "Migration support via RDMA" OFF)
+
+
 add_compile_options(-std=c99)
 
-add_executable(proxy proxy.c utils.c uhyve.c uhyve-net.c)
-target_compile_options(proxy PUBLIC -pthread)
-target_link_libraries(proxy -pthread)
+list(APPEND LIBS "-pthread")
+set(SRC proxy.c
+	utils.c
+	uhyve.c
+	uhyve-net.c
+	uhyve-migration.c
+	uhyve-x86_64.c
+	uhyve-aarch64.c
+)
+
+### Optional migration via RDMA
+if(ENABLE_RDMA_MIGRATION)
+	add_definitions(-D__RDMA_MIGRATION__)
+	list(APPEND LIBS "-libverbs")
+	set(SRC ${SRC} uhyve-migration-rdma.c)
+else()
+	remove_definitions(-D__RDMA_MIGRATION__)
+endif()
+
+add_executable(proxy ${SRC})
+
+target_compile_options(proxy PUBLIC ${LIBS})
+target_compile_options(proxy PUBLIC -DMAX_ARGC_ENVC=${MAX_ARGC_ENVC})
+target_link_libraries(proxy ${LIBS})
 
 install(TARGETS proxy
 	DESTINATION bin)

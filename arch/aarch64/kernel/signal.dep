@@ -1,0 +1,11 @@
+arch/arm64/kernel/signal.o: arch/arm64/kernel/signal.c \
+ /home/stefan/HermitCore/include/hermit/signal.h \
+ /home/stefan/HermitCore/include/hermit/stddef.h \
+ /home/stefan/HermitCore/include/hermit/config.h \
+ /home/stefan/HermitCore/arch/arm64/include/asm/stddef.h \
+ /home/stefan/HermitCore/arch/arm64/include/asm/irqflags.h \
+ /home/stefan/HermitCore/include/hermit/semaphore_types.h \
+ /home/stefan/HermitCore/include/hermit/spinlock_types.h \
+ /home/stefan/HermitCore/arch/arm64/include/asm/atomic.h \
+ /home/stefan/HermitCore/arch/arm64/include/asm/atomic32.h \
+ /home/stefan/HermitCore/arch/arm64/include/asm/atomic64.h
