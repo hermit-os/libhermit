@@ -135,6 +135,17 @@ void print_registers(void)
 	}
 }
 
+
+vcpu_state_t read_cpu_state()
+{
+	err(1, "Migration is currently not supported!");
+}
+
+void migration_handler(int signum)
+{
+	err(1, "Migration is currently not supported!");
+}
+
 void timer_handler(int signum)
 {
 	err(1, "Checkpointing is currently not supported!");
@@ -145,12 +156,28 @@ void restore_cpu_state(void)
 	err(1, "Checkpointing is currently not supported!");
 }
 
-void save_cpu_state(void)
+vcpu_state_t save_cpu_state(void)
+{
+	err(1, "Checkpointing is currently not supported!");
+}
+
+
+void write_cpu_state(void)
 {
 	err(1, "Checkpointing is currently not supported!");
 }
 
 int load_checkpoint(uint8_t* mem, char* path)
+{
+	err(1, "Checkpointing is currently not supported!");
+}
+
+int load_migration_data(uint8_t* mem)
+{
+	err(1, "Checkpointing is currently not supported!");
+}
+
+void wait_for_incomming_migration(migration_metadata_t *metadata, uint16_t listen_portno)
 {
 	err(1, "Checkpointing is currently not supported!");
 }

@@ -37,6 +37,8 @@
 #define TSL_ALIGNMASK		((~0L) << TLS_ALIGNBITS)
 #define TLS_FLOOR(addr)		((((size_t)addr) + TLS_ALIGNSIZE - 1) & TSL_ALIGNMASK)
 
+extern int smp_main(void);
+
 /*
  * Note that linker symbols are not variables, they have no memory allocated for
  * maintaining a value, rather their address is their value.
@@ -45,6 +47,7 @@ extern const void tls_start;
 extern const void tls_end;
 
 extern atomic_int32_t cpu_online;
+extern atomic_int32_t current_boot_id;
 
 static char tls[16][DEFAULT_STACK_SIZE];
 static int id = 0;
@@ -166,6 +169,19 @@ int create_default_frame(task_t* task, entry_point_t ep, void* arg, uint32_t cor
 
 	return 0;
 }
+
+#if MAX_CORES > 1
+int smp_start(void)
+{
+	int32_t core_id = atomic_int32_read(&current_boot_id);
+
+	LOG_INFO("Try to initialize processor (local id %d)\n", core_id);
+
+	atomic_int32_inc(&cpu_online);
+
+	return smp_main();
+}
+#endif
 
 int is_proxy(void)
 {

@@ -209,7 +209,16 @@ mmu_on:
   /* Test core ID */
   mrs x0, mpidr_el1
 
+  ldr x0, =cpu_online
+  ldr x0, [x0]
+  cmp x0, 0
+  b.ne smp_start
+
   bl hermit_main
+  bl halt
+
+smp:
+  bl smp_main
 
   /* halt */
 halt:
@@ -273,6 +282,11 @@ _setup_cpu:
     ret
 
 _setup_pgtable:
+    ldr     x0, =cpu_online
+    ldr     x0, [x0]
+    cmp     x0, 0
+    b.ne    4f
+
     ldr     x0, =kernel_end
     /* align to a 16KByte boundary */
     add     x0, x0, 0x10000
@@ -320,6 +334,7 @@ _setup_pgtable:
     cmp     x7, 511*PAGE_SIZE
     b.lo    3b
 
+4:
     ret
 
 //_calc_offset:

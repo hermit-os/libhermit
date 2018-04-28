@@ -29,6 +29,7 @@
 #define __UHYVE_H__
 
 #include <err.h>
+#include <linux/kvm.h>
 
 #define UHYVE_PORT_WRITE		0x400
 #define UHYVE_PORT_OPEN			0x440
@@ -52,6 +53,9 @@
 
 #define UHYVE_IRQ       11
 
+#define SIGTHRCHKP 	(SIGRTMIN+0)
+#define SIGTHRMIG 	(SIGRTMIN+1)
+
 #define kvm_ioctl(fd, cmd, arg) ({ \
         const int ret = ioctl(fd, cmd, arg); \
         if(ret == -1) \
@@ -59,14 +63,43 @@
         ret; \
         })
 
+#define MAX_MSR_ENTRIES 25
+struct msr_data {
+	struct kvm_msrs info;
+	struct kvm_msr_entry entries[MAX_MSR_ENTRIES];
+};
+
+
+typedef struct _vcpu_state {
+	struct msr_data msr_data;
+	struct kvm_regs regs;
+	struct kvm_sregs sregs;
+	struct kvm_fpu fpu;
+	struct kvm_lapic_state lapic;
+	struct kvm_xsave xsave;
+	struct kvm_xcrs xcrs;
+	struct kvm_vcpu_events events;
+	struct kvm_mp_state mp_state;
+} vcpu_state_t;
+
+
+typedef struct _migration_metadata migration_metadata_t;
+
 void print_registers(void);
 void timer_handler(int signum);
-void restore_cpu_state(void);
-void save_cpu_state(void);
+void *migration_handler(void *arg);
+void restore_cpu_state(vcpu_state_t cpu_state);
+vcpu_state_t read_cpu_state(void);
+vcpu_state_t save_cpu_state(void);
+void write_cpu_state(void);
 void init_cpu_state(uint64_t elf_entry);
 int load_kernel(uint8_t* mem, char* path);
 int load_checkpoint(uint8_t* mem, char* path);
+int load_migration_data(uint8_t* mem);
+void wait_for_incomming_migration(migration_metadata_t *metadata, uint16_t listen_portno);
 void init_kvm_arch(void);
 int load_kernel(uint8_t* mem, char* path);
+size_t determine_dest_offset(size_t src_addr);
+void determine_dirty_pages(void (*save_page_handler)(void*, size_t, void*, size_t));
 
 #endif
