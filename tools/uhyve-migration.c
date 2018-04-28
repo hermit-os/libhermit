@@ -261,5 +261,17 @@ void recv_guest_mem(void)
 }
 #endif /* __RDMA_MIGRATION__ */
 
+#else
+
+/* dummy implementation for aarch64 */
+
+void set_migration_target(const char *ip_str, int port)
+{
+}
+
+void set_migration_type(const char *mig_type_str)
+{
+}
+
 #endif
 

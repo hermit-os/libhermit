@@ -63,12 +63,12 @@
         ret; \
         })
 
+#ifdef __x86_64__
 #define MAX_MSR_ENTRIES 25
 struct msr_data {
 	struct kvm_msrs info;
 	struct kvm_msr_entry entries[MAX_MSR_ENTRIES];
 };
-
 
 typedef struct _vcpu_state {
 	struct msr_data msr_data;
@@ -81,7 +81,11 @@ typedef struct _vcpu_state {
 	struct kvm_vcpu_events events;
 	struct kvm_mp_state mp_state;
 } vcpu_state_t;
-
+#else
+typedef struct _vcpu_state {
+	int dummy;
+} vcpu_state_t;
+#endif
 
 typedef struct _migration_metadata migration_metadata_t;
 

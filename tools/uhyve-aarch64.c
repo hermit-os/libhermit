@@ -141,7 +141,7 @@ vcpu_state_t read_cpu_state()
 	err(1, "Migration is currently not supported!");
 }
 
-void migration_handler(int signum)
+void* migration_handler(void* arg)
 {
 	err(1, "Migration is currently not supported!");
 }
@@ -151,7 +151,7 @@ void timer_handler(int signum)
 	err(1, "Checkpointing is currently not supported!");
 }
 
-void restore_cpu_state(void)
+void restore_cpu_state(vcpu_state_t state)
 {
 	err(1, "Checkpointing is currently not supported!");
 }
