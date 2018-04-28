@@ -58,7 +58,7 @@ extern const void kernel_start;
 extern void* host_logical_addr;
 uint64_t ib_pool_addr = 0;
 
-static spinlock_t list_lock = SPINLOCK_INIT;
+static spinlock_irqsave_t list_lock = SPINLOCK_IRQSAVE_INIT;
 
 static free_list_t init_list = {0, 0, NULL, NULL};
 static free_list_t* free_start = &init_list;
@@ -77,7 +77,7 @@ size_t get_pages(size_t npages)
 	if (BUILTIN_EXPECT(npages > atomic_int64_read(&total_available_pages), 0))
 		return 0;
 
-	spinlock_lock(&list_lock);
+	spinlock_irqsave_lock(&list_lock);
 
 	while(curr) {
 		i = (curr->end - curr->start) / PAGE_SIZE;
@@ -101,7 +101,7 @@ size_t get_pages(size_t npages)
 out:
 	LOG_DEBUG("get_pages: ret 0%llx, curr->start 0x%llx, curr->end 0x%llx\n", ret, curr->start, curr->end);
 
-	spinlock_unlock(&list_lock);
+	spinlock_irqsave_unlock(&list_lock);
 
 	if (ret) {
 		atomic_int64_add(&total_allocated_pages, npages);
@@ -155,7 +155,7 @@ int put_pages(size_t phyaddr, size_t npages)
 	if (BUILTIN_EXPECT(!npages, 0))
 		return -EINVAL;
 
-	spinlock_lock(&list_lock);
+	spinlock_irqsave_lock(&list_lock);
 
 	while(curr) {
 		if (phyaddr+npages*PAGE_SIZE == curr->start) {
@@ -181,7 +181,7 @@ int put_pages(size_t phyaddr, size_t npages)
 		curr = curr->next;
 	}
 out:
-	spinlock_unlock(&list_lock);
+	spinlock_irqsave_unlock(&list_lock);
 
 	atomic_int64_sub(&total_allocated_pages, npages);
 	atomic_int64_add(&total_available_pages, npages);
@@ -189,7 +189,7 @@ out:
 	return 0;
 
 out_err:
-	spinlock_unlock(&list_lock);
+	spinlock_irqsave_unlock(&list_lock);
 
 	return -ENOMEM;
 }
