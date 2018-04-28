@@ -42,7 +42,7 @@ spinlock_irqsave_t stdio_lock = SPINLOCK_IRQSAVE_INIT;
    the binary. => no valid kernel messages */
 /* static */ unsigned char kmessages[KMSG_SIZE+1] __attribute__ ((section(".kmsg"))) = {[0 ... KMSG_SIZE] = 0x00};
 
-	int koutput_init(void)
+int koutput_init(void)
 {
 	if (is_single_kernel())
 		uart_init();
@@ -52,34 +52,38 @@ spinlock_irqsave_t stdio_lock = SPINLOCK_IRQSAVE_INIT;
 
 int kputchar(int c)
 {
-	int pos;
-
 	/* add place holder for end of string */
 	if (BUILTIN_EXPECT(!c, 0))
 		c = '?';
 
-	pos = atomic_int32_inc(&kmsg_counter);
-	kmessages[pos % KMSG_SIZE] = (unsigned char) c;
-
-	if (is_single_kernel())
+	if (is_single_kernel()) {
 		uart_putchar(c);
+	} else {
+		int pos = atomic_int32_inc(&kmsg_counter);
+		kmessages[pos % KMSG_SIZE] = (unsigned char) c;
+	}
 
 	return 1;
 }
 
 int kputs(const char *str)
 {
-	int pos, i, len = strlen(str);
+	int len;
 
 	spinlock_irqsave_lock(&stdio_lock);
 
-	for(i=0; i<len; i++) {
-		pos = atomic_int32_inc(&kmsg_counter);
-		kmessages[pos % KMSG_SIZE] = str[i];
-	}
+	if (is_single_kernel()) {
+		len = uart_puts(str);
+	} else {
+		int pos;
 
-	if (is_single_kernel())
-		uart_puts(str);
+		len = strlen(str);
+
+		for(int i=0; i<len; i++) {
+			pos = atomic_int32_inc(&kmsg_counter);
+			kmessages[pos % KMSG_SIZE] = str[i];
+		}
+	}
 
 	spinlock_irqsave_unlock(&stdio_lock);
 
