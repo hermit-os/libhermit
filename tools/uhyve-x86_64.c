@@ -434,7 +434,8 @@ void init_cpu_state(uint64_t elf_entry)
 	*((volatile uint32_t*) (mboot + 0x30)) = cpuid;
 }
 
-vcpu_state_t read_cpu_state() {
+vcpu_state_t read_cpu_state(void)
+{
 	vcpu_state_t cpu_state;
 	char fname[MAX_FNAME];
 	snprintf(fname, MAX_FNAME, "checkpoint/chk%u_core%u.dat", no_checkpoint, cpuid);
@@ -612,24 +613,28 @@ void scan_page_tables(void (*save_page)(void*, size_t, void*, size_t))
 		}
 	}
 }
-void open_chk_file(char *fname) {
+void open_chk_file(char *fname)
+{
 	chk_file = fopen(fname, "w");
 	if (chk_file == NULL) {
 		err(1, "fopen: unable to open file");
 	}
 }
 
-void close_chk_file(void) {
+void close_chk_file(void)
+{
 	fclose(chk_file);
 }
 
-void write_chk_file(void *addr, size_t bytes) {
+void write_chk_file(void *addr, size_t bytes)
+{
 	if (fwrite(addr, bytes, 1, chk_file) != 1) {
 		err(1, "fwrite failed");
 	}
 }
 
-void write_mem_page_to_chk_file(void *entry, size_t entry_size, void *page, size_t page_size) {
+void write_mem_page_to_chk_file(void *entry, size_t entry_size, void *page, size_t page_size)
+{
 	write_chk_file(entry, entry_size);
 	write_chk_file(page, page_size);
 }
@@ -906,7 +911,7 @@ void wait_for_incomming_migration(migration_metadata_t *metadata, uint16_t liste
 	/* receive metadata state */
 	res = recv_data(metadata, sizeof(migration_metadata_t));
 	fprintf(stderr, "Metadata received! (%d bytes)\n", res);
-	fprintf(stderr, "NCORES = %u; GUEST_SIZE = %llu; NO_CHKPOINT = %u; ELF_ENTRY = 0x%x; FULL_CHKPT = %d\n",
+	fprintf(stderr, "NCORES = %u; GUEST_SIZE = %zu; NO_CHKPOINT = %u; ELF_ENTRY = 0x%lx; FULL_CHKPT = %d\n",
 			metadata->ncores, metadata->guest_size, metadata->no_checkpoint, metadata->elf_entry, metadata->full_checkpoint);
 }
 
