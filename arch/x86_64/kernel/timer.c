@@ -55,7 +55,7 @@ void check_ticks(void)
 	if (!cpu_freq)
 		return;
 
-	const uint64_t curr_rdtsc = has_rdtscp() ? rdtscp(NULL) : rdtsc();
+	const uint64_t curr_rdtsc = rdtsc();
 	rmb();
 
 	const uint64_t diff_cycles = curr_rdtsc - per_core(last_rdtsc);
@@ -65,7 +65,7 @@ void check_ticks(void)
 	if (diff_ticks > 0) {
 		set_per_core(timer_ticks, per_core(timer_ticks) + diff_ticks);
 		set_per_core(last_rdtsc, curr_rdtsc);
-		rmb();
+		mb();
 	}
 }
 #endif
@@ -99,8 +99,11 @@ static void timer_handler(struct state *s)
 
 int timer_wait(unsigned int ticks)
 {
-	uint64_t eticks = per_core(timer_ticks) + ticks;
+#ifdef DYNAMIC_TICKS
+	check_ticks();
+#endif
 
+	uint64_t eticks = per_core(timer_ticks) + ticks;
 	task_t* curr_task = per_core(current_task);
 
 	if (curr_task->status == TASK_IDLE)
@@ -119,12 +122,8 @@ int timer_wait(unsigned int ticks)
 			PAUSE;
 		}
 	} else if (per_core(timer_ticks) < eticks) {
-		check_workqueues();
-
-		if (per_core(timer_ticks) < eticks) {
-			set_timer(eticks);
-			reschedule();
-		}
+		set_timer(eticks);
+		reschedule();
 	}
 
 	return 0;

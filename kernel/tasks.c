@@ -74,7 +74,7 @@ DEFINE_PER_CORE(uint32_t, __core_id, 0);
 
 static void update_timer(task_t* first)
 {
-	if(first) {
+	if (first) {
 		if(first->timeout > get_clock_tick()) {
 			timer_deadline((uint32_t) (first->timeout - get_clock_tick()));
 		} else {
@@ -120,9 +120,9 @@ static void timer_queue_push(uint32_t core_id, task_t* task)
 		timer_queue->first = timer_queue->last = task;
 		task->next = task->prev = NULL;
 
-        #ifdef DYNAMIC_TICKS
-		    update_timer(task);
-        #endif
+#ifdef DYNAMIC_TICKS
+		update_timer(task);
+#endif
 	} else {
 		// lookup position where to insert task
 		task_t* tmp = first;
@@ -148,9 +148,9 @@ static void timer_queue_push(uint32_t core_id, task_t* task)
 			if(timer_queue->first == tmp) {
 				timer_queue->first = task;
 
-                #ifdef DYNAMIC_TICKS
-				    update_timer(task);
-                #endif
+#ifdef DYNAMIC_TICKS
+				update_timer(task);
+#endif
 			}
 		}
 	}
@@ -792,6 +792,13 @@ void check_timers(void)
 		// pops task from timer queue, so next iteration has new first element
 		wakeup_task(task->id);
 	}
+
+#ifdef DYNAMIC_TICKS
+	task = readyqueue->timers.first;
+	if (task) {
+		update_timer(task);
+	}
+#endif
 
 	spinlock_irqsave_unlock(&readyqueue->lock);
 }
