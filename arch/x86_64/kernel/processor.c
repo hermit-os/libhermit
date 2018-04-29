@@ -744,27 +744,20 @@ uint32_t get_cpu_frequency(void)
 
 void udelay(uint32_t usecs)
 {
-	if (has_rdtscp()) {
-		uint64_t diff, end, start = rdtscp(NULL);
-		uint64_t deadline = get_cpu_frequency() * usecs;
+	const uint8_t use_rdtscp = has_rdtscp();
+	uint64_t diff, end;
+	uint64_t start = use_rdtscp ? rdtscp(NULL) : rdtsc();
+	uint64_t deadline = get_cpu_frequency() * usecs;
 
-		do {
-			end = rdtscp(NULL);
-			rmb();
-			diff = end > start ? end - start : start - end;
-			if ((diff < deadline) && (deadline - diff > 50000))
+	do {
+		end = use_rdtscp ? rdtscp(NULL) : rdtsc();
+		rmb();
+		diff = end > start ? end - start : start - end;
+		if (diff < deadline) {
+			if (deadline - diff > 50000)
 				check_workqueues();
-		} while(diff < deadline);
-	} else {
-		uint64_t diff, end, start = rdtsc();
-		uint64_t deadline = get_cpu_frequency() * usecs;
-
-		do {
-			mb();
-			end = rdtsc();
-			diff = end > start ? end - start : start - end;
-			if ((diff < deadline) && (deadline - diff > 50000))
-				check_workqueues();
-		} while(diff < deadline);
-	}
+			else
+				reschedule();
+		}
+	} while(diff < deadline);
 }
