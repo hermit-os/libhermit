@@ -6,7 +6,7 @@
 #include <pthread.h>
 
 #ifndef NUM_THREADS
-#define NUM_THREADS     3
+#define NUM_THREADS     2
 #endif
 
 #ifndef NUM_ITER

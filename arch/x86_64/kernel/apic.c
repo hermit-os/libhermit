@@ -1020,22 +1020,18 @@ static void apic_tlb_handler(struct state *s)
 
 int apic_send_ipi(uint64_t dest, uint8_t irq)
 {
-	uint32_t j;
-	uint8_t flags;
+	uint8_t flags = irq_nested_disable();
+
+	/*
+	 * Make previous memory operations globally visible before
+	 * sending the IPI => serializing
+	 */
+	smp_mb();
 
 	if (has_x2apic()) {
-		flags = irq_nested_disable();
 		LOG_DEBUG("send IPI %d to %lld\n", (int)irq, dest);
-		/*
-		 * Make previous memory operations globally visible before
-		 * sending the IPI through x2apic wrmsr. => serializing
-		 */
-		smp_mb();
 		wrmsr(0x830, (dest << 32)|APIC_INT_ASSERT|APIC_DM_FIXED|irq);
-		irq_nested_enable(flags);
 	} else {
-		flags = irq_nested_disable();
-
 		while (lapic_read(APIC_ICR1) & APIC_ICR_BUSY) {
 			PAUSE;
 		}
@@ -1044,14 +1040,12 @@ int apic_send_ipi(uint64_t dest, uint8_t irq)
 		set_ipi_dest((uint32_t)dest);
 		lapic_write(APIC_ICR1, APIC_INT_ASSERT|APIC_DM_FIXED|irq);
 
-		j = 0;
-		while((lapic_read(APIC_ICR1) & APIC_ICR_BUSY) && (j < 1000)) {
-			j++; // wait for it to finish, give up eventualy tho
+		while(lapic_read(APIC_ICR1) & APIC_ICR_BUSY) {
 			PAUSE;
 		}
-
-		irq_nested_enable(flags);
 	}
+
+	irq_nested_enable(flags);
 
 	return 0;
 }
