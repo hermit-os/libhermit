@@ -569,6 +569,81 @@ out:
 	return 0;
 }
 
+//#define MEASURE_CONTEXT
+
+#ifdef MEASURE_CONTEXT
+
+#define N	10000
+volatile int finished = 0;
+volatile int started1 = 0;
+volatile int started2 = 0;
+
+static int dummy_task(void* arg)
+{
+	kprintf("Enter dummy loop at core %d\n", CORE_ID);
+
+	// cache warm up
+	reschedule();
+	reschedule();
+
+	// synchronize start
+	started2 = 1;
+	mb();
+	while(started1 == 0)
+		reschedule();
+
+	while (finished == 0)
+	{
+		reschedule();
+	}
+
+	kprintf("Leave dummy loop\n");
+
+	return 0;
+}
+
+static int measure_context(void* arg)
+{
+	unsigned long long start, end;
+
+	kprintf("Enter function at core %d to measure the time for a context switch\n", CORE_ID);
+
+	// cache warm up
+	reschedule();
+	reschedule();
+
+	// synchronize start
+	started1 = 1;
+	mb();
+	while(started2 == 0)
+	reschedule();
+
+	// Save the current Time Stamp Counter value and switch to the second task.
+	start = rdtsc();
+	mb();
+
+	for(uint32_t i = 0; i < N; i++)
+	{
+		reschedule();
+	}
+
+	// Calculate the cycle difference and add it to the sum.
+	end = rdtsc();
+	mb();
+
+	finished = 1;
+
+	reschedule();
+	reschedule();
+
+	kprintf("Average time for a task switch: %lld cycles\n", (end - start) / (N * 2));
+
+	sys_exit(0);
+
+	return 0;
+}
+#endif
+
 int hermit_main(void)
 {
 	hermit_init();
@@ -608,7 +683,12 @@ int hermit_main(void)
 	print_cpu_status(isle);
 	//vma_dump();
 
+#ifdef MEASURE_CONTEXT
+	create_kernel_task_on_core(NULL, dummy_task, NULL, NORMAL_PRIO, boot_processor);
+	create_kernel_task_on_core(NULL, measure_context, NULL, NORMAL_PRIO, boot_processor);
+#else
 	create_kernel_task_on_core(NULL, initd, NULL, NORMAL_PRIO, boot_processor);
+#endif
 
 	while(1) {
 		check_workqueues();
