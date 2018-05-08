@@ -18,7 +18,7 @@ RUN apt-get install -y curl cmake bsdmainutils wget vim nano git binutils autoco
 RUN apt-get install -y --allow-unauthenticated binutils-hermit libhermit newlib-hermit pthread-embedded-hermit gcc-hermit
 
 RUN wget https://cmake.org/files/v3.7/cmake-3.7.2.tar.gz
-RUN tar xzvf https://cmake.org/files/v3.7/cmake-3.7.2.tar.gz
+RUN tar xzvf cmake*.tar.gz
 RUN cd cmake-3.7.2
 RUN ./bootstrap
 RUN make
