@@ -68,6 +68,7 @@ int vma_init(void)
 	ret = vma_add(HEAP_START, HEAP_START+HEAP_SIZE, VMA_NO_ACCESS);
 	if (BUILTIN_EXPECT(ret, 0))
 		goto out;
+	LOG_INFO("Reserve space for the heap: 0x%llx - 0x%llx\n", HEAP_START, HEAP_START+HEAP_SIZE-1); 
 
 	// we might move the architecture specific VMA regions to a
 	// seperate function vma_arch_init()

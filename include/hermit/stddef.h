@@ -49,7 +49,7 @@ extern size_t image_size;
 #define CLOCK_TICK_RATE	1193182 /* 8254 chip's internal oscillator frequency */
 #define CACHE_LINE	64
 #define HEAP_START	(PAGE_2M_CEIL(((size_t)&kernel_start + image_size + (16ULL << 10))))
-#define HEAP_SIZE	(1ULL << 32)
+#define HEAP_SIZE	(1ULL << 37)
 #define KMSG_SIZE	0x1000
 #define INT_SYSCALL	0x80
 #define MAILBOX_SIZE	128
