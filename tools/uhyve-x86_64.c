@@ -75,10 +75,6 @@
 #define CPUID_FUNC_PERFMON	0x0A
 #define GUEST_PAGE_SIZE		0x200000   /* 2 MB pages in guest */
 
-#define KVM_32BIT_MAX_MEM_SIZE  (1ULL << 32)
-#define KVM_32BIT_GAP_SIZE      (768 << 20)
-#define KVM_32BIT_GAP_START     (KVM_32BIT_MAX_MEM_SIZE - KVM_32BIT_GAP_SIZE)
-
 #define BOOT_GDT	0x1000
 #define BOOT_INFO	0x2000
 #define BOOT_PML4	0x10000
