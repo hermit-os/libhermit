@@ -40,8 +40,8 @@
 #define GAP_BELOW	0x100000ULL
 #define IB_POOL_SIZE 0x400000ULL
 
-#define PCI_GAP_SIZE		(768 << 20)
-#define PCI_GAP_START		((1ULL << 32) - PCI_GAP_SIZE)
+#define KVM_GAP_SIZE		(768 << 20)
+#define KVM_GAP_START		((1ULL << 32) - KVM_GAP_SIZE)
 
 extern uint64_t base;
 extern uint64_t limit;
@@ -100,6 +100,7 @@ size_t get_pages(size_t npages)
 			}
 			if (curr != &init_list)
 				kfree(curr);
+			kprintf("ret 0x%zx, free_start 0x%zx, prev 0x%zx, next 0x%zx\n", ret, free_start, free_start->prev, free_start->next);
 			goto out;
 		}
 
@@ -304,16 +305,16 @@ int memory_init(void)
 	} else {
 		init_list.start = PAGE_2M_CEIL(base + image_size);
 
-		if (limit < PCI_GAP_START) {
+		if (limit < KVM_GAP_START) {
 			atomic_int64_add(&total_pages, (limit-base) >> PAGE_BITS);
 			atomic_int64_add(&total_available_pages, (limit-base) >> PAGE_BITS);
 
 			init_list.end = limit;
 		} else {
-			atomic_int64_add(&total_pages, (limit-base-PCI_GAP_SIZE) >> PAGE_BITS);
-			atomic_int64_add(&total_available_pages, (limit-base-PCI_GAP_SIZE) >> PAGE_BITS);
+			atomic_int64_add(&total_pages, (limit-base-KVM_GAP_SIZE) >> PAGE_BITS);
+			atomic_int64_add(&total_available_pages, (limit-base-KVM_GAP_SIZE) >> PAGE_BITS);
 
-			init_list.end = PCI_GAP_START;
+			init_list.end = KVM_GAP_START;
 		}
 	}
 
@@ -379,7 +380,7 @@ int memory_init(void)
 		}
 	} else {
 		// add region after the pci gap
-		if (limit > PCI_GAP_START+PCI_GAP_SIZE) {
+		if (limit > KVM_GAP_START+KVM_GAP_SIZE) {
 			free_list_t* last = &init_list;
 
 			last->next = kmalloc(sizeof(free_list_t));
@@ -389,7 +390,7 @@ int memory_init(void)
 			last->next->prev = last;
 			last = last->next;
 			last->next = NULL;
-			last->start = PCI_GAP_START+PCI_GAP_SIZE;
+			last->start = KVM_GAP_START+KVM_GAP_SIZE;
 			last->end = limit;
 
 			LOG_INFO("Add region 0x%zx - 0x%zx\n", last->start, last->end);
@@ -399,9 +400,9 @@ int memory_init(void)
 	// Ok, we are now able to use our memory management => update tss
 	tss_init(0);
 
+#if 0
 	if (host_logical_addr) {
 		LOG_INFO("Host has its guest logical address at %p\n", host_logical_addr);
-#if 0
 		size_t phyaddr = get_pages(IB_POOL_SIZE >> PAGE_BITS);
 		LOG_INFO("Allocate %d MB at physical address 0x%zx for the IB pool\n", IB_POOL_SIZE >> 20, phyaddr);
 		if (BUILTIN_EXPECT(!page_map((size_t)host_logical_addr+phyaddr, phyaddr, IB_POOL_SIZE >> PAGE_BITS, PG_GLOBAL|PG_RW), 1)) {
@@ -409,8 +410,8 @@ int memory_init(void)
 			ib_pool_addr = (size_t)host_logical_addr+phyaddr;
 			LOG_INFO("Map IB pool at 0x%zx\n", ib_pool_addr);
 		}
-#endif
 	}
+#endif
 
 	return ret;
 
