@@ -58,7 +58,7 @@ typedef struct free_list {
  */
 extern const void kernel_start;
 
-extern void* host_logical_addr;
+//extern void* host_logical_addr;
 //uint64_t ib_pool_addr = 0;
 
 static spinlock_irqsave_t list_lock = SPINLOCK_IRQSAVE_INIT;
@@ -100,7 +100,6 @@ size_t get_pages(size_t npages)
 			}
 			if (curr != &init_list)
 				kfree(curr);
-			kprintf("ret 0x%zx, free_start 0x%zx, prev 0x%zx, next 0x%zx\n", ret, free_start, free_start->prev, free_start->next);
 			goto out;
 		}
 
