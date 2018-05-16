@@ -101,15 +101,16 @@ int page_set_flags(size_t viraddr, uint32_t npages, int flags)
 
 int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8_t do_ipi)
 {
-	int lvl, ret = -ENOMEM;
-	long vpn = viraddr >> PAGE_BITS;
-	long first[PAGE_LEVELS], last[PAGE_LEVELS];
+	int ret = -ENOMEM;
+	size_t vpn = viraddr >> PAGE_BITS;
+	size_t first[PAGE_LEVELS];
+	size_t last[PAGE_LEVELS];
 	int8_t send_ipi = 0;
 
 	//kprintf("Map %d pages at 0x%zx\n", npages, viraddr);
 
 	/* Calculate index boundaries for page map traversal */
-	for (lvl=0; lvl<PAGE_LEVELS; lvl++) {
+	for (int32_t lvl=0; lvl<PAGE_LEVELS; lvl++) {
 		first[lvl] = (vpn         ) >> (lvl * PAGE_MAP_BITS);
 		last[lvl]  = (vpn+npages-1) >> (lvl * PAGE_MAP_BITS);
 	}
@@ -118,7 +119,7 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8
 
 	/* Start iterating through the entries
 	 * beginning at the root table (PGD or PML4) */
-	for (lvl=PAGE_LEVELS-1; lvl>=0; lvl--) {
+	for (int32_t lvl=PAGE_LEVELS-1; lvl>=0; lvl--) {
 		for (vpn=first[lvl]; vpn<=last[lvl]; vpn++) {
 			if (lvl) { /* PML4, PDPT, PGD */
 				if (!(self[lvl][vpn] & PG_PRESENT)) {
@@ -129,17 +130,12 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8
 						goto out;
 
 					/* Reference the new table within its parent */
-#if 0
-					self[lvl][vpn] = paddr | bits | PG_PRESENT | PG_USER | PG_RW | PG_ACCESSED | PG_DIRTY;
-#else
 					self[lvl][vpn] = (paddr | bits | PG_PRESENT | PG_USER | PG_RW | PG_ACCESSED | PG_DIRTY) & ~PG_XD;
-#endif
 
 					/* Fill new table with zeros */
 					memset(&self[lvl-1][vpn<<PAGE_MAP_BITS], 0, PAGE_SIZE);
 				}
-			}
-			else { /* PGT */
+			} else { /* PGT */
 				int8_t flush = 0;
 
 				/* do we have to flush the TLB? */
@@ -182,8 +178,8 @@ int page_unmap(size_t viraddr, size_t npages)
 
 	/* Start iterating through the entries.
 	 * Only the PGT entries are removed. Tables remain allocated. */
-	size_t vpn, start = viraddr>>PAGE_BITS;
-	for (vpn=start; vpn<start+npages; vpn++) {
+	size_t start = viraddr>>PAGE_BITS;
+	for (size_t vpn=viraddr>>PAGE_BITS; vpn<start+npages; vpn++) {
 		self[0][vpn] = 0;
 		tlb_flush_one_page(vpn << PAGE_BITS, 0);
 	}
@@ -232,7 +228,7 @@ void page_fault_handler(struct state *s)
 		 * do we have a valid page table entry? => flush TLB and return
 		 */
 		if (check_pagetables(viraddr)) {
-			//tlb_flush_one_page(viraddr);
+			//tlb_flush_one_page(viraddr, 0);
 			spinlock_irqsave_unlock(&page_lock);
 			return;
 		}
