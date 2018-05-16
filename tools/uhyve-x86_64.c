@@ -981,7 +981,8 @@ void init_kvm_arch(void)
 		kvm_ioctl(vmfd, KVM_SET_USER_MEMORY_REGION, &kvm_region);
 
 		kvm_region.slot = 1;
-		kvm_region.guest_phys_addr = KVM_32BIT_GAP_START+KVM_32BIT_GAP_SIZE;
+		kvm_region.guest_phys_addr = KVM_32BIT_GAP_START + KVM_32BIT_GAP_SIZE;
+		kvm_region.userspace_addr = (uint64_t) guest_mem + KVM_32BIT_GAP_START + KVM_32BIT_GAP_SIZE;
 		kvm_region.memory_size = guest_size - KVM_32BIT_GAP_SIZE - KVM_32BIT_GAP_START + GUEST_OFFSET;
 		kvm_ioctl(vmfd, KVM_SET_USER_MEMORY_REGION, &kvm_region);
 	}
