@@ -40,8 +40,8 @@
 #define GAP_BELOW	0x100000ULL
 #define IB_POOL_SIZE 0x400000ULL
 
-#define KVM_GAP_SIZE		(768 << 20)
-#define KVM_GAP_START		((1ULL << 32) - KVM_GAP_SIZE)
+#define IO_GAP_SIZE		(768ULL << 20)
+#define IO_GAP_START		((1ULL << 32) - IO_GAP_SIZE)
 
 extern uint64_t base;
 extern uint64_t limit;
@@ -304,16 +304,16 @@ int memory_init(void)
 	} else {
 		init_list.start = PAGE_2M_CEIL(base + image_size);
 
-		if (limit < KVM_GAP_START) {
+		if (limit < IO_GAP_START) {
 			atomic_int64_add(&total_pages, (limit-base) >> PAGE_BITS);
 			atomic_int64_add(&total_available_pages, (limit-base) >> PAGE_BITS);
 
 			init_list.end = limit;
 		} else {
-			atomic_int64_add(&total_pages, (limit-base-KVM_GAP_SIZE) >> PAGE_BITS);
-			atomic_int64_add(&total_available_pages, (limit-base-KVM_GAP_SIZE) >> PAGE_BITS);
+			atomic_int64_add(&total_pages, (limit-base-IO_GAP_SIZE) >> PAGE_BITS);
+			atomic_int64_add(&total_available_pages, (limit-base-IO_GAP_SIZE) >> PAGE_BITS);
 
-			init_list.end = KVM_GAP_START;
+			init_list.end = IO_GAP_START;
 		}
 	}
 
@@ -379,7 +379,7 @@ int memory_init(void)
 		}
 	} else {
 		// add region after the pci gap
-		if (limit > KVM_GAP_START+KVM_GAP_SIZE) {
+		if (limit > IO_GAP_START+IO_GAP_SIZE) {
 			free_list_t* last = &init_list;
 
 			last->next = kmalloc(sizeof(free_list_t));
@@ -389,7 +389,7 @@ int memory_init(void)
 			last->next->prev = last;
 			last = last->next;
 			last->next = NULL;
-			last->start = KVM_GAP_START+KVM_GAP_SIZE;
+			last->start = IO_GAP_START+IO_GAP_SIZE;
 			last->end = limit;
 
 			LOG_INFO("Add region 0x%zx - 0x%zx\n", last->start, last->end);
