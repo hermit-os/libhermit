@@ -49,6 +49,7 @@
 /* Note that linker symbols are not variables, they have no memory
  * allocated for maintaining a value, rather their address is their value. */
 extern const void kernel_start;
+extern const void __bss_start;
 
 /** Single-address space operating system => one lock for all tasks */
 static spinlock_irqsave_t page_lock = SPINLOCK_IRQSAVE_INIT;
@@ -220,7 +221,8 @@ void page_fault_handler(struct state *s)
 
 	spinlock_irqsave_lock(&page_lock);
 
-	if ((task->heap) && (viraddr >= task->heap->start) && (viraddr < task->heap->end)) {
+	if (((task->heap) && (viraddr >= task->heap->start) && (viraddr < task->heap->end))
+	   || ((viraddr >= (size_t) &__bss_start) && (viraddr < (size_t) &kernel_start + image_size))) {
 		size_t flags;
 		int ret;
 
