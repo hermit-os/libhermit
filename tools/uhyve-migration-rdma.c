@@ -27,6 +27,7 @@
 
 #define _GNU_SOURCE
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <infiniband/verbs.h>
@@ -42,12 +43,15 @@
 
 
 #ifdef __RDMA_MIGRATION__
+#define IB_USE_ODP 		(0)
 
-#define IB_USED_PORT 		(1)
 #define IB_CQ_ENTRIES 		(1)
 #define IB_MAX_INLINE_DATA 	(0)
 #define IB_MAX_DEST_RD_ATOMIC 	(1)
 #define IB_MIN_RNR_TIMER 	(1)
+#define IB_MAX_SEND_WR 		(8192)  // TODO: should be
+					// com_hndl.dev_attr_ex.orig_attr.max_qp_wr
+					// fix for mlx_5 adapter
 #define IB_MAX_RECV_WR 		(1)
 #define IB_MAX_SEND_SGE 	(1)
 #define IB_MAX_RECV_SGE 	(1)
@@ -70,18 +74,19 @@ typedef struct qp_info {
 } qp_info_t;
 
 typedef struct com_hndl {
-	struct ibv_context 	*ctx; 		/* device context */
-	struct ibv_device_attr  dev_attr; 	/* device attributes */
-	struct ibv_port_attr  	port_attr; 	/* port attributes */
-	struct ibv_pd 		*pd;  		/* protection domain */
-	struct ibv_mr 		**mrs; 		/* memory regions */
-	struct ibv_cq 		*cq;  		/* completion queue */
-	struct ibv_qp 		*qp;  		/* queue pair */
-	struct ibv_comp_channel	*comp_chan;  	/* completion event channel */
-	qp_info_t 	loc_qp_info;
-	qp_info_t 	rem_qp_info;
-	uint8_t 		*buf; 		/* the guest memory (with potential gaps!) */
-	size_t 			mr_cnt; 	/* number of memory regions */
+	struct ibv_context 		*ctx; 		/* device context */
+	struct ibv_device_attr_ex 	dev_attr_ex; 	/* extended device attributes */
+	struct ibv_port_attr  		port_attr; 	/* port attributes */
+	struct ibv_pd 			*pd;  		/* protection domain */
+	struct ibv_mr 			**mrs; 		/* memory regions */
+	struct ibv_cq 			*cq;  		/* completion queue */
+	struct ibv_qp 			*qp;  		/* queue pair */
+	struct ibv_comp_channel		*comp_chan;  	/* comp. event channel */
+	qp_info_t 			loc_qp_info;
+	qp_info_t 			rem_qp_info;
+	uint8_t 			used_port; 	/* port of the IB device */
+	uint8_t 			*buf; 		/* the guest memory (with potential gaps!) */
+	size_t 				mr_cnt; 	/* number of memory regions */
 } com_hndl_t;
 
 
@@ -134,13 +139,16 @@ void print_send_wr_info(uint64_t id)
 static void
 init_com_hndl(size_t mem_chunk_cnt, mem_chunk_t *mem_chunks)
 {
+	/* initialize com_hndl */
+	memset(&com_hndl, 0, sizeof(com_hndl));
+
 	/* the guest physical memory is the communication buffer */
 	com_hndl.buf = guest_mem;
 	com_hndl.mr_cnt = mem_chunk_cnt;
 
-	struct ibv_device **device_list;
-	struct ibv_device *ib_pp_device;
-	int num_devices;
+	struct ibv_device **device_list = NULL;
+	int num_devices = 0;
+	bool active_port_found = false;
 
 	/* determine first available device */
 	if ((device_list = ibv_get_device_list(&num_devices)) == NULL) {
@@ -151,34 +159,86 @@ init_com_hndl(size_t mem_chunk_cnt, mem_chunk_t *mem_chunks)
 			strerror(errno));
 		exit(EXIT_FAILURE);
 	}
-	if (num_devices != 0) {
-		ib_pp_device = device_list[0];
-	} else {
-		fprintf(stderr,
-		        "[ERROR] Could not find any IB device. Abort!\n");
+
+	/* find device with active port */
+	size_t cur_dev = 0;
+	for (cur_dev=0; cur_dev<num_devices; ++cur_dev){
+		/* open the device context */
+		if ((com_hndl.ctx = ibv_open_device(device_list[cur_dev])) == NULL) {
+			fprintf(stderr,
+				"[ERROR] Could not open the device context "
+				"- %d (%s). Abort!\n",
+				errno,
+				strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+
+		/* query extended device capabilities (e.g., to check for ODP support */
+		struct ibv_query_device_ex_input device_ex_input;
+		if (ibv_query_device_ex(com_hndl.ctx, &device_ex_input, &com_hndl.dev_attr_ex) < 0) {
+			fprintf(stderr,
+				"[ERROR] Could not query extended device attributes "
+				"- %d (%s). Abort!\n",
+				errno,
+				strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+
+		/* determine port count via normal device query (necessary for mlx_5) */
+		if (ibv_query_device(com_hndl.ctx, &com_hndl.dev_attr_ex.orig_attr) < 0) {
+			fprintf(stderr,
+				"[ERROR] Could not query normal device attributes "
+				"- %d (%s). Abort!\n",
+				errno,
+				strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+
+
+		/* check all ports */
+		size_t num_ports = com_hndl.dev_attr_ex.orig_attr.phys_port_cnt;
+		for (size_t cur_port=0; cur_port<=num_ports; ++cur_port) {
+			/* query current port */
+			if (ibv_query_port(com_hndl.ctx, cur_port, &com_hndl.port_attr) < 0){
+				fprintf(stderr,
+					"[ERROR] Could not query port %u "
+					"- %d (%s). Abort!\n",
+					cur_port,
+					errno,
+					strerror(errno));
+				exit(EXIT_FAILURE);
+			}
+
+			if (com_hndl.port_attr.state == IBV_PORT_ACTIVE) {
+				active_port_found = 1;
+				com_hndl.used_port = cur_port;
+				break;
+			}
+		}
+
+		/* close this device if no active port was found */
+		if (!active_port_found) {
+		       if (ibv_close_device(com_hndl.ctx) < 0) {
+			fprintf(stderr,
+				"[ERROR] Could not close the device context "
+				"- %d (%s). Abort!\n",
+				errno,
+				strerror(errno));
+			exit(EXIT_FAILURE);
+		       }
+		} else {
+			break;
+		}
+	}
+
+	if (!active_port_found) {
+		fprintf(stderr, "[ERROR] No active port found. Abort!\n");
 		exit(EXIT_FAILURE);
 	}
 
-	/* open the device context and create protection domain */
-	if ((com_hndl.ctx = ibv_open_device(ib_pp_device)) == NULL) {
-		fprintf(stderr,
-			"[ERROR] Could not open the device context "
-			"- %d (%s). Abort!\n",
-			errno,
-			strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
-	/* query device capability (e.g., to determine 'max_qp_wr') */
-	if (ibv_query_device(com_hndl.ctx, &com_hndl.dev_attr) < 0) {
-		fprintf(stderr,
-			"[ERROR] Could not query device attributes "
-			"- %d (%s). Abort!\n",
-			errno,
-			strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
+	fprintf(stderr, "[INFO] Using device '%s' and port %u\n",
+			ibv_get_device_name(device_list[cur_dev]),
+			com_hndl.used_port);
 	/* allocate protection domain */
 	if ((com_hndl.pd = ibv_alloc_pd(com_hndl.ctx)) == NULL) {
 		fprintf(stderr,
@@ -189,27 +249,22 @@ init_com_hndl(size_t mem_chunk_cnt, mem_chunk_t *mem_chunks)
 		exit(EXIT_FAILURE);
 	}
 
-	/* determine LID */
-	if (ibv_query_port(com_hndl.ctx, IB_USED_PORT, &com_hndl.port_attr) < 0){
-		fprintf(stderr,
-			"[ERROR] Could not query port %u "
-			"- %d (%s). Abort!\n",
-			IB_USED_PORT,
-			errno,
-			strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-
 	/* register guest memory chunks with the protection domain */
 	int i = 0;
 	com_hndl.mrs = (struct ibv_mr**)malloc(sizeof(struct ibv_mr*)*com_hndl.mr_cnt);
+
+	int access_flags = (IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
+	if ((IB_USE_ODP) &&
+	    (com_hndl.dev_attr_ex.odp_caps.general_caps & IBV_ODP_SUPPORT) &&
+	    (com_hndl.dev_attr_ex.odp_caps.per_transport_caps.rc_odp_caps & IBV_ODP_SUPPORT_WRITE)) {
+		access_flags |= IBV_ACCESS_ON_DEMAND;
+	}
 
 	for (i=0; i<com_hndl.mr_cnt; ++i) {
 		if ((com_hndl.mrs[i] = ibv_reg_mr(com_hndl.pd,
 						mem_chunks[i].ptr,
 						mem_chunks[i].size,
-						IBV_ACCESS_LOCAL_WRITE |
-						IBV_ACCESS_REMOTE_WRITE)) == NULL) {
+						access_flags)) == NULL) {
 			fprintf(stderr,
 				"[ERROR] Could not register the memory region #%d (ptr: %llx; size: %llu) "
 				"- %d (%s). Abort!\n",
@@ -257,7 +312,7 @@ init_com_hndl(size_t mem_chunk_cnt, mem_chunk_t *mem_chunks)
 		.send_cq = com_hndl.cq,
 		.recv_cq = com_hndl.cq,
 		.cap 	 = {
-			.max_send_wr  		= com_hndl.dev_attr.max_qp_wr,
+			.max_send_wr  		= IB_MAX_SEND_WR,
 			.max_recv_wr  		= IB_MAX_RECV_WR,
 			.max_send_sge 		= IB_MAX_SEND_SGE,
 			.max_recv_sge 		= IB_MAX_RECV_SGE,
@@ -278,7 +333,7 @@ init_com_hndl(size_t mem_chunk_cnt, mem_chunk_t *mem_chunks)
 	struct ibv_qp_attr attr = {
 		.qp_state   		= IBV_QPS_INIT,
 		.pkey_index 		= 0,
-		.port_num 		= IB_USED_PORT,
+		.port_num 		= com_hndl.used_port,
 		.qp_access_flags 	= (IBV_ACCESS_REMOTE_WRITE)
 	};
 	if (ibv_modify_qp(com_hndl.qp,
@@ -406,7 +461,7 @@ con_com_buf(void) {
 			.sl 		= 0,
 			.src_path_bits 	= 0,
 			.dlid 		= com_hndl.rem_qp_info.lid,
-			.port_num 	= IB_USED_PORT,
+			.port_num 	= com_hndl.used_port,
 		}
 	};
 	if (ibv_modify_qp(com_hndl.qp,
@@ -581,7 +636,7 @@ create_send_list_entry (void *addr, size_t addr_size, void *page, size_t page_si
 		send_list_last = send_list_last->next;
 	}
 	/* we have to request a CQE if max_send_wr is reached to avoid overflows */
-	if ((++send_list_length%com_hndl.dev_attr.max_qp_wr) == 0) {
+	if ((++send_list_length%com_hndl.dev_attr_ex.orig_attr.max_qp_wr) == 0) {
 		send_list_last->send_flags 	= IBV_SEND_SIGNALED;
 	}
 }
