@@ -594,6 +594,7 @@ void write_cpu_state(void)
 
 void scan_dirty_log(void (*save_page)(void*, size_t, void*, size_t))
 {
+	size_t slot_offset = 0;
 	static struct kvm_dirty_log dlog = {
 		.slot = 0,
 		.dirty_bitmap = NULL
@@ -623,7 +624,7 @@ nextslot:
 				size_t test = 1ULL << j;
 
 				if ((value & test) == test) {
-					size_t addr = (i*sizeof(size_t)*8+j)*PAGE_SIZE;
+					size_t addr = (i*sizeof(size_t)*8+j)*PAGE_SIZE + slot_offset;
 
 					save_page(&addr, sizeof(size_t), (void*)((uint64_t)guest_mem+(uint64_t)addr), PAGE_SIZE);
 				}
@@ -633,6 +634,7 @@ nextslot:
 
 	// do we have to check the second slot?
 	if ((dlog.slot == 0) && (guest_size > KVM_32BIT_GAP_START - GUEST_OFFSET)) {
+		slot_offset = KVM_32BIT_MAX_MEM_SIZE;
 		dlog.slot = 1;
 		memset(dlog.dirty_bitmap, 0x00, dirty_log_size * sizeof(size_t));
 		goto nextslot;
