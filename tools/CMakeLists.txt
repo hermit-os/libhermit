@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.7)
 project(hermit_tools)
 
+include(CheckIncludeFiles)
 include(../cmake/HermitCore-Paths.cmake)
 
 option(ENABLE_RDMA_MIGRATION "Migration support via RDMA" OFF)
@@ -25,6 +26,12 @@ if(ENABLE_RDMA_MIGRATION)
 	set(SRC ${SRC} uhyve-migration-rdma.c)
 else()
 	remove_definitions(-D__RDMA_MIGRATION__)
+endif()
+
+check_include_files(asm/msr-index.h HAVE_MSR_INDEX_H)
+
+if(HAVE_MSR_INDEX_H)
+add_definitions(-DHAVE_MSR_INDEX_H=1)
 endif()
 
 add_executable(proxy ${SRC})
