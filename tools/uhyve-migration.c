@@ -237,7 +237,7 @@ void close_migration_channel(void)
 
 
 #ifndef __RDMA_MIGRATION__
-void send_guest_mem(mig_mode_t  mode, bool final_dump)
+void send_guest_mem(mig_mode_t mode, bool final_dump, size_t mem_chunk_cnt, mem_chunk_t *mem_chunks)
 {
 	/* determine migration mode */
 	switch (mode) {
@@ -254,7 +254,7 @@ void send_guest_mem(mig_mode_t  mode, bool final_dump)
 	fprintf(stderr, "Guest memory sent!\n");
 }
 
-void recv_guest_mem(void)
+void recv_guest_mem(size_t mem_chunk_cnt, mem_chunk_t *mem_chunks)
 {
 	recv_data(guest_mem, guest_size);
 	fprintf(stderr, "Guest memory received!\n");

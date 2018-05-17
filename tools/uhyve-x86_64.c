@@ -435,6 +435,25 @@ static void setup_cpuid(int kvm, int vcpufd)
 	free(kvm_cpuid);
 }
 
+static size_t prepare_mem_chunk_info(mem_chunk_t **mem_chunks) {
+	size_t mem_chunk_cnt = 0;
+	if (guest_size < KVM_32BIT_GAP_START) {
+		mem_chunk_cnt = 1;
+		*mem_chunks = (mem_chunk_t*)malloc(sizeof(mem_chunk_t)*mem_chunk_cnt);
+		(*mem_chunks)[0].ptr = guest_mem;
+		(*mem_chunks)[0].size = guest_size;
+	} else {
+		mem_chunk_cnt = 2;
+		*mem_chunks = (mem_chunk_t*)malloc(sizeof(mem_chunk_t)*mem_chunk_cnt);
+		(*mem_chunks)[0].ptr = guest_mem;
+		(*mem_chunks)[0].size = KVM_32BIT_GAP_START;
+		(*mem_chunks)[1].ptr = (uint8_t*)((uint64_t)guest_mem + (KVM_32BIT_GAP_START + KVM_32BIT_GAP_SIZE));
+		(*mem_chunks)[1].size = (uint64_t)guest_size - (KVM_32BIT_GAP_START + KVM_32BIT_GAP_SIZE);
+	}
+
+	return mem_chunk_cnt;
+}
+
 size_t determine_dest_offset(size_t src_addr)
 {
 	size_t ret = 0;
@@ -793,10 +812,14 @@ void *migration_handler(void *arg)
 	res = send_data(&metadata, sizeof(migration_metadata_t));
       	fprintf(stderr, "Metadata sent! (%d bytes)\n", res);
 
+	/* prepare info concerning memory chunks */
+	mem_chunk_t *mem_chunks = NULL;
+	size_t mem_chunk_cnt = prepare_mem_chunk_info(&mem_chunks);
+
 	if (get_migration_type() == MIG_TYPE_LIVE) {
 		/* resend rounds */
 		for (i=0; i<MIG_ITERS; ++i) {
-			send_guest_mem(MIG_MODE_INCREMENTAL_DUMP, 0);
+			send_guest_mem(MIG_MODE_INCREMENTAL_DUMP, 0, mem_chunk_cnt, mem_chunks);
 		}
 	}
 
@@ -808,7 +831,11 @@ void *migration_handler(void *arg)
 	pthread_barrier_wait(&migration_barrier);
 
 	/* send the final dump */
-	send_guest_mem(MIG_MODE_INCREMENTAL_DUMP, 1);
+	send_guest_mem(MIG_MODE_INCREMENTAL_DUMP, 1, mem_chunk_cnt, mem_chunks);
+	fprintf(stderr, "Memory sent! (Guest size: %llu bytes)\n", guest_size);
+
+	/* free mem_chunk info */
+	free(mem_chunks);
 
 	/* send CPU state */
 	res = send_data(vcpu_thread_states, sizeof(vcpu_state_t)*ncores);
@@ -842,7 +869,10 @@ int load_migration_data(uint8_t* mem)
 		mboot = mem+paddr-GUEST_OFFSET;
 
 
-	recv_guest_mem();
+	mem_chunk_t *mem_chunks = NULL;
+	size_t mem_chunk_cnt = prepare_mem_chunk_info(&mem_chunks);
+	recv_guest_mem(mem_chunk_cnt, mem_chunks);
+	free(mem_chunks);
 
 	/* receive cpu state */
 	assert(vcpu_thread_states == NULL);
