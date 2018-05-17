@@ -59,6 +59,11 @@ const static struct {
 	{MIG_TYPE_LIVE, "live"},
 };
 
+typedef struct _mem_chunk {
+	size_t size;
+	uint8_t *ptr;
+} mem_chunk_t;
+
 typedef struct _migration_metadata {
 	uint32_t ncores;
 	size_t guest_size;
@@ -78,8 +83,8 @@ void close_migration_channel(void);
 int recv_data(void *buffer, size_t length);
 int send_data(void *buffer, size_t length);
 
-void send_guest_mem(mig_mode_t mode, bool final_dump);
-void recv_guest_mem(void);
+void send_guest_mem(mig_mode_t mode, bool final_dump, size_t mem_chunk_cnt, mem_chunk_t *mem_chunks);
+void recv_guest_mem(size_t mem_chunk_cnt, mem_chunk_t *mem_chunks);
 #endif /* __UHYVE_MIGRATION_H__ */
 
 

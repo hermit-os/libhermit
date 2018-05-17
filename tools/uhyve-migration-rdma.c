@@ -54,31 +54,34 @@
 
 typedef enum ib_wr_ids {
 	IB_WR_NO_ID = 0,
-	IB_WR_WRITE_PAGE_ID,
 	IB_WR_WRITE_LAST_PAGE_ID,
-	IB_WR_RECV_LAST_PAGE_ID
+	IB_WR_RECV_LAST_PAGE_ID,
+	IB_WR_BASE_ID
 } ib_wr_ids_t;
+
+uint64_t cur_wr_id = IB_WR_BASE_ID;
 
 typedef struct qp_info {
 	uint32_t qpn;
 	uint16_t lid;
 	uint16_t psn;
-	uint32_t key;
+	uint32_t *keys;
 	uint64_t addr;
 } qp_info_t;
 
 typedef struct com_hndl {
 	struct ibv_context 	*ctx; 		/* device context */
 	struct ibv_device_attr  dev_attr; 	/* device attributes */
+	struct ibv_port_attr  	port_attr; 	/* port attributes */
 	struct ibv_pd 		*pd;  		/* protection domain */
-	struct ibv_mr 		*mr;  		/* memory region */
+	struct ibv_mr 		**mrs; 		/* memory regions */
 	struct ibv_cq 		*cq;  		/* completion queue */
 	struct ibv_qp 		*qp;  		/* queue pair */
 	struct ibv_comp_channel	*comp_chan;  	/* completion event channel */
 	qp_info_t 	loc_qp_info;
 	qp_info_t 	rem_qp_info;
-	uint8_t 		*buf; 		/* the communication buffer */
-	uint32_t 		size; 		/* size of the buffer */
+	uint8_t 		*buf; 		/* the guest memory (with potential gaps!) */
+	size_t 			mr_cnt; 	/* number of memory regions */
 } com_hndl_t;
 
 
@@ -86,6 +89,36 @@ static com_hndl_t com_hndl;
 static struct ibv_send_wr *send_list = NULL;
 static struct ibv_send_wr *send_list_last = NULL;
 static size_t send_list_length = 0;
+
+/**
+ * \brief Prints info of a send_wr
+ *
+ * \param id the ID of the send_wr
+ */
+static inline
+void print_send_wr_info(uint64_t id)
+{
+	struct ibv_send_wr *search_wr = send_list;
+
+	/* find send_wr with id */
+	while(search_wr) {
+		if (search_wr->wr_id == id) {
+			fprintf(stderr, "[INFO] WR_ID: %llu; LADDR: 0x%llx; RADDR: 0x%llx; SIZE: %llu\n",
+					search_wr->wr_id,
+					search_wr->sg_list->addr,
+					search_wr->wr.rdma.remote_addr,
+					search_wr->sg_list->length);
+
+			break;
+		}
+
+		search_wr = search_wr->next;
+	}
+
+	if (search_wr == NULL) {
+		fprintf(stderr, "[ERROR] Could not find send_wr with ID %llu\n", id);
+	}
+}
 
 
 /**
@@ -99,11 +132,11 @@ static size_t send_list_length = 0;
  * state ready to be connected with the remote side.
  */
 static void
-init_com_hndl(void)
+init_com_hndl(size_t mem_chunk_cnt, mem_chunk_t *mem_chunks)
 {
 	/* the guest physical memory is the communication buffer */
-	com_hndl.size = guest_size;
 	com_hndl.buf = guest_mem;
+	com_hndl.mr_cnt = mem_chunk_cnt;
 
 	struct ibv_device **device_list;
 	struct ibv_device *ib_pp_device;
@@ -112,7 +145,7 @@ init_com_hndl(void)
 	/* determine first available device */
 	if ((device_list = ibv_get_device_list(&num_devices)) == NULL) {
 		fprintf(stderr,
-		    	"ERROR: Could not determine available IB devices "
+			"[ERROR] Could not determine available IB devices "
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
@@ -122,14 +155,14 @@ init_com_hndl(void)
 		ib_pp_device = device_list[0];
 	} else {
 		fprintf(stderr,
-		        "ERROR: Could not find any IB device. Abort!\n");
+		        "[ERROR] Could not find any IB device. Abort!\n");
 		exit(EXIT_FAILURE);
 	}
 
 	/* open the device context and create protection domain */
 	if ((com_hndl.ctx = ibv_open_device(ib_pp_device)) == NULL) {
 		fprintf(stderr,
-		    	"ERROR: Could not open the device context "
+			"[ERROR] Could not open the device context "
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
@@ -139,7 +172,7 @@ init_com_hndl(void)
 	/* query device capability (e.g., to determine 'max_qp_wr') */
 	if (ibv_query_device(com_hndl.ctx, &com_hndl.dev_attr) < 0) {
 		fprintf(stderr,
-		    	"ERROR: Could not query device attributes "
+			"[ERROR] Could not query device attributes "
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
@@ -149,7 +182,7 @@ init_com_hndl(void)
 	/* allocate protection domain */
 	if ((com_hndl.pd = ibv_alloc_pd(com_hndl.ctx)) == NULL) {
 		fprintf(stderr,
-		    	"ERROR: Could not allocate protection domain "
+			"[ERROR] Could not allocate protection domain "
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
@@ -157,10 +190,9 @@ init_com_hndl(void)
 	}
 
 	/* determine LID */
-	struct ibv_port_attr port_attr;
-	if (ibv_query_port(com_hndl.ctx, IB_USED_PORT, &port_attr) < 0){
+	if (ibv_query_port(com_hndl.ctx, IB_USED_PORT, &com_hndl.port_attr) < 0){
 		fprintf(stderr,
-		    	"ERROR: Could not query port %u "
+			"[ERROR] Could not query port %u "
 			"- %d (%s). Abort!\n",
 			IB_USED_PORT,
 			errno,
@@ -168,25 +200,38 @@ init_com_hndl(void)
 		exit(EXIT_FAILURE);
 	}
 
-	/* register guest memory with the protection domain */
-	if ((com_hndl.mr = ibv_reg_mr(com_hndl.pd,
-					com_hndl.buf,
-					com_hndl.size,
-					IBV_ACCESS_LOCAL_WRITE |
-					IBV_ACCESS_REMOTE_WRITE)) == NULL) {
-		fprintf(stderr,
-		    	"ERROR: Could not register the memory region "
-			"- %d (%s). Abort!\n",
-			errno,
-			strerror(errno));
-		exit(EXIT_FAILURE);
+	/* register guest memory chunks with the protection domain */
+	int i = 0;
+	com_hndl.mrs = (struct ibv_mr**)malloc(sizeof(struct ibv_mr*)*com_hndl.mr_cnt);
+
+	for (i=0; i<com_hndl.mr_cnt; ++i) {
+		if ((com_hndl.mrs[i] = ibv_reg_mr(com_hndl.pd,
+						mem_chunks[i].ptr,
+						mem_chunks[i].size,
+						IBV_ACCESS_LOCAL_WRITE |
+						IBV_ACCESS_REMOTE_WRITE)) == NULL) {
+			fprintf(stderr,
+				"[ERROR] Could not register the memory region #%d (ptr: %llx; size: %llu) "
+				"- %d (%s). Abort!\n",
+				i,
+				mem_chunks[i].ptr,
+				mem_chunks[i].size,
+				errno,
+				strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+		fprintf(stderr, "[INFO] com_hndl.mrs[%d]->addr = 0x%llx; com_hndl->mrs[%d].length = %llu\n",
+				i,
+				com_hndl.mrs[i]->addr,
+				i,
+				com_hndl.mrs[i]->length);
 	}
 
 	/* create completion event channel */
 	if ((com_hndl.comp_chan =
 		ibv_create_comp_channel(com_hndl.ctx)) == NULL) {
 		fprintf(stderr,
-		    	"ERROR: Could not create the completion channel "
+			"[ERROR] Could not create the completion channel "
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
@@ -200,7 +245,7 @@ init_com_hndl(void)
 					       com_hndl.comp_chan,
 					       0)) == NULL) {
 		fprintf(stderr,
-		    	"ERROR: Could not create the completion queue "
+			"[ERROR] Could not create the completion queue "
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
@@ -223,7 +268,7 @@ init_com_hndl(void)
 	};
 	if ((com_hndl.qp = ibv_create_qp(com_hndl.pd, &init_attr)) == NULL) {
 		fprintf(stderr,
-		    	"ERROR: Could not create the queue pair "
+			"[ERROR] Could not create the queue pair "
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
@@ -243,7 +288,7 @@ init_com_hndl(void)
 			  IBV_QP_PORT |
 			  IBV_QP_ACCESS_FLAGS) < 0) {
 		fprintf(stderr,
-		    	"ERROR: Could not set QP into init state "
+			"[ERROR] Could not set QP into init state "
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
@@ -253,10 +298,13 @@ init_com_hndl(void)
 	/* fill in local qp_info */
 	com_hndl.loc_qp_info.qpn 	= com_hndl.qp->qp_num;
 	com_hndl.loc_qp_info.psn 	= lrand48() & 0xffffff;
-	com_hndl.loc_qp_info.key 	= com_hndl.mr->rkey;
 	com_hndl.loc_qp_info.addr 	= (uint64_t)com_hndl.buf;
-	com_hndl.loc_qp_info.lid 	= port_attr.lid;
+	com_hndl.loc_qp_info.lid 	= com_hndl.port_attr.lid;
 
+	com_hndl.loc_qp_info.keys = (uint32_t*)malloc(sizeof(uint32_t)*com_hndl.mr_cnt);
+	for (i=0; i<com_hndl.mr_cnt; ++i) {
+		com_hndl.loc_qp_info.keys[i] = com_hndl.mrs[i]->rkey;
+	}
 }
 
 /**
@@ -269,7 +317,7 @@ destroy_com_hndl(void)
 {
 	if (ibv_destroy_qp(com_hndl.qp) < 0) {
 		fprintf(stderr,
-		    	"ERROR: Could not destroy the queue pair "
+			"[ERROR] Could not destroy the queue pair "
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
@@ -278,7 +326,7 @@ destroy_com_hndl(void)
 
 	if (ibv_destroy_cq(com_hndl.cq) < 0) {
 		fprintf(stderr,
-		    	"ERROR: Could not deallocate the protection domain "
+			"[ERROR] Could not deallocate the protection domain "
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
@@ -287,27 +335,30 @@ destroy_com_hndl(void)
 
 	if (ibv_destroy_comp_channel(com_hndl.comp_chan) < 0) {
 		fprintf(stderr,
-		    	"ERROR: Could not deallocate the protection domain "
+			"[ERROR] Could not destroy the completion channel "
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
-	if (ibv_dereg_mr(com_hndl.mr) < 0) {
-		fprintf(stderr,
-		    	"ERROR: Could not deallocate the protection domain "
-			"- %d (%s). Abort!\n",
-			errno,
-			strerror(errno));
-		exit(EXIT_FAILURE);
+	int i = 0;
+	for (i=0; i<com_hndl.mr_cnt; ++i) {
+		if (ibv_dereg_mr(com_hndl.mrs[i]) < 0) {
+			fprintf(stderr,
+				"[ERROR] Could not deregister MR #%d "
+				"- %d (%s). Abort!\n",
+				i,
+				errno,
+				strerror(errno));
+			exit(EXIT_FAILURE);
+		}
 	}
-
 
 
 	if (ibv_dealloc_pd(com_hndl.pd) < 0) {
 		fprintf(stderr,
-		    	"ERROR: Could not deallocate the protection domain "
+			"[ERROR] Could not deallocate the protection domain "
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
@@ -316,13 +367,21 @@ destroy_com_hndl(void)
 
 	if (ibv_close_device(com_hndl.ctx) < 0) {
 		fprintf(stderr,
-		    	"ERROR: Could not close the device context "
+			"[ERROR] Could not close the device context "
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
 		exit(EXIT_FAILURE);
 	}
 
+	/* free dynamic data structures */
+	free(com_hndl.loc_qp_info.keys);
+	free(com_hndl.rem_qp_info.keys);
+	free(com_hndl.mrs);
+
+	com_hndl.loc_qp_info.keys = NULL;
+	com_hndl.rem_qp_info.keys = NULL;
+	com_hndl.mrs = NULL;
 }
 
 /**
@@ -360,7 +419,7 @@ con_com_buf(void) {
 			  IBV_QP_MIN_RNR_TIMER |
 			  IBV_QP_AV)) {
 		fprintf(stderr,
-		    	"ERROR: Could not put QP into RTR state"
+			"[ERROR] Could not put QP into RTR state"
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
@@ -382,7 +441,7 @@ con_com_buf(void) {
 			  IBV_QP_SQ_PSN             |
 			  IBV_QP_MAX_QP_RD_ATOMIC)) {
 		fprintf(stderr,
-		    	"ERROR: Could not put QP into RTS state"
+			"[ERROR] Could not put QP into RTS state"
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
@@ -399,27 +458,49 @@ con_com_buf(void) {
 static void
 exchange_qp_info(bool server)
 {
+	size_t keys_size = sizeof(uint32_t)*com_hndl.mr_cnt;
+
 	int res = 0;
 	if (server) {
+		/* general QP info */
 		res = recv_data(&com_hndl.rem_qp_info, sizeof(qp_info_t));
 		res = send_data(&com_hndl.loc_qp_info, sizeof(qp_info_t));
+
+		/* remote keys */
+		com_hndl.rem_qp_info.keys = (uint32_t*)malloc(keys_size);
+		res = recv_data(com_hndl.rem_qp_info.keys, keys_size);
+		res = send_data(com_hndl.loc_qp_info.keys, keys_size);
 	} else {
+		/* general QP info */
 		res = send_data(&com_hndl.loc_qp_info, sizeof(qp_info_t));
 		res = recv_data(&com_hndl.rem_qp_info, sizeof(qp_info_t));
+
+		/* remote keys */
+		com_hndl.rem_qp_info.keys = (uint32_t*)malloc(keys_size);
+		res = send_data(com_hndl.loc_qp_info.keys, keys_size);
+		res = recv_data(com_hndl.rem_qp_info.keys, keys_size);
 	}
 
-	fprintf(stderr, "QP info sent! (QPN: %lu; LID: %lu; PSN: %lu; KEY: %lu; ADDR: 0x%x)\n",
+	fprintf(stderr, "[INFO] loc_qp_info (QPN: %lu; LID: %lu; PSN: %lu; ADDR: 0x%x ",
 			com_hndl.loc_qp_info.qpn,
 			com_hndl.loc_qp_info.lid,
 			com_hndl.loc_qp_info.psn,
-			com_hndl.loc_qp_info.key,
 			com_hndl.loc_qp_info.addr);
-	fprintf(stderr, "QP info received! (QPN: %lu; LID: %lu; PSN: %lu; KEY: %lu; ADDR: 0x%x)\n",
+	int i = 0;
+	for (i=0; i<com_hndl.mr_cnt; ++i) {
+		fprintf(stderr, "KEY[%d]: %lu; ", i, com_hndl.loc_qp_info.keys[i]);
+	}
+	printf("\b\b)\n");
+
+	fprintf(stderr, "[INFO] rem_qp_info (QPN: %lu; LID: %lu; PSN: %lu; ADDR: 0x%x ",
 			com_hndl.rem_qp_info.qpn,
 			com_hndl.rem_qp_info.lid,
 			com_hndl.rem_qp_info.psn,
-			com_hndl.rem_qp_info.key,
 			com_hndl.rem_qp_info.addr);
+	for (i=0; i<com_hndl.mr_cnt; ++i) {
+		fprintf(stderr, "KEY[%d]: %lu; ", i, com_hndl.rem_qp_info.keys[i]);
+	}
+	printf("\b\b)\n");
 }
 
 /**
@@ -439,7 +520,7 @@ prepare_send_list_elem(void)
 	send_wr->next  	 	= NULL;
 	send_wr->sg_list 	= sge;
 	send_wr->num_sge 	= 1;
-	send_wr->wr_id  	= IB_WR_WRITE_PAGE_ID;
+	send_wr->wr_id  	= ++cur_wr_id;
 	send_wr->opcode 	= IBV_WR_RDMA_WRITE;
 
 	return send_wr;
@@ -465,9 +546,25 @@ create_send_list_entry (void *addr, size_t addr_size, void *page, size_t page_si
 	struct ibv_send_wr *send_wr =  prepare_send_list_elem();
 
 	/* configure source buffer */
-	send_wr->sg_list->addr 		= (uintptr_t)page;
-	send_wr->sg_list->length 	= page_size;
-	send_wr->sg_list->lkey 		= com_hndl.mr->lkey;
+	int i = 0;
+	for (i=0; i<com_hndl.mr_cnt; ++i) {
+		if (((uint64_t)page >= (uint64_t)com_hndl.mrs[i]->addr) &&
+		    ((uint64_t)page < ((uint64_t)com_hndl.mrs[i]->addr + (uint64_t)com_hndl.mrs[i]->length))) {
+			send_wr->sg_list->addr 		= (uintptr_t)page;
+			send_wr->sg_list->length 	= page_size;
+			send_wr->sg_list->lkey 		= com_hndl.mrs[i]->lkey;
+
+			send_wr->wr.rdma.rkey 		= com_hndl.rem_qp_info.keys[i];
+
+			break;
+		}
+	}
+
+	/* did we find the correct memory region? */
+	if (i == com_hndl.mr_cnt) {
+		fprintf(stderr, "[ERROR] Could not find a valid MR for address 0x%llx!\n", page);
+		return;
+	}
 
 	/* configure destination buffer */
 	if (addr) {
@@ -475,7 +572,6 @@ create_send_list_entry (void *addr, size_t addr_size, void *page, size_t page_si
 	} else {
 		send_wr->wr.rdma.remote_addr 	= com_hndl.rem_qp_info.addr;
 	}
-	send_wr->wr.rdma.rkey 		= com_hndl.rem_qp_info.key;
 
 	/* apped work request to send list */
 	if (send_list == NULL) {
@@ -490,20 +586,57 @@ create_send_list_entry (void *addr, size_t addr_size, void *page, size_t page_si
 	}
 }
 
+
+/**
+ * \brief Prepares a send_list containing all memory defined by com_hndl.mrs
+ *
+ * This function creates as many send_wr items as required to cover all
+ * com_hndl.mrs in accordance with the maximum message size that can be
+ * transmitted per send_sr (com_hndl.port_attr.max_msg_sz).
+ */
+static inline
+void enqueue_all_mrs(void)
+{
+	uint64_t max_msg_sz = com_hndl.port_attr.max_msg_sz;
+	int i = 0;
+
+	/* send all MRs */
+	for (i=0; i<com_hndl.mr_cnt; ++i) {
+		uint64_t cur_mr_length = com_hndl.mrs[i]->length;
+
+		/* split the MR if it exceed the max_msg_sz */
+		size_t cur_chunk = 0, max_chunks = cur_mr_length/max_msg_sz;
+		for (cur_chunk; cur_chunk < max_chunks; ++cur_chunk) {
+			size_t cur_offset = cur_chunk*max_msg_sz;
+			size_t cur_glob_offset =  cur_offset + (uint64_t)com_hndl.mrs[i]->addr - (uint64_t)guest_mem;
+			create_send_list_entry((void*)&cur_glob_offset, 0, (void*)((uint64_t)com_hndl.mrs[i]->addr+cur_offset), max_msg_sz);
+		}
+
+		/* do we have a remainder? */
+		uint64_t remainder = cur_mr_length%max_msg_sz;
+		if (remainder) {
+			size_t cur_offset = cur_mr_length-remainder;
+			size_t cur_glob_offset =  cur_offset + (uint64_t)com_hndl.mrs[i]->addr - (uint64_t)guest_mem;
+			create_send_list_entry((void*)&cur_glob_offset, 0, (void*)((uint64_t)com_hndl.mrs[i]->addr+cur_offset), remainder);
+		}
+	}
+}
+
+
 /**
  * \brief Sends the guest memory to the destination
  *
  * \param mode MIG_MODE_COMPLETE_DUMP sends the complete memory and
  *             MIG_MODE_INCREMENTAL_DUMP only the mapped guest pages
  */
-void send_guest_mem(mig_mode_t mode, bool final_dump)
+void send_guest_mem(mig_mode_t mode, bool final_dump, size_t mem_chunk_cnt, mem_chunk_t *mem_chunks)
 {
-	int res = 0;
+	int res = 0, i = 0;
 	static bool ib_initialized = false;
 
 	/* prepare IB channel */
 	if (!ib_initialized) {
-		init_com_hndl();
+		init_com_hndl(mem_chunk_cnt, mem_chunks);
 		exchange_qp_info(false);
 		con_com_buf();
 
@@ -513,15 +646,14 @@ void send_guest_mem(mig_mode_t mode, bool final_dump)
 	/* determine migration mode */
 	switch (mode) {
 	case MIG_MODE_COMPLETE_DUMP:
-		/* one send_wr for the whole guest memory */
-		create_send_list_entry(NULL, 0, (void*)com_hndl.buf, guest_size);
+		enqueue_all_mrs();
 		break;
 	case MIG_MODE_INCREMENTAL_DUMP:
 		/* iterate guest page tables */
 		determine_dirty_pages(create_send_list_entry);
 		break;
 	default:
-		fprintf(stderr, "ERROR: Unknown migration mode. Abort!\n");
+		fprintf(stderr, "[ERROR] Unknown migration mode. Abort!\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -550,7 +682,7 @@ void send_guest_mem(mig_mode_t mode, bool final_dump)
 		remaining_send_wr = NULL;
 		if (ibv_post_send(com_hndl.qp, send_list, &remaining_send_wr) && (errno != ENOMEM)) {
 			fprintf(stderr,
-			    	"ERROR: Could not post send"
+				"[ERROR] Could not post send"
 				"- %d (%s). Abort!\n",
 				errno,
 				strerror(errno));
@@ -561,7 +693,7 @@ void send_guest_mem(mig_mode_t mode, bool final_dump)
 		do {
 			if ((res = ibv_poll_cq(com_hndl.cq, 1, &wc)) < 0) {
 				fprintf(stderr,
-				    	"ERROR: Could not poll on CQ"
+					"[ERROR] Could not poll on CQ"
 					"- %d (%s). Abort!\n",
 					errno,
 					strerror(errno));
@@ -570,10 +702,12 @@ void send_guest_mem(mig_mode_t mode, bool final_dump)
 		} while (res < 1);
 		if (wc.status != IBV_WC_SUCCESS) {
 			fprintf(stderr,
-			    "ERROR: WR failed status %s (%d) for wr_id %d\n",
+			    "[ERROR] WR failed status %s (%d) for wr_id %llu\n",
 			    ibv_wc_status_str(wc.status),
 			    wc.status,
-			    (int)wc.wr_id);
+			    wc.wr_id);
+
+			print_send_wr_info(wc.wr_id);
 		}
 		send_list = remaining_send_wr;
 	} while (remaining_send_wr);
@@ -582,7 +716,7 @@ void send_guest_mem(mig_mode_t mode, bool final_dump)
 	/* ensure that we receive the CQE for the last page */
 	if (wc.wr_id != IB_WR_WRITE_LAST_PAGE_ID) {
 		fprintf(stderr,
-		    "ERROR: WR failed status %s (%d) for wr_id %d\n",
+		    "[ERROR] WR failed status %s (%d) for wr_id %d\n",
 		    ibv_wc_status_str(wc.status),
 		    wc.status,
 		    (int)wc.wr_id);
@@ -618,19 +752,19 @@ void send_guest_mem(mig_mode_t mode, bool final_dump)
  * The receive participates in the IB connection setup and waits for the
  * 'solicited' event sent with the last WR issued by the sender.
  */
-void recv_guest_mem(void)
+void recv_guest_mem(size_t mem_chunk_cnt, mem_chunk_t *mem_chunks)
 {
 	int res = 0;
 
 	/* prepare IB channel */
-	init_com_hndl();
+	init_com_hndl(mem_chunk_cnt, mem_chunks);
 	exchange_qp_info(true);
 	con_com_buf();
 
 	/* request notification on the event channel */
 	if (ibv_req_notify_cq(com_hndl.cq, 1) < 0) {
 		fprintf(stderr,
-		    	"ERROR: Could request notify for completion queue "
+			"[ERROR] Could request notify for completion queue "
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
@@ -648,7 +782,7 @@ void recv_guest_mem(void)
 	memset(&sg, 0, sizeof(sg));
 	sg.addr	  = (uintptr_t)&recv_buf;
 	sg.length = sizeof(recv_buf);
-	sg.lkey	  = com_hndl.mr->lkey;
+	sg.lkey	  = com_hndl.mrs[0]->lkey;
 
 	memset(&recv_wr, 0, sizeof(recv_wr));
 	recv_wr.wr_id      = 0;
@@ -657,7 +791,7 @@ void recv_guest_mem(void)
 
 	if (ibv_post_recv(com_hndl.qp, &recv_wr, &bad_wr) < 0) {
 	    	fprintf(stderr,
-		    	"ERROR: Could post recv - %d (%s). Abort!\n",
+			"[ERROR] Could post recv - %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
 		exit(EXIT_FAILURE);
@@ -666,7 +800,7 @@ void recv_guest_mem(void)
 	/* wait for requested event */
 	if (ibv_get_cq_event(com_hndl.comp_chan, &ev_cq, &ev_ctx) < 0) {
 	    	fprintf(stderr,
-		    	"ERROR: Could get event from completion channel "
+			"[ERROR] Could get event from completion channel "
 			"- %d (%s). Abort!\n",
 			errno,
 			strerror(errno));
