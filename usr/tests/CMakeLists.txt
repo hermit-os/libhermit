@@ -9,6 +9,7 @@ add_executable(argv_envp argv_envp.c)
 add_executable(hello++ hello++.cpp)
 add_executable(hellof hellof.f90)
 add_executable(pi pi.go)
+add_executable(allocator allocator.c)
 
 add_executable(endless endless.c)
 target_compile_options(endless PRIVATE -fopenmp)
