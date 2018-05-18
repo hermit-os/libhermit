@@ -812,6 +812,11 @@ void *migration_handler(void *arg)
 		elf_entry,
 		full_checkpoint};
 
+	/* the guest size is calculated at the destination again */
+	if ((guest_size-KVM_32BIT_GAP_SIZE) >= KVM_32BIT_GAP_START) {
+		metadata.guest_size -= KVM_32BIT_GAP_SIZE;
+	}
+
 	res = send_data(&metadata, sizeof(migration_metadata_t));
       	fprintf(stderr, "Metadata sent! (%d bytes)\n", res);
 
