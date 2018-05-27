@@ -36,7 +36,7 @@ apt-get install -y cmake wget curl gnupg checkinstall gawk dialog apt-utils flex
 
 echo "deb [trusted=yes] https://dl.bintray.com/hermitcore/ubuntu bionic main" | tee -a /etc/apt/sources.list
 apt-get update
-apt-get install -y --allow-unauthenticated binutils-hermit newlib-hermit pthread-embedded-hermit gcc-hermit-bootstrap
+apt-get install -y --allow-unauthenticated binutils-hermit newlib-hermit pte-hermit gcc-hermit-bootstrap
 export PATH=/opt/hermit/bin:$PATH
 
 mkdir -p build
