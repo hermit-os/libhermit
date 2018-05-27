@@ -41,7 +41,7 @@ export PATH=/opt/hermit/bin:$PATH
 
 mkdir -p build
 cd build
-cmake -DTOOLCHAIN_BIN_DIR=$PREFIX/bin -DCMAKE_INSTALL_PREFIX=$PREFIX -DBOOTSTRAP=true ../hermit
+cmake -DTOOLCHAIN_BIN_DIR=$PREFIX/bin -DCMAKE_INSTALL_PREFIX=$PREFIX -DBOOTSTRAP=true ..
 make hermit-bootstrap
 checkinstall -D -y --exclude=build --pkggroup=main --maintainer=stefan@eonerc.rwth-aachen.de --pkgsource=https://hermitcore.org --pkgname=libhermit --pkgversion=0.2.8 --pkglicense=BSD-2-Clause make hermit-bootstrap-install
 
