@@ -43,7 +43,7 @@ mkdir -p build
 cd build
 cmake -DTOOLCHAIN_BIN_DIR=/opt/hermit/bin -DCMAKE_INSTALL_PREFIX=/opt/hermit .. #-DBOOTSTRAP=true ..
 make hermit-bootstrap
-checkinstall -D -y --exclude=build --pkggroup=main --maintainer=stefan@eonerc.rwth-aachen.de --pkgsource=https://hermitcore.org --pkgname=libhermit --pkgversion=0.2.8 --pkglicense=BSD-2-Clause make hermit-bootstrap-install
+checkinstall -D -y --strip=no --stripso=no --exclude=build --pkggroup=main --maintainer=stefan@eonerc.rwth-aachen.de --pkgsource=https://hermitcore.org --pkgname=libhermit --pkgversion=0.2.8 --pkglicense=BSD-2-Clause make hermit-bootstrap-install
 
 cd ..
 mkdir -p tmp
