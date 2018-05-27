@@ -1,7 +1,7 @@
 sudo: required
 git:
   depth: 3
-  submodules: false
+  submodules: true
 env:
   matrix:
   - OS_TYPE=ubuntu OS_VERSION=18.04 OS_NAME=bionic
