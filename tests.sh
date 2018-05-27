@@ -48,6 +48,6 @@ checkinstall -D -y --exclude=build --pkggroup=main --maintainer=stefan@eonerc.rw
 cd ..
 mkdir -p tmp
 dpkg-deb -R build/libhermit_0.2.8-1_amd64.deb tmp
-rm -f build/newlib-hermit_0.2.8-1_amd64.deb
+rm -f build/libhermit_0.2.8-1_amd64.deb
 
 fi
