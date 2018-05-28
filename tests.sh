@@ -41,10 +41,9 @@ export PATH=/opt/hermit/bin:$PATH
 
 mkdir -p build
 cd build
-cmake -DTOOLCHAIN_BIN_DIR=/opt/hermit/bin -DCMAKE_INSTALL_PREFIX=/opt/hermit .. #-DBOOTSTRAP=true ..
-make #hermit-bootstrap
-apt-get remove -y libhermit
-checkinstall -D -y --strip=no --stripso=no --exclude=build --pkggroup=main --maintainer=stefan@eonerc.rwth-aachen.de --pkgsource=https://hermitcore.org --pkgname=libhermit --pkgversion=0.2.8 --pkglicense=BSD-2-Clause make install
+#cmake -DTOOLCHAIN_BIN_DIR=/opt/hermit/bin -DCMAKE_INSTALL_PREFIX=/opt/hermit .. #-DBOOTSTRAP=true ..
+cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=true ..
+make -j1 package
 
 cd ..
 mkdir -p tmp
@@ -53,9 +52,9 @@ rm -f build/libhermit_0.2.8-1_amd64.deb
 
 fi
 
-TDIR=/opt/hermit/x86_64-hermit/extra
+TDIR=/work/build/opt/hermit/x86_64-hermit/extra
 FILES="$TDIR/tests/hello $TDIR/tests/hellof $TDIR/tests/hello++ $TDIR/tests/thr_hello $TDIR/tests/pi $TDIR/benchmarks/stream $TDIR/benchmarks/basic $TDIR/tests/signals $TDIR/tests/test-malloc $TDIR/tests/test-malloc-mt $TDIR/tests/argv_envp"
-PROXY=/opt/hermit/bin/proxy
+PROXY=/work/build/opt/hermit/bin/proxy
 
 for f in $FILES; do echo "check $f..."; HERMIT_ISLE=qemu HERMIT_CPUS=1 HERMIT_KVM=0 HERMIT_VERBOSE=1 timeout --kill-after=5m 5m $PROXY $f || exit 1; done
 
