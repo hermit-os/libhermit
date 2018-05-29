@@ -36,20 +36,23 @@ apt-get install -y qemu-system-x86 cmake wget curl gnupg checkinstall gawk dialo
 
 echo "deb [trusted=yes] https://dl.bintray.com/hermitcore/ubuntu bionic main" | tee -a /etc/apt/sources.list
 apt-get update
-apt-get install -y --allow-unauthenticated binutils-hermit libhermit newlib-hermit pte-hermit gcc-hermit #gcc-hermit-bootstrap
+apt-get install -y --allow-unauthenticated binutils-hermit newlib-hermit pte-hermit gcc-hermit #gcc-hermit-bootstrap
 export PATH=/opt/hermit/bin:$PATH
 
 mkdir -p build
 cd build
-#cmake -DTOOLCHAIN_BIN_DIR=/opt/hermit/bin -DCMAKE_INSTALL_PREFIX=/opt/hermit .. #-DBOOTSTRAP=true ..
-cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=true ..
+cmake -DTOOLCHAIN_BIN_DIR=/opt/hermit/bin -DCMAKE_INSTALL_PREFIX=/opt/hermit -DBOOTSTRAP=true ..
+make hermit-bootstrap
+make hermit-bootstrap-install
+rm -rf *
+cmake -DTOOLCHAIN_BIN_DIR=/opt/hermit/bin -DCMAKE_INSTALL_PREFIX=/opt/hermit ..
 install -m 644 ../usr/libomp/libgomp.spec /opt/hermit/x86_64-hermit/lib
 make -j1 package
 
 cd ..
 mkdir -p tmp
-dpkg-deb -R build/libhermit_0.2.8-all_amd64.deb tmp
-rm -f build/libhermit_0.2.8-all_amd64.deb
+dpkg-deb -R build/libhermit-0.2.8-all.deb tmp
+rm -rf build/*.deb build/_CPack_Packages
 
 fi
 

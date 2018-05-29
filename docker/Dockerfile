@@ -1,4 +1,4 @@
-#Download base image ubuntu 16.04
+# Download base image ubuntu 18.04
 FROM ubuntu:18.04
 
 # Update Software repository
@@ -8,13 +8,13 @@ RUN apt-get -qq update
 RUN apt-get install -y apt-transport-https
 
 # add path to hermitcore packets
-RUN echo "deb https://dl.bintray.com/rwth-os/hermitcore vivid main" | tee -a /etc/apt/sources.list
+RUN echo "deb [trusted=yes] https://dl.bintray.com/hermitcore/ubuntu bionic main" | tee -a /etc/apt/sources.list
 
 # Update Software repository
 RUN apt-get -qq update
 
 # Install required packets from ubuntu repository
-RUN apt-get install -y curl cmake bsdmainutils wget vim nano git binutils autoconf automake make cmake qemu-system-x86 nasm gcc
+RUN apt-get install -y curl cmake bsdmainutils wget vim nano git binutils autoconf automake make cmake kvm qemu-system-x86 nasm gcc ca-certificates
 RUN apt-get install -y --allow-unauthenticated binutils-hermit newlib-hermit pte-hermit gcc-hermit libhermit
 
 ENV PATH="/opt/hermit/bin:${PATH}"

@@ -18,7 +18,7 @@ script:
   -c "cd /work; ./tests.sh ${OS_TYPE} ${OS_NAME}"
 before_deploy:
 - cd ${TRAVIS_BUILD_DIR}
-- dpkg-deb -b tmp libhermit_0.2.8-all_amd64.deb
+- dpkg-deb -b tmp libhermit-0.2.8-all.deb
 deploy:
   provider: bintray
   on:
@@ -35,7 +35,7 @@ after_deploy:
   - export REPO=rwthos/hermitcore
   - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
   - cd ${TRAVIS_BUILD_DIR}/docker
-  - docker build -f Dockerfile -t $REPO:$COMMIT .
+  - docker build -f Dockerfile -t $REPO .
   - docker tag $REPO:$COMMIT $REPO:$TAG
   - docker tag $REPO:$COMMIT $REPO:travis-$TRAVIS_BUILD_NUMBER
   - docker push $REPO
