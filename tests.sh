@@ -43,6 +43,7 @@ mkdir -p build
 cd build
 #cmake -DTOOLCHAIN_BIN_DIR=/opt/hermit/bin -DCMAKE_INSTALL_PREFIX=/opt/hermit .. #-DBOOTSTRAP=true ..
 cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=true ..
+install -m 644 usr/libomp/libgomp.spec /opt/hermit/x86_64-hermit/lib
 make -j1 package
 
 cd ..
