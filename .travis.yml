@@ -18,7 +18,7 @@ script:
   -c "cd /work; ./tests.sh ${OS_TYPE} ${OS_NAME}"
 before_deploy:
 - cd ${TRAVIS_BUILD_DIR}
-- dpkg-deb -b tmp libhermit_0.2.8-1_amd64.deb
+- dpkg-deb -b tmp libhermit_0.2.9-all_amd64.deb
 deploy:
   provider: bintray
   on:
