@@ -18,7 +18,7 @@ script:
   -c "cd /work; ./tests.sh ${OS_TYPE} ${OS_NAME}"
 before_deploy:
 - cd ${TRAVIS_BUILD_DIR}
-- dpkg-deb -b tmp libhermit_0.2.9-all_amd64.deb
+- dpkg-deb -b tmp libhermit-0.2.9-all.deb
 deploy:
   provider: bintray
   on:
@@ -29,3 +29,13 @@ deploy:
     secure: kiTa03QyprxZfL8QuWCLuMnWUpMAhOlmwpHP2BdYsBTNEXS4vfNbOLZSUUWRi29tg1/zdXbIexoUXEmt/ZpDiM0W0kpZrcxvt/bi181RUVei9eoim+GL4jtJ5R7JKBIJuDXbCZiDQTs/oaiIv1EFkMKQeHl6GIiLIl3ehnqNyvpJvJC713uW6PTbxUjz20pfhFiq7B73j/onLVTC1m19L9lFnsryxatDN7zny/qZHmyel3ggDbPokv7jZwSYNs/X6yyOF1RQZ2qqIML0YLtkLqdrCqviSD/8p7OdNN34ACf6I+D5GIzZd1arlrOO2RsB+mIlDxoOiCNtwPbCVs3ReY9DOlNBxs/fABEyVyEWX20VboiLbWbhCok6V4Uk95BCHBbp6ceP06NhQ9gFbqFJwQe6NG/XlQbrKBp7Yj3+GovcNDjWVcHYpSuc4a7+1unM3tfPMFREgloTX0xg017H1eiRiR2viJsMuCmtCXteZ8H9qTx1l8Kf+cXKtg/h+XIkzDbIwhlO/jE3Bss7LSDNghYUBo2meEEJgibbFCuNQCFoA5doYCOMz4rO1YT3uI2fBLisAIqys+e3zGfmHARejjMASjdwT5vZzDNeeiTE8/2zG5X7Ow697TI+HtnFE+/hCZ4RAmu+vz6/IZYYO/Mf7kIAs8WGfcAkuCPzYXBoA10=
   key:
     secure: fg8+5owyDFPt3H/+Xk8jGHtEBasz1C2K0i+z92f/JnjTyLCrrKn+6DX7VRgcEl4ketTWLex7JduJLl4/7Ftug8qN0NuMwx0OxDCrwzvkoVwbl2DYX8von9ceuuV57p4e+uG35bPjU7E1KblkL+7ERqn9hsp5NbVdb4ueoSl9LedDdfzwcz8iA8JmzpbJ5RwQqg4kmdvuRVEUZMbQeHq4KB3kTznsma3BUeApVSaRQ8BpSaHED0tzFWKUTdjq7GvjBMF6WNpVIsc7Usky78UUyjaGbfMyT/7i9RctC3rAXr2XZryxDrJstAnHo6trqraf/3E40a7r0LhF9y7HWdmlfG99qhT3Vii3/pHeRIDp5O6xpIF8o/QkbYaFTwcvefRCjRQ8YYREqYvYnXOsKge/VaoUx48pTn6fOPzEzvlbyTkJ6Wp7knhx4qzR5JB8yTbIjoozggrkayvkYVfdMZjXvY/2T8TcNbPG0+0+EVkUcNrNMy9ksAH4RgR+eVQ4oI/sg5ldnVpp74jhSSDgAHBKCZQ01tIYMMEIyZm7qhAAdXnjCeV6D78a8/brUN+TSRNGYILx4vTiY3GMLEHsDGH4VEGawef0CtQasBrt5Cc0a/3KDNwuBy8rlbxLxbv+JCCn9vMm+UYQ6sTexsih76V07OHmQliu0xjQgBG5maFaV74=
+
+after_deploy:
+  - docker login -u $DOCKER_USER -p $DOCKER_PASS
+  - export REPO=rwthos/hermitcore
+  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
+  - cd ${TRAVIS_BUILD_DIR}/docker
+  - docker build -f Dockerfile -t $REPO .
+  - docker tag $REPO $REPO:$TAG
+  - docker tag $REPO $REPO:travis-$TRAVIS_BUILD_NUMBER
+  - docker push $REPO
