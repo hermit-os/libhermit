@@ -491,15 +491,15 @@ void init_cpu_state(uint64_t elf_entry)
 	msr_data.info.nmsrs = 1;
 	kvm_ioctl(vcpufd, KVM_SET_MSRS, &msr_data);
 
-	/* Setup registers and memory. */
-	setup_system(vcpufd, guest_mem, cpuid);
-	kvm_ioctl(vcpufd, KVM_SET_REGS, &regs);
-
 	// only one core is able to enter startup code
 	// => the wait for the predecessor core
 	while (*((volatile uint32_t*) (mboot + 0x20)) < cpuid)
 		pthread_yield();
 	*((volatile uint32_t*) (mboot + 0x30)) = cpuid;
+
+	/* Setup registers and memory. */
+	setup_system(vcpufd, guest_mem, cpuid);
+	kvm_ioctl(vcpufd, KVM_SET_REGS, &regs);
 }
 
 vcpu_state_t read_cpu_state(void)
@@ -840,7 +840,7 @@ void *migration_handler(void *arg)
 
 	/* send the final dump */
 	send_guest_mem(MIG_MODE_INCREMENTAL_DUMP, 1, mem_chunk_cnt, mem_chunks);
-	fprintf(stderr, "Memory sent! (Guest size: %llu bytes)\n", guest_size);
+	fprintf(stderr, "Memory sent! (Guest size: %zu bytes)\n", guest_size);
 
 	/* free mem_chunk info */
 	free(mem_chunks);
