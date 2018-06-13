@@ -366,8 +366,8 @@ int load_kernel(uint8_t* mem, char* path)
 	Elf64_Ehdr hdr;
 	Elf64_Phdr *phdr = NULL;
 	size_t buflen;
+	size_t pstart = 0;
 	int fd, ret;
-	int first_load = 1;
 
 	fd = open(path, O_RDONLY);
 	if (fd == -1)
@@ -432,8 +432,8 @@ int load_kernel(uint8_t* mem, char* path)
 			mboot = mem+paddr-GUEST_OFFSET;
 		//fprintf(stderr, "mboot at %p, klog at %p\n", mboot, klog);
 
-		if (first_load) {
-			first_load = 0;
+		if (!pstart) {
+			pstart = paddr;
 
 			// initialize kernel
 			*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x100)) = paddr; // physical start address
@@ -480,7 +480,7 @@ int load_kernel(uint8_t* mem, char* path)
 			if (verbose)
 				*((uint32_t*) (mem+paddr-GUEST_OFFSET + 0x174)) = (uint32_t) UHYVE_UART_PORT;
 		}
-		*((uint64_t*) (mem+paddr-GUEST_OFFSET + 0x158)) += memsz; // total kernel size
+		*((uint64_t*) (mem+pstart-GUEST_OFFSET + 0x158)) = paddr + memsz - pstart; // total kernel size
 	}
 
 	ret = 0;

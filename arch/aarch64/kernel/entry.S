@@ -290,7 +290,10 @@ _setup_pgtable:
     cmp     x0, 0
     b.ne    4f
 
-    ldr     x0, =kernel_end
+    ldr     x0, =kernel_start
+    ldr     x1, =image_size
+    ldr     x1, [x1]
+    add     x0, x0, x1
     /* align to a 16KByte boundary */
     add     x0, x0, 0x10000
     mov     x1, ~0xFFFF

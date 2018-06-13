@@ -48,7 +48,6 @@
 /* Note that linker symbols are not variables, they have no memory
  * allocated for maintaining a value, rather their address is their value. */
 extern const void kernel_start;
-extern const void kernel_end;
 
 extern size_t l0_pgtable;
 
