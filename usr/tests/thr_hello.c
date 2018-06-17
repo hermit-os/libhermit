@@ -3,12 +3,13 @@
 
 #define MAX_THREADS 2
 
+__thread int id = -1;
+
 void* thread_func(void* arg)
 {
-	int id = *((int*) arg);
+	id = *((int*) arg);
 
 	printf("Hello Thread!!! id = %d\n", id);
-
 	return 0;
 }
 
