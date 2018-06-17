@@ -55,21 +55,6 @@ extern "C" {
  */
 int create_default_frame(task_t* task, entry_point_t ep, void* arg, uint32_t core_id);
 
-/** @brief Jump to user code
- *
- * This function runs the user code after stopping it just as if
- * it was a return from a procedure.
- *
- * @return 0 in any case
- */
-/*static inline int jump_to_user_code(size_t ep, size_t stack)
-{
-	// Create a pseudo interrupt on the stack and return to user function
-	asm volatile ("push %0; push %1; push $0x41202; push %2; push %3; iretq" :: "r"(0x33ULL), "r"(stack), "r"(0x2bULL), "r"(ep) : "memory");
-
-	return 0;
-}*/
-
 /** @brief Architecture dependent initialize routine
  */
 static inline void arch_init_task(task_t* task) {}
