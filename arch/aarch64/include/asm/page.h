@@ -73,7 +73,7 @@
 /// Align to 2M boundary
 #define PAGE_2M_FLOOR(addr)	( (addr)                   & ((~0L) << 21))
 // Align the kernel end
-#define KERNEL_END_CEIL(addr)	(((addr) + (16L << 10)) & ~0xFFFF)
+#define KERNEL_END_CEIL(addr)	(((addr) + (16L << 10) - 1) & ~0x3FFFL)
 
 /// Page is present
 #define PG_PRESENT		(1UL << 0)
