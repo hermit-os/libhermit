@@ -96,7 +96,7 @@ size_t get_pages(size_t npages)
 		curr = curr->next;
 	}
 out:
-	LOG_DEBUG("get_pages: ret 0%llx, curr->start 0x%llx, curr->end 0x%llx\n", ret, curr->start, curr->end);
+	LOG_DEBUG("get_pages: ret 0x%llx, npages %zd, curr->start 0x%llx, curr->end 0x%llx\n", ret, npages, curr->start, curr->end);
 
 	spinlock_unlock(&list_lock);
 
@@ -269,7 +269,7 @@ int memory_init(void)
 	else
 		init_list.end = GICD_BASE;
 
-	// determine allocated memory, we use 2MB pages to map the kernel
+	// determine allocated memory
 	atomic_int64_add(&total_allocated_pages, PAGE_FLOOR((size_t) &kernel_start + image_size + 511*PAGE_SIZE) >> PAGE_BITS);
 	atomic_int64_sub(&total_available_pages, PAGE_FLOOR((size_t) &kernel_start + image_size + 511*PAGE_SIZE) >> PAGE_BITS);
 
