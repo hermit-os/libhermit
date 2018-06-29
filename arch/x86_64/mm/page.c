@@ -103,9 +103,9 @@ int page_set_flags(size_t viraddr, uint32_t npages, int flags)
 int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8_t do_ipi)
 {
 	int ret = -ENOMEM;
-	size_t vpn = viraddr >> PAGE_BITS;
-	size_t first[PAGE_LEVELS];
-	size_t last[PAGE_LEVELS];
+	ssize_t vpn = viraddr >> PAGE_BITS;
+	ssize_t first[PAGE_LEVELS];
+	ssize_t last[PAGE_LEVELS];
 	int8_t send_ipi = 0;
 
 	//kprintf("Map %d pages at 0x%zx\n", npages, viraddr);
@@ -201,8 +201,8 @@ void page_fault_handler(struct state *s)
 	int check_pagetables(size_t vaddr)
 	{
 		int lvl;
-		long vpn = vaddr >> PAGE_BITS;
-		long index[PAGE_LEVELS];
+		ssize_t vpn = vaddr >> PAGE_BITS;
+		ssize_t index[PAGE_LEVELS];
 
 		/* Calculate index boundaries for page map traversal */
 		for (lvl=0; lvl<PAGE_LEVELS; lvl++)

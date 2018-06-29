@@ -240,4 +240,8 @@ static inline void tlb_flush_range(size_t start, size_t end)
 	asm volatile ("isb" ::: "memory");
 }
 
+/** @brief Print the current page table tree
+ */
+void page_dump(void);
+
 #endif

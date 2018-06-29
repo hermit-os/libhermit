@@ -86,7 +86,7 @@ static const int sobufsize = 131072;
  * maintaining a value, rather their address is their value.
  */
 extern const void kernel_start;
-extern const void hbss_start;
+extern const void tdata_end;
 extern const void tls_start;
 extern const void tls_end;
 extern const void __bss_start;
@@ -117,7 +117,7 @@ static int hermit_init(void)
 	size_t sz = (size_t) &percore_end0 - (size_t) &percore_start;
 
 	// initialize .kbss sections
-	memset((void*)&hbss_start, 0x00, (size_t) &__bss_start - (size_t) &hbss_start);
+	memset((void*)&tdata_end, 0x00, (size_t) &__bss_start - (size_t) &tdata_end);
 
 	// initialize .percore section => copy first section to all other sections
 	for(i=1; i<MAX_CORES; i++)
@@ -652,8 +652,8 @@ int hermit_main(void)
 	LOG_INFO("This is Hermit %s, build on %s\n", PACKAGE_VERSION, __DATE__);
 	//LOG_INFO("Isle %d of %d possible isles\n", isle, possible_isles);
 	LOG_INFO("Kernel starts at %p and ends at %p\n", &kernel_start, (size_t)&kernel_start + image_size);
-	//LOG_INFO("TLS image starts at %p and ends at %p (size 0x%zx)\n", &tls_start, &tls_end, ((size_t) &tls_end) - ((size_t) &tls_start));
-	LOG_INFO("BBS starts at %p and ends at %p\n", &hbss_start, (size_t)&kernel_start + image_size);
+	LOG_INFO("TLS image starts at %p and ends at %p (size 0x%zx)\n", &tls_start, &tls_end, ((size_t) &tls_end) - ((size_t) &tls_start));
+	LOG_INFO("BBS starts at %p and ends at %p\n", &tdata_end, (size_t)&kernel_start + image_size);
 	LOG_INFO("Per core data starts at %p and ends at %p\n", &percore_start, &percore_end);
 	LOG_INFO("Per core size 0x%zx\n", (size_t) &percore_end0 - (size_t) &percore_start);
 	if (get_cpu_frequency() > 0)

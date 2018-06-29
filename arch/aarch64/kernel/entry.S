@@ -377,7 +377,9 @@ ldr     \xreg, [sp], #8
      stp x5, x6, [sp, #-16]!
      stp x3, x4, [sp, #-16]!
      stp x1, x2, [sp, #-16]!
-     str x0, [sp, #-16]!
+
+     mrs x22, tpidr_el0
+     stp x0, x22, [sp, #-16]!
 
      mrs x22, elr_el1
      mrs x23, spsr_el1
@@ -389,7 +391,9 @@ ldr     \xreg, [sp], #8
      msr elr_el1, x22
      msr spsr_el1, x23
 
-     ldr x0, [sp], #16
+     ldp x0, x22, [sp], #16
+     msr tpidr_el0, x22
+
      ldp x1, x2, [sp], #16
      ldp x3, x4, [sp], #16
      ldp x5, x6, [sp], #16

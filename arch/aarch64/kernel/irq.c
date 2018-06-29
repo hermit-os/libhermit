@@ -286,6 +286,10 @@ void do_sync(void *regs)
 				return;
 
 			LOG_ERROR("Unable to handle page fault at 0x%llx\n", far);
+			LOG_ERROR("Exception return address 0x%llx\n", get_elr());
+			LOG_ERROR("Thread ID register 0x%llx\n", get_tpidr());
+			LOG_ERROR("Table Base Register 0x%llx\n", get_ttbr0());
+			LOG_ERROR("Exception Syndrome Register 0x%lx\n", esr);
 
 			// send EOI
 			gicc_write(GICC_EOIR, iar);

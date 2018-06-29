@@ -84,7 +84,7 @@ typedef wchar_t wint_t;
 struct state {
 	uint64_t elr_el1;
 	uint64_t spsr_el1;
-	uint64_t res;
+	uint64_t tpidr_el0;
 	uint64_t x0;
 	uint64_t x1;
 	uint64_t x2;
