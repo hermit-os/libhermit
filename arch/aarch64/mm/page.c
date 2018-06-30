@@ -133,10 +133,12 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits)
 				}*/
 
 #if 0
-				if (!cflags && !(viraddr & 0XFFFFULL) && (npages-page_counter >= 16))
-					cflags = PT_CONTIG;
-				else if (cflags && !(viraddr & 0xFFFFULL) && (npages-page_counter < 16))
-					cflags = 0;
+				if ((viraddr & 0xFFFFULL) == 0) {
+					if ((ssize_t)npages-(ssize_t)page_counter >= 16)
+						cflags = PT_CONTIG;
+					else if ((ssize_t)npages-(ssize_t)page_counter < 16)
+						cflags = 0;
+				}
 #endif
 
 				if (bits & PG_DEVICE)
@@ -217,7 +219,7 @@ int page_fault_handler(size_t viraddr)
 
 	spinlock_irqsave_lock(&page_lock);
 
-	//page_dump();
+	//:wpage_dump();
 
 	if ((task->heap) && (viraddr >= task->heap->start) && (viraddr < task->heap->end)) {
 		/*
@@ -315,7 +317,7 @@ void page_dump(void)
 	void print(size_t start, size_t end, size_t flags) {
 		size_t size = end - start;
 
-		kprintf("%#018lx-%#018lx %#14x 0x%zx\n", start, end, size, flags & ~PAGE_MASK);
+		kprintf("%#018lx-%#018lx %#14x 0x%zx\n", start, end, size, flags);
 	}
 
 	void traverse(int level, page_entry_t* entry) {
@@ -327,14 +329,14 @@ void page_dump(void)
 					traverse(level-1, get_child_entry(entry));
 				} else {
 					if (!flags) {
-						flags = *entry; //& ~PAGE_MASK;
+						flags = *entry & 0xFFFF000000000FFFULL;
 						start = entry_to_virt(entry, level);
 					}
-					else if ((flags & ~PAGE_MASK) != (*entry & ~PAGE_MASK)) {
+					else if (flags != (*entry & 0xFFFF000000000FFFULL)) {
 						end = entry_to_virt(entry, level);
 						print(start, end, flags);
 
-						flags = *entry; // & ~PAGE_MASK;
+						flags = *entry & 0xFFFF000000000FFFULL;
 						start = end;
 					}
 				}
