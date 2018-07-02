@@ -104,6 +104,7 @@ cpu_online: .dword 0
 possible_cpus: .dword 0
 .global current_boot_id
 current_boot_id: .dword 0
+.global isle
 isle: .dword -1
 .global possible_isles
 possible_isles: .dword 1
@@ -135,6 +136,11 @@ start64:
   /* store x5=dtb */
   /*adrp    x1, dtb
   str     x5, [x1, #:lo12:dtb]*/
+
+  /* reset thread id registers */
+  mov x0, #0
+  msr tpidr_el0, x0
+  msr tpidr_el1, x0
 
   /*
    * Disable the MMU. We may have entered the kernel with it on and
@@ -168,6 +174,12 @@ start64:
   /* Set exception table */
   ldr x0, =vector_table
   msr vbar_el1, x0
+
+  /* Enable hardware coherency between cores */
+  /*mrs x0, S3_1_c15_c2_1	// read EL1 CPU Extended Control Register
+  orr x0, x0, #(1 << 6)	// set the SMPEN bit
+  msr S3_1_c15_c2_1, x0	// write EL1 CPU Extended Control Register
+  isb*/
 
   /* Turning on MMU */
   dsb sy
