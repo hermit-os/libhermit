@@ -28,19 +28,57 @@
 #include <hermit/stdlib.h>
 #include <hermit/stdio.h>
 #include <hermit/logging.h>
+#include <hermit/spinlock.h>
 #include <asm/processor.h>
 
+/*
+ * Note that linker symbols are not variables, they have no memory allocated for
+ * maintaining a value, rather their address is their value.
+ */
+extern const void percore_start;
+extern const void percore_end0;
+extern const void percore_end;
+
 extern uint32_t cpu_freq;
+extern atomic_int32_t current_boot_id;
+
+void print_cpu_status(int isle)
+{
+	static spinlock_t status_lock = SPINLOCK_INIT;
+
+	spinlock_lock(&status_lock);
+	LOG_INFO("CPU %d is online, 0x%zx\n", CORE_ID, get_mpidr());
+	spinlock_unlock(&status_lock);
+}
 
 uint32_t get_cpu_frequency(void)
 {
 	return cpu_freq;
 }
 
+static void init_percore_data(uint32_t core_id)
+{
+	asm volatile("msr tpidr_el1, %0" :: "r"(core_id * ((size_t) &percore_end0 - (size_t) &percore_start)));
+
+#if 1
+	size_t off;
+	asm volatile("mrs %0, tpidr_el1" : "=r"(off));
+	LOG_INFO("Set tpidr_el1 to 0x%zx\n", off);
+#endif
+}
+
 int cpu_detection(void)
 {
-	LOG_INFO("HermitCore runs in exception level %d\n", get_current_el());
-	LOG_INFO("System control register: 0x%x\n", get_sctlr());
+	static uint8_t first_time = 1;
+	uint32_t id = atomic_int32_read(&current_boot_id);
+
+	init_percore_data(id);
+	set_per_core(__core_id, id);
+
+	if (first_time) {
+		LOG_INFO("HermitCore runs in exception level %d\n", get_current_el());
+		LOG_INFO("System control register: 0x%x\n", get_sctlr());
+	}
 
 #if 0
 	uint32_t value = 0;
@@ -59,6 +97,8 @@ int cpu_detection(void)
 	value |= ARMV8_PMCNTENSET_EL0_EN;
 	asm volatile("msr pmcntenset_el0, %0" : : "r" (value));
 #endif
+
+	first_time = 0;
 
 	return 0;
 }
