@@ -186,7 +186,11 @@ int smp_start(void)
 
 	LOG_INFO("Try to initialize processor (local id %d)\n", core_id);
 
+	cpu_detection();
+
 	atomic_int32_inc(&cpu_online);
+
+	irq_enable();
 
 	return smp_main();
 }
