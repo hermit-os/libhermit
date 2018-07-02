@@ -235,6 +235,27 @@ static inline uint64_t get_cntpct(void)
 	return value;
 }
 
+static inline uint64_t get_mpidr(void)
+{
+	uint64_t value;
+	asm volatile("mrs %0, mpidr_el1" : "=r"(value) :: "memory");
+	return value;
+}
+
+static inline uint64_t get_cpuactlr(void)
+{
+	uint64_t value;
+	asm volatile("mrs %0, s3_1_c15_c2_0" : "=r"(value) :: "memory");
+	return value;
+}
+
+static inline uint64_t get_cpuectlr(void)
+{
+	uint64_t value;
+	asm volatile("mrs %0, s3_1_c15_c2_1" : "=r"(value) :: "memory");
+	return value;
+}
+
 inline static uint64_t get_rdtsc(void) { return get_cntpct(); }
 
 /// A one-instruction-do-nothing
@@ -415,7 +436,7 @@ void udelay(uint32_t usecs);
 /// Finalize the GIC initialization
 int irq_post_init(void);
 
-// Sets up the system clock
+/// Sets up the system clock
 int timer_calibration(void);
 
 extern atomic_int32_t cpu_online;
