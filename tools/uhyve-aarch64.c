@@ -77,8 +77,11 @@
 #ifndef offsetof
 #define offsetof(TYPE, MEMBER)		((size_t) &((TYPE *)0)->MEMBER)
 #endif
+
 #define ARM64_CORE_REG(x)		(KVM_REG_ARM64 | KVM_REG_SIZE_U64 |\
 					 KVM_REG_ARM_CORE | KVM_REG_ARM_CORE_REG(x))
+#define ARM_CPU_ID		3, 0, 0, 0
+#define ARM_CPU_ID_MPIDR	5
 
 static bool cap_irqfd = false;
 static bool cap_read_only = false;
@@ -122,6 +125,10 @@ void print_registers(void)
 	reg.id = ARM64_CORE_REG(regs.regs[30]);
 	kvm_ioctl(vcpufd, KVM_GET_ONE_REG, &reg);
 	fprintf(stderr, " LR:     0x%016lx\n", data);
+
+	reg.id = ARM64_SYS_REG(ARM_CPU_ID, ARM_CPU_ID_MPIDR);
+	kvm_ioctl(vcpufd, KVM_GET_ONE_REG, &reg);
+	fprintf(stderr, " MPIDR:  0x%016lx\n", data);
 
 	for(int i=0; i<=29; i+=2)
 	{
