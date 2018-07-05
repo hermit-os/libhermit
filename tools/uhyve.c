@@ -67,6 +67,7 @@
 #include "uhyve-syscalls.h"
 #include "uhyve-migration.h"
 #include "uhyve-net.h"
+#include "uhyve-gdb.h"
 #include "proxy.h"
 
 static bool restart = false;
@@ -78,6 +79,7 @@ static pthread_mutex_t kvm_lock = PTHREAD_MUTEX_INITIALIZER;
 extern bool verbose;
 
 static char* guest_path = NULL;
+static bool uhyve_gdb_enabled = false;
 size_t guest_size = 0x20000000ULL;
 bool full_checkpoint = false;
 pthread_barrier_t barrier;
@@ -310,6 +312,8 @@ static int vcpu_loop(void)
 		switch (run->exit_reason) {
 		case KVM_EXIT_HLT:
 			fprintf(stderr, "Guest has halted the CPU, this is considered as a normal exit.\n");
+			if (uhyve_gdb_enabled)
+				uhyve_gdb_handle_term();
 			return 0;
 
 		case KVM_EXIT_MMIO:
@@ -467,11 +471,15 @@ static int vcpu_loop(void)
 			break;
 
 		case KVM_EXIT_FAIL_ENTRY:
+			if (uhyve_gdb_enabled)
+				uhyve_gdb_handle_exception(vcpufd, GDB_SIGNAL_SEGV);
 			err(1, "KVM: entry failure: hw_entry_failure_reason=0x%llx\n",
 				run->fail_entry.hardware_entry_failure_reason);
 			break;
 
 		case KVM_EXIT_INTERNAL_ERROR:
+			if (uhyve_gdb_enabled)
+				uhyve_gdb_handle_exception(vcpufd, GDB_SIGNAL_SEGV);
 			err(1, "KVM: internal error exit: suberror = 0x%x\n", run->internal.suberror);
 			break;
 
@@ -479,7 +487,10 @@ static int vcpu_loop(void)
 			fprintf(stderr, "KVM: receive shutdown command\n");
 
 		case KVM_EXIT_DEBUG:
-			print_registers();
+			if (uhyve_gdb_enabled) {
+				uhyve_gdb_handle_exception(vcpufd, GDB_SIGNAL_TRAP);
+				break;
+			} else print_registers();
 			exit(EXIT_FAILURE);
 
 		default:
@@ -691,7 +702,11 @@ int uhyve_loop(int argc, char **argv)
 	const char* hermit_check = getenv("HERMIT_CHECKPOINT");
 	const char* hermit_mig_support = getenv("HERMIT_MIGRATION_SUPPORT");
 	const char* hermit_mig_type = getenv("HERMIT_MIGRATION_TYPE");
+	const char* hermit_debug = getenv("HERMIT_DEBUG");
 	int ts = 0, i = 0;
+
+	if (hermit_debug && (atoi(hermit_debug) != 0))
+		uhyve_gdb_enabled = true;
 
 	/* argv[0] is 'proxy', do not count it */
 	uhyve_argc = argc-1;
@@ -711,7 +726,7 @@ int uhyve_loop(int argc, char **argv)
 		uhyve_envc = MAX_ARGC_ENVC-1;
 	}
 
-	if(uhyve_argc > MAX_ARGC_ENVC || uhyve_envc > MAX_ARGC_ENVC) {
+	if (uhyve_argc > MAX_ARGC_ENVC || uhyve_envc > MAX_ARGC_ENVC) {
 		fprintf(stderr, "uhyve cannot forward more than %d command line "
 			"arguments or environment variables, please consider increasing "
 				"the MAX_ARGC_ENVP cmake argument\n", MAX_ARGC_ENVC);
@@ -784,6 +799,10 @@ int uhyve_loop(int argc, char **argv)
 		/* Start a virtual timer. It counts down whenever this process is executing. */
 		setitimer(ITIMER_REAL, &timer, NULL);
 	}
+
+	/* init uhyve gdb support */
+	if (uhyve_gdb_enabled)
+		uhyve_gdb_init(vcpufd);
 
 	// Run first CPU
 	return vcpu_loop();
