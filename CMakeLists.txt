@@ -127,6 +127,9 @@ install(DIRECTORY include/hermit
 	FILES_MATCHING
 		PATTERN *.h)
 
+install(FILES tools/init.sh
+        DESTINATION tools)
+
 # provide custom target to only install libhermit without its runtimes which is
 # needed during the compilation of the cross toolchain
 add_custom_target(hermit-bootstrap-install
@@ -150,7 +153,7 @@ add_custom_target(hermit
 # be relocated for installation
 
 ## HermitCore's own tools such as Qemu/KVM proxy
-build_external(tools ${HERMIT_ROOT}/tools "")
+build_external(caves ${HERMIT_ROOT}/caves "")
 
 if("${TARGET_ARCH}" STREQUAL "x86_64-hermit")
 

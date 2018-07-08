@@ -6,3 +6,6 @@
 	path = usr/libomp
 	url = https://github.com/hermitcore/libomp_oss.git
 	branch = hermit
+[submodule "caves"]
+	path = caves
+	url = https://github.com/hermitcore/hermit-caves.git
