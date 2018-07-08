@@ -527,8 +527,7 @@ static void gdb_handle_exception(int vcpufd, int sigval)
 				}
 				/* Packet looks like 'Gxxxxx', so we have to skip the first char */
 				hex2mem(packet + 1, registers, len);
-				if (uhyve_gdb_write_registers
-				    (vcpufd, registers, len) == -1) {
+				if (uhyve_gdb_write_registers(vcpufd, registers, len) == -1) {
 					send_error_msg();
 					break;
 				}
@@ -549,27 +548,19 @@ static void gdb_handle_exception(int vcpufd, int sigval)
 			{
 				/* Remove a breakpoint */
 				packet++;
-				if (sscanf
-				    (packet, "%" PRIx32 ",%" PRIx64 ",%zx",
+				if (sscanf(packet, "%" PRIx32 ",%" PRIx64 ",%zx",
 				     &type, &addr, &len) != 3) {
 					send_error_msg();
 					break;
 				}
 				uint64_t phys_addr;
-				if (uhyve_gdb_guest_virt_to_phys
-				    (vcpufd, addr, &phys_addr)) {
+				if (uhyve_gdb_guest_virt_to_phys(vcpufd, addr, &phys_addr)) {
 					send_error_msg();
 				} else {
 					if (command == 'Z')
-						ret =
-						    uhyve_gdb_add_breakpoint
-						    (vcpufd, type, phys_addr,
-						     len);
+						ret = uhyve_gdb_add_breakpoint(vcpufd, type, phys_addr, len);
 					else
-						ret =
-						    uhyve_gdb_remove_breakpoint
-						    (vcpufd, type, phys_addr,
-						     len);
+						ret = uhyve_gdb_remove_breakpoint(vcpufd, type, phys_addr, len);
 
 					if (ret == -1)
 						send_error_msg();
@@ -617,8 +608,7 @@ int uhyve_gdb_init(int vcpufd)
 	 * GDB clients can change memory, and software breakpoints work by
 	 * replacing instructions with int3's.
 	 */
-	if (mprotect(guest_mem, guest_size,
-		     PROT_READ | PROT_WRITE | PROT_EXEC) == -1)
+	if (mprotect(guest_mem, guest_size, PROT_READ | PROT_WRITE | PROT_EXEC) == -1)
 		err(1, "GDB: Cannot remove guest memory protection");
 
 	/* Notify the debugger that we are dying. */

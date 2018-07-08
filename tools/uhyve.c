@@ -281,6 +281,14 @@ static int vcpu_loop(void)
 		}
 	}
 
+	/* init uhyve gdb support */
+	if (uhyve_gdb_enabled) {
+		if (cpuid == 0)
+			uhyve_gdb_init(vcpufd);
+
+		pthread_barrier_wait(&barrier);
+	}
+
 	while (1) {
 		ret = ioctl(vcpufd, KVM_RUN, NULL);
 
@@ -799,10 +807,6 @@ int uhyve_loop(int argc, char **argv)
 		/* Start a virtual timer. It counts down whenever this process is executing. */
 		setitimer(ITIMER_REAL, &timer, NULL);
 	}
-
-	/* init uhyve gdb support */
-	if (uhyve_gdb_enabled)
-		uhyve_gdb_init(vcpufd);
 
 	// Run first CPU
 	return vcpu_loop();

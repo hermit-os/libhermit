@@ -63,14 +63,15 @@ struct uhyve_gdb_regs {
     uint64_t r14;
     uint64_t r15;
     uint64_t rip;
-    uint64_t eflags;
 
+    uint32_t eflags;
     uint32_t cs;
     uint32_t ss;
     uint32_t ds;
     uint32_t es;
     uint32_t fs;
     uint32_t gs;
+    uint8_t st[8][10];
 };
 
 #endif /* UHYVE_GDB_X86_64_H */
