@@ -159,16 +159,6 @@ if("${TARGET_ARCH}" STREQUAL "x86_64-hermit")
 
 build_external(arch_x86_loader ${HERMIT_ROOT}/arch/x86_64/loader "")
 
-## Intel's OpenMP runtime for x86 (libomp)
-build_external(libiomp ${HERMIT_ROOT}/usr/libomp ""
-		-DHERMIT=1
-		-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
-		-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/${TARGET_ARCH})
-
-# libomp is part of HermitCore's runtime and should be available before any
-# application will link
-add_dependencies(hermit libiomp)
-
 ## iRCCE
 build_external(ircce ${HERMIT_ROOT}/usr/ircce "")
 add_dependencies(hermit ircce)
@@ -181,11 +171,9 @@ add_dependencies(hermit xray)
 endif()
 
 ## Tests and benchmarks
-if("${TARGET_ARCH}" STREQUAL "x86_64-hermit")
 build_external(tests ${HERMIT_ROOT}/usr/tests hermit)
 build_external(benchmarks ${HERMIT_ROOT}/usr/benchmarks hermit)
 build_external(openmpbench ${HERMIT_ROOT}/usr/openmpbench hermit)
-endif()
 
 ## relocate the local prefix to our install destination
 install(DIRECTORY ${LOCAL_PREFIX_DIR}/
