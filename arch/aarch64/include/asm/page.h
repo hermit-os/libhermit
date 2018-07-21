@@ -180,6 +180,9 @@ int page_set_flags(size_t viraddr, uint32_t npages, int flags);
 
 /** @brief Handler to map on demand pages for the heap
  *
+ * * @param viraddr Virtual address, which triggers the page fault
+ * * @param pc Instruction pointer, where the handler is triggered
+ *
  * @return
  * - 0 on success
  * - -EINVAL (-22) on failure.

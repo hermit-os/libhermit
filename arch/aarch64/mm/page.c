@@ -267,6 +267,10 @@ default_handler:
 
 	/* indicate unrecoverable page fault to the hypervisor */
 	uhyve_pfault_t arg = {pc, viraddr, -1};
+	/*
+	 * In principle, uhyve_send is a function call to the hypervisor.
+	 * => It is safe to pass data, which are stored on the stack.
+	 */
 	uhyve_send(UHYVE_PORT_PFAULT, (unsigned)virt_to_phys((size_t)&arg));
 
 	return -EINVAL;
