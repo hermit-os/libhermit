@@ -184,7 +184,7 @@ int page_set_flags(size_t viraddr, uint32_t npages, int flags);
  * - 0 on success
  * - -EINVAL (-22) on failure.
  */
-int page_fault_handler(size_t viraddr);
+int page_fault_handler(size_t viraddr, size_t pc);
 
 /** @brief Flush Translation Lookaside Buffer
  */
