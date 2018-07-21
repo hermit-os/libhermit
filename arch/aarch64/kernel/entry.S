@@ -127,6 +127,23 @@ host_logical_addr: .quad 0
 .global uart_mmio
 uart_mmio: .dword 0
 
+.global l0_pgtable
+.align 12
+l0_pgtable:
+    .quad l1_pgtable + PT_PT
+    .space 510*8, 0
+    .quad l0_pgtable + PT_PT + PT_SELF
+l1_pgtable:
+    .quad l2_pgtable + PT_PT
+    .space 511*8, 0
+l2_pgtable:
+    .quad l3_pgtable + PT_PT
+    .space 511*8, 0
+l3_pgtable:
+    .quad 0x00000000 + PT_MEM_CD // map II ports
+    .quad 0x09000000 + PT_MEM_CD // map QEMU's uart port
+    .space 510*8, 0
+
 start64:
   //mrs x0, s3_1_c15_c3_0 // Read EL1 Configuration Base Address Register
 
@@ -572,21 +589,3 @@ END(vector_table)
 boot_stack: .skip KERNEL_STACK_SIZE
 .global boot_ist
 boot_ist: .skip KERNEL_STACK_SIZE
-
-
-.global l0_pgtable
-.align 12
-l0_pgtable:
-    .quad l1_pgtable + PT_PT
-    .space 510*8, 0
-    .quad l0_pgtable + PT_PT + PT_SELF
-l1_pgtable:
-    .quad l2_pgtable + PT_PT
-    .space 511*8, 0
-l2_pgtable:
-    .quad l3_pgtable + PT_PT
-    .space 511*8, 0
-l3_pgtable:
-    .quad 0x00000000 + PT_MEM_CD // map II ports
-    .quad 0x09000000 + PT_MEM_CD // map QEMU's uart port
-    .space 510*8, 0

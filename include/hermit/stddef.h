@@ -66,6 +66,8 @@ extern size_t image_size;
 #define UHYVE_PORT_EXIT			0x540
 #define UHYVE_PORT_LSEEK		0x580
 
+#define UHYVE_PORT_PFAULT		0x511
+
 // Networkports
 #define UHYVE_PORT_NETINFO		0x600
 #define UHYVE_PORT_NETWRITE		0x640
