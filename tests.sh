@@ -36,7 +36,7 @@ apt-get install -y qemu-system-x86 cmake wget curl gnupg checkinstall gawk dialo
 
 echo "deb [trusted=yes] https://dl.bintray.com/hermitcore/ubuntu bionic main" | tee -a /etc/apt/sources.list
 apt-get -qq update
-apt-get install -y --allow-unauthenticated binutils-hermit newlib-hermit pte-hermit gcc-hermit #gcc-hermit-bootstrap
+apt-get install -y --allow-unauthenticated -o Dpkg::Options::="--force-overwrite" binutils-hermit newlib-hermit pte-hermit gcc-hermit libomp-hermit #gcc-hermit-bootstrap
 export PATH=/opt/hermit/bin:$PATH
 
 mkdir -p build
@@ -46,7 +46,6 @@ make hermit-bootstrap
 make hermit-bootstrap-install
 rm -rf *
 cmake -DTOOLCHAIN_BIN_DIR=/opt/hermit/bin -DCMAKE_INSTALL_PREFIX=/opt/hermit ..
-install -m 644 ../usr/libomp/libgomp.spec /opt/hermit/x86_64-hermit/lib
 make -j1 package
 
 cd ..
