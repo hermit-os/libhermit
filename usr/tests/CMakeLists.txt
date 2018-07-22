@@ -9,7 +9,9 @@ add_executable(jacobi jacobi.c)
 add_executable(argv_envp argv_envp.c)
 add_executable(hello++ hello++.cpp)
 add_executable(hellof hellof.f90)
+if("${TARGET_ARCH}" STREQUAL "x86_64-hermit")
 add_executable(pi pi.go)
+endif()
 add_executable(allocator allocator.c)
 
 add_executable(endless endless.c)
@@ -21,11 +23,13 @@ add_executable(test-malloc-mt test-malloc-mt.c)
 target_compile_options(test-malloc-mt PRIVATE -pthread)
 target_link_libraries(test-malloc-mt pthread)
 
+if("${TARGET_ARCH}" STREQUAL "x86_64-hermit")
 add_executable(server server.go)
 target_link_libraries(server netgo)
 
 add_executable(RCCE_minimum RCCE_minimum.c)
 target_link_libraries(RCCE_minimum ircce)
+endif()
 
 add_executable(thr_hello thr_hello.c)
 target_compile_options(thr_hello PRIVATE -pthread)

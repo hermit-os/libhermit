@@ -173,7 +173,9 @@ endif()
 ## Tests and benchmarks
 build_external(tests ${HERMIT_ROOT}/usr/tests hermit)
 build_external(benchmarks ${HERMIT_ROOT}/usr/benchmarks hermit)
+if("${TARGET_ARCH}" STREQUAL "x86_64-hermit")
 build_external(openmpbench ${HERMIT_ROOT}/usr/openmpbench hermit)
+endif()
 
 ## relocate the local prefix to our install destination
 install(DIRECTORY ${LOCAL_PREFIX_DIR}/
