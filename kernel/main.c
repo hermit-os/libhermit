@@ -386,7 +386,7 @@ static int initd(void* arg)
 		for(i=0; i<uhyve_cmdsize.envc-1; i++)
 			uhyve_cmdval_phys.envp[i] = (char*) virt_to_phys((size_t) uhyve_cmdval.envp[i]);
 		// the last element is always NULL
-		uhyve_cmdval_phys.envp[uhyve_cmdsize.envc-1] = NULL;
+		uhyve_cmdval.envp[uhyve_cmdsize.envc-1] = NULL;
 		uhyve_cmdval_phys.envp = (char**) virt_to_phys((size_t) uhyve_cmdval_phys.envp);
 
 		uhyve_send(UHYVE_PORT_CMDVAL,
