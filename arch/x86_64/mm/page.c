@@ -66,6 +66,8 @@ static uint8_t expect_zeroed_pages = 0;
 
 size_t virt_to_phys(size_t addr)
 {
+	task_t* task = per_core(current_task);
+
 	if ((addr > (size_t) &kernel_start) &&
 	    (addr <= PAGE_2M_CEIL((size_t) &kernel_start + image_size)))
 	{
@@ -75,7 +77,13 @@ size_t virt_to_phys(size_t addr)
 		size_t phy   = entry &  PAGE_2M_MASK;	// physical page frame number
 
 		return phy | off;
+	} else if ((task->heap) && (addr >= task->heap->start) && (addr < task->heap->end)) {
+		size_t vpn   = addr >> (HUGE_PAGE_BITS); // virtual page number
+		size_t entry = (HUGE_PAGE_SIZE == PAGE_2M_SIZE) ? self[1][vpn] : self[2][vpn];	// page table entry
+		size_t off   = addr  & ~HUGE_PAGE_MASK;	// offset within page
+		size_t phy   = entry &  HUGE_PAGE_MASK;	// physical page frame number
 
+		return phy | off;
 	} else {
 		size_t vpn   = addr >> PAGE_BITS;	// virtual page number
 		size_t entry = self[0][vpn];		// page table entry
@@ -102,16 +110,38 @@ int page_set_flags(size_t viraddr, uint32_t npages, int flags)
 
 int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8_t do_ipi)
 {
-	int ret = -ENOMEM;
 	ssize_t vpn = viraddr >> PAGE_BITS;
-	ssize_t first[PAGE_LEVELS];
-	ssize_t last[PAGE_LEVELS];
+	ssize_t first[PAGE_LEVELS] = {[0 ... PAGE_LEVELS-1] = 0};
+	ssize_t last[PAGE_LEVELS] = {[0 ... PAGE_LEVELS-1] = 0};
+	size_t page_size = PAGE_SIZE;
+	size_t page_bits = PAGE_BITS;
+	int ret = -ENOMEM;
+	uint32_t last_level_page_table = PAGE_LEVELS;
+	uint32_t offset = 0;
 	int8_t send_ipi = 0;
 
-	//kprintf("Map %d pages at 0x%zx\n", npages, viraddr);
+	//kprintf("Map %d pages at 0x%zx (0x%zx)\n", npages, viraddr, phyaddr);
+
+	if (!(viraddr & (HUGE_PAGE_SIZE-1))
+	   && !(phyaddr & (HUGE_PAGE_SIZE-1))
+	   && (npages == HUGE_PAGE_SIZE/PAGE_SIZE)) {
+		LOG_DEBUG("Map huge page...\n");
+
+		vpn = vpn >> PAGE_MAP_BITS;
+		npages = 1;
+		page_size = HUGE_PAGE_SIZE;
+		page_bits = HUGE_PAGE_BITS;
+
+		if (HUGE_PAGE_SIZE == PAGE_2M_SIZE)
+			offset = 1;
+		else // => 1GB pages
+			offset = 2;
+
+		last_level_page_table -= offset;
+	}
 
 	/* Calculate index boundaries for page map traversal */
-	for (int32_t lvl=0; lvl<PAGE_LEVELS; lvl++) {
+	for (int32_t lvl=0; lvl<last_level_page_table; lvl++) {
 		first[lvl] = (vpn         ) >> (lvl * PAGE_MAP_BITS);
 		last[lvl]  = (vpn+npages-1) >> (lvl * PAGE_MAP_BITS);
 	}
@@ -120,10 +150,10 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8
 
 	/* Start iterating through the entries
 	 * beginning at the root table (PGD or PML4) */
-	for (int32_t lvl=PAGE_LEVELS-1; lvl>=0; lvl--) {
+	for (int32_t lvl=last_level_page_table-1; lvl>=0; lvl--) {
 		for (vpn=first[lvl]; vpn<=last[lvl]; vpn++) {
 			if (lvl) { /* PML4, PDPT, PGD */
-				if (!(self[lvl][vpn] & PG_PRESENT)) {
+				if (!(self[lvl+offset][vpn] & PG_PRESENT)) {
 					/* There's no table available which covers the region.
 					 * Therefore we need to create a new empty table. */
 					size_t paddr = get_pages(1);
@@ -131,29 +161,30 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8
 						goto out;
 
 					/* Reference the new table within its parent */
-					self[lvl][vpn] = (paddr | bits | PG_PRESENT | PG_USER | PG_RW | PG_ACCESSED | PG_DIRTY) & ~PG_XD;
+					self[lvl+offset][vpn] = (paddr | bits | PG_PRESENT | PG_USER | PG_RW | PG_ACCESSED | PG_DIRTY) & ~PG_XD;
 
 					/* Fill new table with zeros */
-					memset(&self[lvl-1][vpn<<PAGE_MAP_BITS], 0, PAGE_SIZE);
+					memset(&self[lvl+offset-1][vpn<<PAGE_MAP_BITS], 0, PAGE_SIZE);
 				}
-			} else { /* PGT */
+			} else { /* last level page table */
 				int8_t flush = 0;
 
 				/* do we have to flush the TLB? */
-				if (self[lvl][vpn] & PG_PRESENT) {
+				if (self[lvl+offset][vpn] & PG_PRESENT) {
 					//kprintf("Remap address 0x%zx at core %d\n", viraddr, CORE_ID);
 					send_ipi = flush = 1;
 				}
 
-				self[lvl][vpn] = phyaddr | bits | PG_PRESENT | PG_ACCESSED | PG_DIRTY;
+				self[lvl+offset][vpn] = phyaddr | bits | PG_PRESENT | PG_ACCESSED | PG_DIRTY;
+
+				// Do we map a huge page?
+				if (last_level_page_table != PAGE_LEVELS)
+					self[lvl+offset][vpn] = self[lvl+offset][vpn] | PG_PSE;
 
 				if (flush)
-					/* There's already a page mapped at this address.
-					 * We have to flush a single TLB entry. */
-					tlb_flush_one_page(vpn << PAGE_BITS, 0);
+					tlb_flush_one_page(vpn << page_bits, 0);
 
-				phyaddr += PAGE_SIZE;
-				//viraddr += PAGE_SIZE;
+				phyaddr += page_size;
 			}
 		}
 	}
@@ -238,7 +269,7 @@ void page_fault_handler(struct state *s)
 		 // on demand userspace heap mapping
 		viraddr &= PAGE_MASK;
 
-		size_t phyaddr = expect_zeroed_pages ? get_zeroed_page() : get_page();
+		size_t phyaddr = expect_zeroed_pages ? get_zeroed_huge_page() : get_huge_page();
 		if (BUILTIN_EXPECT(!phyaddr, 0)) {
 			LOG_ERROR("out of memory: task = %u\n", task->id);
 			goto default_handler;
@@ -247,7 +278,7 @@ void page_fault_handler(struct state *s)
 		flags = PG_USER|PG_RW;
 		if (has_nx()) // set no execution flag to protect the heap
 			flags |= PG_XD;
-		ret = __page_map(viraddr, phyaddr, 1, flags, 0);
+		ret = __page_map(viraddr, phyaddr, HUGE_PAGE_SIZE/PAGE_SIZE, flags, 0);
 
 		if (BUILTIN_EXPECT(ret, 0)) {
 			LOG_ERROR("map_region: could not map %#lx to %#lx, task = %u\n", phyaddr, viraddr, task->id);

@@ -44,10 +44,14 @@
 /// Page offset bits
 #define PAGE_BITS		12
 #define PAGE_2M_BITS		21
+#define HUGE_PAGE_BITS		12
 /// The size of a single page in bytes
 #define PAGE_SIZE		( 1L << PAGE_BITS)
+#define PAGE_2M_SIZE		( 1L << PAGE_2M_BITS)
+#define HUGE_PAGE_SIZE		( 1L << HUGE_PAGE_BITS)
 #define PAGE_MASK		((~0L) << PAGE_BITS)
 #define PAGE_2M_MASK		((~0L) << PAGE_2M_BITS)
+#define HUGE_PAGE_MASK		((~0L) << HUGE_PAGE_BITS)
 
 /// Total operand width in bits
 #define BITS			64
@@ -72,6 +76,10 @@
 #define PAGE_2M_CEIL(addr)	(((addr) + (1L << 21) - 1) & ((~0L) << 21))
 /// Align to 2M boundary
 #define PAGE_2M_FLOOR(addr)	( (addr)                   & ((~0L) << 21))
+/// Align to next huge boundary
+#define PAGE_HUGE_CEIL(addr)	(((addr) + HUGE_PAGE_MASK - 1) & HUGE_PAGE_MASK)
+/// Align to huge page boundary
+#define PAGE_HUGE_FLOOR(addr)	( (addr)                  & HUGE_PAGE_MASK)
 // Align the kernel end
 #define KERNEL_END_CEIL(addr)	(((addr) + (16L << 10) - 1) & ~0x3FFFL)
 

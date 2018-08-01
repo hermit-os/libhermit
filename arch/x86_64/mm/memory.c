@@ -70,7 +70,7 @@ atomic_int64_t total_pages = ATOMIC_INIT(0);
 atomic_int64_t total_allocated_pages = ATOMIC_INIT(0);
 atomic_int64_t total_available_pages = ATOMIC_INIT(0);
 
-size_t get_pages(size_t npages)
+static size_t __get_pages(size_t npages, size_t align)
 {
 	size_t i, ret = 0;
 	free_list_t* curr = free_start;
@@ -85,12 +85,28 @@ size_t get_pages(size_t npages)
 	while(curr) {
 		i = (curr->end - curr->start) / PAGE_SIZE;
 		if (i > npages) {
+			if (!(curr->start & (align-1)))	 {
+				ret = curr->start;
+				curr->start += npages * PAGE_SIZE;
+				goto out;
+			} else {
+				size_t tmp = HUGE_PAGE_CEIL(curr->start);
+				if (tmp < curr->end) {
+					// Ok, we have to split the list
+					free_list_t* n = kmalloc(sizeof(free_list_t));
+					if (n) {
+						n->start = tmp;
+						n->end = curr->end;
+						curr->end = n->start;
+						n->prev = curr;
+						n->next = curr->next;
+						curr->next = n;
+					}
+				}
+			}
+		} else if ((i == npages) && !(curr->start & (align-1))) {
 			ret = curr->start;
-			curr->start += npages * PAGE_SIZE;
-			goto out;
-		} else if (i == npages) {
-			ret = curr->start;
-			if (curr->prev) { 
+			if (curr->prev) {
 				if (curr->next)
 					curr->next->prev = curr->prev;
 				curr->prev->next = curr->next;
@@ -116,6 +132,16 @@ out:
 	}
 
 	return ret;
+}
+
+size_t get_pages(size_t npages)
+{
+	return __get_pages(npages, PAGE_SIZE);
+}
+
+size_t get_huge_page(void)
+{
+	return __get_pages(512, PAGE_2M_SIZE);
 }
 
 DEFINE_PER_CORE(size_t, ztmp_addr, 0);
@@ -150,6 +176,41 @@ novaddr:
 	irq_nested_enable(flags);
 
 	return phyaddr;
+}
+
+size_t get_zeroed_huge_page(void)
+{
+	size_t phyaddr = get_huge_page();
+	size_t viraddr;
+	uint8_t flags;
+
+	if (BUILTIN_EXPECT(!phyaddr, 0))
+		return 0;
+
+	flags = irq_nested_disable();
+
+	viraddr = per_core(ztmp_addr);
+	if (BUILTIN_EXPECT(!viraddr, 0))
+	{
+		viraddr = vma_alloc(PAGE_SIZE, VMA_READ|VMA_WRITE|VMA_CACHEABLE);
+		if (BUILTIN_EXPECT(!viraddr, 0))
+			goto novaddr;
+
+		LOG_DEBUG("Core %d uses 0x%zx as temporary address\n", CORE_ID, viraddr);
+		set_per_core(ztmp_addr, viraddr);
+	}
+
+	for(uint32_t i=0; i<HUGE_PAGE_SIZE/PAGE_SIZE; i++) {
+		__page_map(viraddr, phyaddr+i*PAGE_SIZE, 1, PG_GLOBAL|PG_RW|PG_PRESENT, 0);
+		memset((void*) viraddr, 0x00, PAGE_SIZE);
+	}
+
+	memset((void*) viraddr, 0x00, PAGE_SIZE);
+
+novaddr:
+	irq_nested_enable(flags);
+
+	return 0;
 }
 
 /* TODO: reunion of elements is still missing */
