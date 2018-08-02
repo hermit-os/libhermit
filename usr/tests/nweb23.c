@@ -2,7 +2,9 @@
  * This 'Tiny Web Server’ is derived from nweb, which was developed
  * by Nigel Griffiths and published at
  * https://www.ibm.com/developerworks/systems/library/es-nweb/index.html.
- */	
+ *
+ * The web server was released under the IBM License Agreement.
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -43,7 +45,7 @@ struct {
 	{"html","text/html" },
 	{0,0} };
 
-void logger(int type, char *s1, char *s2, int socket_fd)
+static void logger(int type, char *s1, char *s2, int socket_fd)
 {
 	int fd ;
 	char logbuffer[BUFSIZE*2];
@@ -71,7 +73,7 @@ void logger(int type, char *s1, char *s2, int socket_fd)
 }
 
 /* this is a child web server process, so we can exit on errors */
-void web(int fd, int hit)
+static void web(int fd, int hit)
 {
 	int j, file_fd, buflen;
 	long i, ret, len;
@@ -132,12 +134,12 @@ void web(int fd, int hit)
 		(void)write(fd,buffer,ret);
 	}
 #ifdef __hermit__
-	sys_msleep(1000);
+	close(fd);
 #else
 	sleep(1);	/* allow socket to drain before signalling the socket is closed */
-#endif
 	close(fd);
 	exit(1);
+#endif
 }
 
 #ifdef __hermit__
@@ -147,7 +149,7 @@ typedef struct {
 	int hit;
 } web_t;
 
-void* thread_func(void* arg)
+static void* thread_func(void* arg)
 {
 	web_t* w = (web_t*) arg;
 
@@ -157,7 +159,8 @@ void* thread_func(void* arg)
 
 	return NULL;
 }
-void webthr(int fd, int hit)
+
+static void webthr(int fd, int hit)
 {
 	web_t* w = malloc(sizeof(web_t));
 
@@ -167,6 +170,7 @@ void webthr(int fd, int hit)
 	int ret = pthread_create(NULL, NULL, thread_func, (void*) w);
 	if (ret)
 		fprintf(stderr, "Unable to create thread: %d\n", ret);
+	sched_yield();
 }
 #endif
 
@@ -250,7 +254,8 @@ int main(int argc, char **argv)
 		if((socketfd = accept(listenfd, (struct sockaddr *)&cli_addr, &length)) < 0)
 			logger(ERROR,"system call","accept",0);
 #ifdef __hermit__
-		webthr(socketfd,hit);
+		//webthr(socketfd,hit);
+		web(socketfd,hit);
 #else
 		if((pid = fork()) < 0) {
 			logger(ERROR,"system call","fork",0);
