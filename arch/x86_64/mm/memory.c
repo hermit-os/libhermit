@@ -141,7 +141,7 @@ size_t get_pages(size_t npages)
 
 size_t get_huge_page(void)
 {
-	return __get_pages(512, PAGE_2M_SIZE);
+	return __get_pages(HUGE_PAGE_SIZE/PAGE_SIZE, HUGE_PAGE_SIZE);
 }
 
 DEFINE_PER_CORE(size_t, ztmp_addr, 0);
