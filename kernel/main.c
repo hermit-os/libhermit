@@ -325,7 +325,6 @@ static int initd(void* arg)
 	int magic = 0;
 	struct sockaddr_in6 server, client;
 	task_t* curr_task = per_core(current_task);
-	size_t heap = HEAP_START;
 	int argc, envc;
 	char** argv = NULL;
 	char **environ = NULL;
@@ -345,8 +344,8 @@ static int initd(void* arg)
 	}
 
 	curr_task->heap->flags = VMA_HEAP|VMA_USER;
-	curr_task->heap->start = PAGE_CEIL(heap);
-	curr_task->heap->end = PAGE_CEIL(heap);
+	curr_task->heap->start = HEAP_START;
+	curr_task->heap->end = HEAP_START;
 
 	// region is already reserved for the heap, we have to change the
 	// property of the first page
