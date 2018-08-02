@@ -319,5 +319,8 @@ err_t uhyve_netif_init (struct netif* netif)
 	LOG_INFO("uhyve_netif_init: OK\n");
 	uhyve_net_init_ok = 1;
 
+	/* check if we already receive an interrupt */
+	uhyve_netif_poll();
+
 	return ERR_OK;
 }
