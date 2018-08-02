@@ -264,7 +264,7 @@ void page_fault_handler(struct state *s)
 		}
 
 		 // on demand userspace heap mapping
-		viraddr &= PAGE_MASK;
+		viraddr &= HUGE_PAGE_MASK;
 
 		size_t phyaddr = expect_zeroed_pages ? get_zeroed_huge_page() : get_huge_page();
 		if (BUILTIN_EXPECT(!phyaddr, 0)) {
@@ -305,7 +305,7 @@ default_handler:
 	LOG_ERROR("rax %#lx, rbx %#lx, rcx %#lx, rdx %#lx, rbp, %#lx, rsp %#lx rdi %#lx, rsi %#lx, r8 %#lx, r9 %#lx, r10 %#lx, r11 %#lx, r12 %#lx, r13 %#lx, r14 %#lx, r15 %#lx\n",
 		s->rax, s->rbx, s->rcx, s->rdx, s->rbp, s->rsp, s->rdi, s->rsi, s->r8, s->r9, s->r10, s->r11, s->r12, s->r13, s->r14, s->r15);
 	if (task->heap)
-		LOG_ERROR("Heap 0x%llx - 0x%llx\n", task->heap->start, task->heap->end);
+		LOG_ERROR("Heap 0x%zx - 0x%zx\n", task->heap->start, task->heap->end);
 
 	// clear cr2 to signalize that the pagefault is solved by the pagefault handler
 	write_cr2(0);
