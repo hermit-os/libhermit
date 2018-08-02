@@ -115,9 +115,8 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8
 	ssize_t last[PAGE_LEVELS] = {[0 ... PAGE_LEVELS-1] = 0};
 	size_t page_size = PAGE_SIZE;
 	size_t page_bits = PAGE_BITS;
+	int32_t offset = 0;
 	int ret = -ENOMEM;
-	uint32_t last_level_page_table = PAGE_LEVELS;
-	uint32_t offset = 0;
 	int8_t send_ipi = 0;
 
 	//kprintf("Map %d pages at 0x%zx (0x%zx)\n", npages, viraddr, phyaddr);
@@ -127,7 +126,6 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8
 	   && (npages == HUGE_PAGE_SIZE/PAGE_SIZE)) {
 		LOG_DEBUG("Map huge page...\n");
 
-		vpn = vpn >> PAGE_MAP_BITS;
 		npages = 1;
 		page_size = HUGE_PAGE_SIZE;
 		page_bits = HUGE_PAGE_BITS;
@@ -136,12 +134,10 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8
 			offset = 1;
 		else // => 1GB pages
 			offset = 2;
-
-		last_level_page_table -= offset;
 	}
 
 	/* Calculate index boundaries for page map traversal */
-	for (int32_t lvl=0; lvl<last_level_page_table; lvl++) {
+	for (int32_t lvl=offset; lvl<PAGE_LEVELS; lvl++) {
 		first[lvl] = (vpn         ) >> (lvl * PAGE_MAP_BITS);
 		last[lvl]  = (vpn+npages-1) >> (lvl * PAGE_MAP_BITS);
 	}
@@ -150,10 +146,10 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8
 
 	/* Start iterating through the entries
 	 * beginning at the root table (PGD or PML4) */
-	for (int32_t lvl=last_level_page_table-1; lvl>=0; lvl--) {
+	for (int32_t lvl=PAGE_LEVELS-1; lvl>=offset; lvl--) {
 		for (vpn=first[lvl]; vpn<=last[lvl]; vpn++) {
-			if (lvl) { /* PML4, PDPT, PGD */
-				if (!(self[lvl+offset][vpn] & PG_PRESENT)) {
+			if (lvl != offset) { /* PML4, PDPT, PGD */
+				if (!(self[lvl][vpn] & PG_PRESENT)) {
 					/* There's no table available which covers the region.
 					 * Therefore we need to create a new empty table. */
 					size_t paddr = get_pages(1);
@@ -161,25 +157,25 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8
 						goto out;
 
 					/* Reference the new table within its parent */
-					self[lvl+offset][vpn] = (paddr | bits | PG_PRESENT | PG_USER | PG_RW | PG_ACCESSED | PG_DIRTY) & ~PG_XD;
+					self[lvl][vpn] = (paddr | bits | PG_PRESENT | PG_USER | PG_RW | PG_ACCESSED | PG_DIRTY) & ~PG_XD;
 
 					/* Fill new table with zeros */
-					memset(&self[lvl+offset-1][vpn<<PAGE_MAP_BITS], 0, PAGE_SIZE);
+					memset(&self[lvl-1][vpn<<PAGE_MAP_BITS], 0, PAGE_SIZE);
 				}
 			} else { /* last level page table */
 				int8_t flush = 0;
 
 				/* do we have to flush the TLB? */
-				if (self[lvl+offset][vpn] & PG_PRESENT) {
+				if (self[lvl][vpn] & PG_PRESENT) {
 					//kprintf("Remap address 0x%zx at core %d\n", viraddr, CORE_ID);
 					send_ipi = flush = 1;
 				}
 
-				self[lvl+offset][vpn] = phyaddr | bits | PG_PRESENT | PG_ACCESSED | PG_DIRTY;
+				self[lvl][vpn] = phyaddr | bits | PG_PRESENT | PG_ACCESSED | PG_DIRTY;
 
 				// Do we map a huge page?
-				if (last_level_page_table != PAGE_LEVELS)
-					self[lvl+offset][vpn] = self[lvl+offset][vpn] | PG_PSE;
+				if (offset)
+					self[lvl][vpn] = self[lvl][vpn] | PG_PSE;
 
 				if (flush)
 					tlb_flush_one_page(vpn << page_bits, 0);
@@ -232,15 +228,16 @@ void page_fault_handler(struct state *s)
 	int check_pagetables(size_t vaddr)
 	{
 		int lvl;
+		int start = (HUGE_PAGE_SIZE == PAGE_2M_SIZE) ? 1 : 2;
 		ssize_t vpn = vaddr >> PAGE_BITS;
 		ssize_t index[PAGE_LEVELS];
 
 		/* Calculate index boundaries for page map traversal */
-		for (lvl=0; lvl<PAGE_LEVELS; lvl++)
+		for (lvl=start; lvl<PAGE_LEVELS; lvl++)
 			index[lvl] = vpn >> (lvl * PAGE_MAP_BITS);
 
 		/* do we have already a valid entry in the page tables */
-		for (lvl=PAGE_LEVELS-1; lvl>=0; lvl--) {
+		for (lvl=PAGE_LEVELS-1; lvl>=start; lvl--) {
 			vpn = index[lvl];
 
 			if (!(self[lvl][vpn] & PG_PRESENT))
