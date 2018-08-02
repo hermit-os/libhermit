@@ -98,7 +98,7 @@ static inline size_t sign_extend(ssize_t addr, int bits)
 /// Align to nex huge page boundary
 #define HUGE_PAGE_FLOOR(addr)	( (addr)                  & ((~0UL) << HUGE_PAGE_BITS))
 /// Align end of the kernel
-#define KERNEL_END_CEIL(addr)   (HUGE_PAGE_CEIL((addr)))
+#define KERNEL_END_CEIL(addr)   (PAGE_2M_CEIL((addr)))
 
 /// Page is present
 #define PG_PRESENT		(1ULL << 0)
