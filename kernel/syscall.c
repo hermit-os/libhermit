@@ -177,7 +177,7 @@ ssize_t sys_read(int fd, char* buf, size_t len)
 	}
 
 	if (is_uhyve()) {
-		uhyve_read_t uhyve_args = {fd, (char*) virt_to_phys((size_t) buf), len, -1};
+		uhyve_read_t uhyve_args = {fd, (char*) buf, len, -1};
 
 		uhyve_send(UHYVE_PORT_READ, (unsigned)virt_to_phys((size_t)&uhyve_args));
 
@@ -247,7 +247,7 @@ ssize_t sys_write(int fd, const char* buf, size_t len)
 	}
 
 	if (is_uhyve()) {
-		uhyve_write_t uhyve_args = {fd, (const char*) virt_to_phys((size_t) buf), len};
+		uhyve_write_t uhyve_args = {fd, (const char*) buf, len};
 
 		uhyve_send(UHYVE_PORT_WRITE, (unsigned)virt_to_phys((size_t)&uhyve_args));
 
