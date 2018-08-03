@@ -121,7 +121,7 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8
 
 	//kprintf("Map %d pages at 0x%zx (0x%zx)\n", npages, viraddr, phyaddr);
 
-	if (!(viraddr & (HUGE_PAGE_SIZE-1))
+	if ((HUGE_PAGE_SIZE != PAGE_SIZE) && !(viraddr & (HUGE_PAGE_SIZE-1))
 	   && !(phyaddr & (HUGE_PAGE_SIZE-1))
 	   && (npages == HUGE_PAGE_SIZE/PAGE_SIZE)) {
 		LOG_DEBUG("Map huge page...\n");
