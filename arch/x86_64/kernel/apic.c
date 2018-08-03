@@ -365,6 +365,9 @@ static apic_mp_t* search_mptable(size_t base, size_t limit) {
 	apic_mp_t* tmp;
 	uint32_t i;
 
+	if (is_uhyve())
+		return NULL;
+
 	// protec apic by the NX flags
 	if (has_nx())
 		flags |= PG_XD;
