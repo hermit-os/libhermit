@@ -113,14 +113,15 @@ extern void signal_init();
 
 static int hermit_init(void)
 {
-	uint32_t i;
+	clock_init();
+
 	size_t sz = (size_t) &percore_end0 - (size_t) &percore_start;
 
 	// initialize .kbss sections
 	memset((void*)&tdata_end, 0x00, (size_t) &__bss_start - (size_t) &tdata_end);
 
 	// initialize .percore section => copy first section to all other sections
-	for(i=1; i<MAX_CORES; i++)
+	for(uint32_t i=1; i<MAX_CORES; i++)
 		memcpy((char*) &percore_start + i*sz, (char*) &percore_start, sz);
 
 	koutput_init();
@@ -391,7 +392,7 @@ static int initd(void* arg)
 		uhyve_send(UHYVE_PORT_CMDVAL,
 				(unsigned)virt_to_phys((size_t)&uhyve_cmdval_phys));
 
-		LOG_INFO("Boot time: %d ms\n", (get_clock_tick() * 1000) / TIMER_FREQ);
+		LOG_INFO("Boot time: %d ms\n", get_uptime());
 		libc_start(uhyve_cmdsize.argc, uhyve_cmdval.argv, uhyve_cmdval.envp);
 
 		for(i=0; i<uhyve_cmdsize.argc; i++)

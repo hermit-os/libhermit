@@ -47,7 +47,7 @@ extern int32_t boot_processor;
 
 #ifdef DYNAMIC_TICKS
 DEFINE_PER_CORE(uint64_t, last_rdtsc, 0);
-uint64_t boot_tsc = 0;
+uint64_t boot_tsc __attribute__ ((section(".data"))) = 0;
 
 void check_ticks(void)
 {
@@ -56,7 +56,7 @@ void check_ticks(void)
 		return;
 
 	const uint64_t curr_rdtsc = rdtsc();
-	rmb();
+	mb();
 
 	const uint64_t diff_cycles = curr_rdtsc - per_core(last_rdtsc);
 	const uint64_t cpu_freq_hz = 1000000ULL * (uint64_t) get_cpu_frequency();
@@ -67,6 +67,22 @@ void check_ticks(void)
 		set_per_core(last_rdtsc, curr_rdtsc);
 		mb();
 	}
+}
+
+uint64_t get_uptime(void)
+{
+	const uint64_t cpu_freq_hz = 1000000ULL * (uint64_t) get_cpu_frequency();
+	const uint64_t curr_tsc = rdtsc();
+
+	mb();
+	uint64_t diff = curr_tsc - per_core(last_rdtsc);
+
+	return (1000ULL*diff) / cpu_freq_hz;
+}
+#else
+uint64_t get_uptime(void)
+{
+	return (get_clock_tick() * 1000) / TIMER_FREQ;
 }
 #endif
 
@@ -162,6 +178,16 @@ static int pit_init(void)
 	return 0;
 }
 
+int clock_init(void)
+{
+#ifdef DYNAMIC_TICKS
+	if (!boot_tsc)
+		boot_tsc = has_rdtscp() ? rdtscp(NULL) : rdtsc();
+#endif
+
+	return 0;
+}
+
 /*
  * Sets up the system clock by installing the timer handler
  * into IRQ0
@@ -169,11 +195,7 @@ static int pit_init(void)
 int timer_init(void)
 {
 #ifdef DYNAMIC_TICKS
-	if (boot_tsc)
-	{
-		set_per_core(last_rdtsc, boot_tsc);
-		return 0;
-	}
+	set_per_core(last_rdtsc, boot_tsc);
 #endif
 
 	/*
@@ -182,11 +204,6 @@ int timer_init(void)
 	 */
 	irq_install_handler(32, timer_handler);
 	irq_install_handler(123, timer_handler);
-
-#ifdef DYNAMIC_TICKS
-	boot_tsc = has_rdtscp() ? rdtscp(NULL) : rdtsc();
-	set_per_core(last_rdtsc, boot_tsc);
-#endif
 
 	if (cpu_freq) // do we need to configure the timer?
 		return 0;

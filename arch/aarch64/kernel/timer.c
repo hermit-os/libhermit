@@ -50,7 +50,7 @@ extern int32_t boot_processor;
 
 #ifdef DYNAMIC_TICKS
 DEFINE_PER_CORE(uint64_t, last_tsc, 0);
-static uint64_t boot_tsc = 0;
+static uint64_t boot_tsc __attribute__ ((section(".data"))) = 0;
 
 void check_ticks(void)
 {
@@ -59,7 +59,7 @@ void check_ticks(void)
 		return;
 
 	const uint64_t curr_tsc = get_cntpct();
-	rmb();
+	mb();
 
 	const uint64_t diff_tsc = curr_tsc - per_core(last_tsc);
 	const uint64_t diff_ticks = (diff_tsc * (uint64_t) TIMER_FREQ) / freq_hz;
@@ -70,7 +70,22 @@ void check_ticks(void)
 		rmb();
 	}
 }
+
+uint64_t get_uptime(void)
+{
+	const uint64_t curr_tsc = get_cntpct();
+
+	mb();
+	uint64_t diff = curr_tsc - per_core(last_rdtsc);
+
+	return (1000ULL*diff) / freq_hz;
+}
 #else
+uint64_t get_uptime(void)
+{
+	return (get_clock_tick() * 1000) / TIMER_FREQ;
+}
+
 static void restart_periodic_timer(void)
 {
 	set_cntp_tval(freq_hz / TIMER_FREQ);
@@ -172,13 +187,19 @@ int timer_wait(unsigned int ticks)
 	return 0;
 }
 
+int clock_init(void)
+{
+#ifdef DYNAMIC_TICKS
+	if (!boot_tsc)
+		boot_tsc = get_cntpct();
+#endif
+
+	return 0;
+}
+
 int timer_init(void)
 {
 #ifdef DYNAMIC_TICKS
-	if (boot_tsc)
-		return 0;
-
-	boot_tsc = get_cntpct();
 	set_per_core(last_tsc, boot_tsc);
 #endif
 
