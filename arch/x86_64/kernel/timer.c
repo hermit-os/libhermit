@@ -71,11 +71,14 @@ void check_ticks(void)
 
 uint64_t get_uptime(void)
 {
+	if (!cpu_freq)
+		return 0;
+
 	const uint64_t cpu_freq_hz = 1000000ULL * (uint64_t) get_cpu_frequency();
 	const uint64_t curr_tsc = rdtsc();
 
 	mb();
-	uint64_t diff = curr_tsc - per_core(last_rdtsc);
+	uint64_t diff = curr_tsc - boot_tsc;
 
 	return (1000ULL*diff) / cpu_freq_hz;
 }
@@ -182,7 +185,7 @@ int clock_init(void)
 {
 #ifdef DYNAMIC_TICKS
 	if (!boot_tsc)
-		boot_tsc = has_rdtscp() ? rdtscp(NULL) : rdtsc();
+		boot_tsc = rdtsc();
 #endif
 
 	return 0;
@@ -195,7 +198,8 @@ int clock_init(void)
 int timer_init(void)
 {
 #ifdef DYNAMIC_TICKS
-	set_per_core(last_rdtsc, boot_tsc);
+	if (!per_core(last_rdtsc))
+		set_per_core(last_rdtsc, rdtsc());
 #endif
 
 	/*
