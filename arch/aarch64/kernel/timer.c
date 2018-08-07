@@ -80,7 +80,7 @@ uint64_t get_uptime(void)
 	const uint64_t curr_tsc = get_cntpct();
 
 	mb();
-	uint64_t diff = curr_tsc - per_core(boot_tsc);
+	uint64_t diff = curr_tsc - boot_tsc;
 
 	return (1000ULL*diff) / freq_hz;
 }
