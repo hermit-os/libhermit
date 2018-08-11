@@ -158,8 +158,8 @@ If the proxy is register as loader to the Linux system, HermitCore applications 
 The proxy can be registered with following command.
 
 ```bash
-$ sudo -c sh 'echo ":hermit:M:7:\\x42::/opt/hermit/bin/proxy:" > /proc/sys/fs/binfmt_misc/register'
-$ # dirct call of a HermitCore appliaction
+$ sudo -c sh 'echo ":hermit:M:7:\\xff::/opt/hermit/bin/proxy:" > /proc/sys/fs/binfmt_misc/register'
+$ # dirct call of a HermitCore application
 $ /opt/hermit/x86_64-hermit/extra/tests/hello
 ```
 

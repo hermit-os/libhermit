@@ -44,7 +44,7 @@ foreach(SOURCE ${ASM_SOURCES})
 
 	add_custom_target("${OBJECT_TARGET_NAME}"
 		COMMAND
-			${CMAKE_ELFEDIT} --output-osabi HermitCore ${OBJECT_PATH}
+			${CMAKE_ELFEDIT} --output-osabi Standalone ${OBJECT_PATH}
 		DEPENDS
 			${X86_KERNEL_ASM_TARGET})
 

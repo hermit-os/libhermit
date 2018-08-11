@@ -53,7 +53,7 @@ extern "C" {
 #define ELF_ET_CORE	0x0004	// Corefile
 #define ELF_ET_LOPROC	0xFF00	// Processor-specific
 #define ELF_ET_HIPROC	0x00FF	// Processor-specific
- 
+
 #define ELF_EM_NONE	0x0000	// no type
 #define ELF_EM_M32	0x0001	// AT&T WE 32100
 #define ELF_EM_SPARC	0x0002	// SPARC
@@ -67,11 +67,28 @@ extern "C" {
 #define ELF_CLASS_NONE	0x0000
 #define ELF_CLASS_32	0x0001	// 32bit file
 #define ELF_CLASS_64	0x0002	// 64bit file
- 
+
 #define ELF_DATA_NONE	0x0000
 #define ELF_DATA_2LSB	0x0001
 #define ELF_DATA_2MSB	0x002
- 
+
+#define ELFOSABI_NONE		0	// UNIX System V ABI
+#define ELFOSABI_SYSV		0	// Alias.
+#define ELFOSABI_HPUX		1	// HP-UX
+#define ELFOSABI_NETBSD		2	// NetBSD.
+#define ELFOSABI_GNU		3	// Object uses GNU ELF extensions.
+#define ELFOSABI_LINUX		ELFOSABI_GNU	// Compatibility alias.
+#define ELFOSABI_SOLARIS	6	// Sun Solaris.
+#define ELFOSABI_AIX		7	// IBM AIX.
+#define ELFOSABI_IRIX		8	// SGI Irix.
+#define ELFOSABI_FREEBSD	9	// FreeBSD.
+#define ELFOSABI_TRU64		10	// Compaq TRU64 UNIX.
+#define ELFOSABI_MODESTO	11	// Novell Modesto.
+#define ELFOSABI_OPENBSD	12	// OpenBSD.
+#define ELFOSABI_ARM_AEABI	64	// ARM EABI
+#define ELFOSABI_ARM		97	// ARM
+#define ELFOSABI_STANDALONE	255	// Standalone (embedded) application
+
 /* Legal values for p_type (segment type).  */
 
 #define ELF_PT_NULL		0	/* Program header table entry unused */
