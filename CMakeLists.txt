@@ -127,6 +127,9 @@ install(DIRECTORY include/hermit
 	FILES_MATCHING
 		PATTERN *.h)
 
+install(FILES tools/init.sh
+        DESTINATION tools)
+
 # provide custom target to only install libhermit without its runtimes which is
 # needed during the compilation of the cross toolchain
 add_custom_target(hermit-bootstrap-install
@@ -150,21 +153,11 @@ add_custom_target(hermit
 # be relocated for installation
 
 ## HermitCore's own tools such as Qemu/KVM proxy
-build_external(tools ${HERMIT_ROOT}/tools "")
+build_external(caves ${HERMIT_ROOT}/caves "")
 
 if("${TARGET_ARCH}" STREQUAL "x86_64-hermit")
 
 build_external(arch_x86_loader ${HERMIT_ROOT}/arch/x86_64/loader "")
-
-## Intel's OpenMP runtime for x86 (libomp)
-build_external(libiomp ${HERMIT_ROOT}/usr/libomp ""
-		-DHERMIT=1
-		-DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
-		-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}/${TARGET_ARCH})
-
-# libomp is part of HermitCore's runtime and should be available before any
-# application will link
-add_dependencies(hermit libiomp)
 
 ## iRCCE
 build_external(ircce ${HERMIT_ROOT}/usr/ircce "")
@@ -178,9 +171,9 @@ add_dependencies(hermit xray)
 endif()
 
 ## Tests and benchmarks
-if("${TARGET_ARCH}" STREQUAL "x86_64-hermit")
 build_external(tests ${HERMIT_ROOT}/usr/tests hermit)
 build_external(benchmarks ${HERMIT_ROOT}/usr/benchmarks hermit)
+if("${TARGET_ARCH}" STREQUAL "x86_64-hermit")
 build_external(openmpbench ${HERMIT_ROOT}/usr/openmpbench hermit)
 endif()
 
@@ -224,7 +217,7 @@ set(CPACK_SYSTEM_NAME all)
 
 set(CPACK_PACKAGE_VERSION_MAJOR 0)
 set(CPACK_PACKAGE_VERSION_MINOR 2)
-set(CPACK_PACKAGE_VERSION_PATCH 8)
+set(CPACK_PACKAGE_VERSION_PATCH 9)
 
 set(CPACK_PACKAGE_CONTACT "Stefan Lankes <slankes@eonerc.rwth-aachen.de>")
 

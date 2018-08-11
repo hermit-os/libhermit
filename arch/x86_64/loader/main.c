@@ -166,7 +166,7 @@ void main(void)
 	if (BUILTIN_EXPECT(header->ident.data != ELF_DATA_2LSB, 0))
 		goto invalid;
 
-	if (header->ident.pad[0] != 0x42) {
+	if (header->ident.pad[0] != ELFOSABI_STANDALONE) {
 		kprintf("ELF file doesn't contain a HermitCore application (OS/ABI 0x%x)\n", (uint32_t)header->ident.pad[0]);
 		goto invalid;
 	}

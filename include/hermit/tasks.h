@@ -230,6 +230,8 @@ void NORETURN do_abort(void);
 /** @brief This function shall be called by leaving kernel-level tasks */
 void NORETURN leave_kernel_task(void);
 
+/** @brief Release the thread local storage of the current thread */
+void destroy_tls(void);
 
 /** @brief if a task exists with higher priority, HermitCore switch to it. */
 void check_scheduling(void);

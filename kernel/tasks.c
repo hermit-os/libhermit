@@ -47,8 +47,6 @@ extern atomic_int32_t cpu_online;
 
 volatile uint32_t go_down = 0;
 
-#define TLS_OFFSET	8
-
 /** @brief Array of task structures (aka PCB)
  *
  * A task's id will be its position in this array.
@@ -367,7 +365,6 @@ void finish_task_switch(void)
 void NORETURN do_exit(int arg)
 {
 	task_t* curr_task = per_core(current_task);
-	void* tls_addr = NULL;
 	const uint32_t core_id = CORE_ID;
 
 	LOG_INFO("Terminate task: %u, return value %d\n", curr_task->id, arg);
@@ -379,12 +376,8 @@ void NORETURN do_exit(int arg)
 	readyqueues[core_id].nr_tasks--;
 	spinlock_irqsave_unlock(&readyqueues[core_id].lock);
 
-	// do we need to release the TLS?
-	tls_addr = (void*)get_tls();
-	if (tls_addr) {
-		//LOG_INFO("Release TLS at %p\n", (char*)tls_addr - curr_task->tls_size);
-		kfree((char*)tls_addr - curr_task->tls_size - TLS_OFFSET);
-	}
+	// release the thread local storage
+	destroy_tls();
 
 	curr_task->status = TASK_FINISHED;
 

@@ -40,6 +40,9 @@
 #define GAP_BELOW	0x100000ULL
 #define IB_POOL_SIZE 0x400000ULL
 
+#define IO_GAP_SIZE		(768ULL << 20)
+#define IO_GAP_START		((1ULL << 32) - IO_GAP_SIZE)
+
 extern uint64_t base;
 extern uint64_t limit;
 
@@ -55,8 +58,8 @@ typedef struct free_list {
  */
 extern const void kernel_start;
 
-extern void* host_logical_addr;
-uint64_t ib_pool_addr = 0;
+//extern void* host_logical_addr;
+//uint64_t ib_pool_addr = 0;
 
 static spinlock_irqsave_t list_lock = SPINLOCK_IRQSAVE_INIT;
 
@@ -67,7 +70,7 @@ atomic_int64_t total_pages = ATOMIC_INIT(0);
 atomic_int64_t total_allocated_pages = ATOMIC_INIT(0);
 atomic_int64_t total_available_pages = ATOMIC_INIT(0);
 
-size_t get_pages(size_t npages)
+static size_t __get_pages(size_t npages, size_t align)
 {
 	size_t i, ret = 0;
 	free_list_t* curr = free_start;
@@ -82,15 +85,35 @@ size_t get_pages(size_t npages)
 	while(curr) {
 		i = (curr->end - curr->start) / PAGE_SIZE;
 		if (i > npages) {
+			if (!(curr->start & (align-1)))	 {
+				ret = curr->start;
+				curr->start += npages * PAGE_SIZE;
+				goto out;
+			} else {
+				size_t tmp = HUGE_PAGE_CEIL(curr->start);
+				if (tmp < curr->end) {
+					// Ok, we have to split the list
+					free_list_t* n = kmalloc(sizeof(free_list_t));
+					if (n) {
+						n->start = tmp;
+						n->end = curr->end;
+						curr->end = n->start;
+						n->prev = curr;
+						n->next = curr->next;
+						curr->next = n;
+					}
+				}
+			}
+		} else if ((i == npages) && !(curr->start & (align-1))) {
 			ret = curr->start;
-			curr->start += npages * PAGE_SIZE;
-			goto out;
-		} else if (i == npages) {
-			ret = curr->start;
-			if (curr->prev)
-				curr->prev = curr->next;
-			else
+			if (curr->prev) {
+				if (curr->next)
+					curr->next->prev = curr->prev;
+				curr->prev->next = curr->next;
+			} else {
 				free_start = curr->next;
+				free_start->prev = NULL;
+			}
 			if (curr != &init_list)
 				kfree(curr);
 			goto out;
@@ -111,35 +134,72 @@ out:
 	return ret;
 }
 
+size_t get_pages(size_t npages)
+{
+	return __get_pages(npages, PAGE_SIZE);
+}
+
+size_t get_huge_page(void)
+{
+	return __get_pages(HUGE_PAGE_SIZE/PAGE_SIZE, HUGE_PAGE_SIZE);
+}
+
 DEFINE_PER_CORE(size_t, ztmp_addr, 0);
 
-size_t get_zeroed_page(void)
+static inline size_t get_ztmp_addr(void)
 {
-	size_t phyaddr = get_page();
-	size_t viraddr;
-	uint8_t flags;
-
-	if (BUILTIN_EXPECT(!phyaddr, 0))
-		return 0;
-
-	flags = irq_nested_disable();
-
-	viraddr = per_core(ztmp_addr);
+	size_t viraddr = per_core(ztmp_addr);
 	if (BUILTIN_EXPECT(!viraddr, 0))
 	{
 		viraddr = vma_alloc(PAGE_SIZE, VMA_READ|VMA_WRITE|VMA_CACHEABLE);
 		if (BUILTIN_EXPECT(!viraddr, 0))
-			goto novaddr;
+			return 0;
 
 		LOG_DEBUG("Core %d uses 0x%zx as temporary address\n", CORE_ID, viraddr);
 		set_per_core(ztmp_addr, viraddr);
 	}
 
-	__page_map(viraddr, phyaddr, 1, PG_GLOBAL|PG_RW|PG_PRESENT, 0);
+	return viraddr;
+}
 
-	memset((void*) viraddr, 0x00, PAGE_SIZE);
+size_t get_zeroed_page(void)
+{
+	size_t phyaddr = get_page();
 
-novaddr:
+	if (BUILTIN_EXPECT(!phyaddr, 0))
+		return 0;
+
+	uint8_t flags = irq_nested_disable();
+
+	size_t viraddr = get_ztmp_addr();
+	if (!viraddr) {
+		__page_map(viraddr, phyaddr, 1, PG_GLOBAL|PG_RW|PG_PRESENT, 0);
+
+		memset((void*) viraddr, 0x00, PAGE_SIZE);
+	}
+
+	irq_nested_enable(flags);
+
+	return phyaddr;
+}
+
+size_t get_zeroed_huge_page(void)
+{
+	size_t phyaddr = get_huge_page();
+
+	if (BUILTIN_EXPECT(!phyaddr, 0))
+		return 0;
+
+	uint8_t flags = irq_nested_disable();
+
+	size_t viraddr = get_ztmp_addr();
+	if (!viraddr) {
+		for(uint32_t i=0; i<HUGE_PAGE_SIZE/PAGE_SIZE; i++) {
+			__page_map(viraddr, phyaddr+i*PAGE_SIZE, 1, PG_GLOBAL|PG_RW|PG_PRESENT, 0);
+			memset((void*) viraddr, 0x00, PAGE_SIZE);
+		}
+	}
+
 	irq_nested_enable(flags);
 
 	return phyaddr;
@@ -295,12 +355,19 @@ int memory_init(void)
 			goto oom;
 		}
 	} else {
-		// determine available memory
-		atomic_int64_add(&total_pages, (limit-base) >> PAGE_BITS);
-		atomic_int64_add(&total_available_pages, (limit-base) >> PAGE_BITS);
-
 		init_list.start = PAGE_2M_CEIL(base + image_size);
-		init_list.end = limit;
+
+		if (limit < IO_GAP_START) {
+			atomic_int64_add(&total_pages, (limit-base) >> PAGE_BITS);
+			atomic_int64_add(&total_available_pages, (limit-base) >> PAGE_BITS);
+
+			init_list.end = limit;
+		} else {
+			atomic_int64_add(&total_pages, (limit-base-IO_GAP_SIZE) >> PAGE_BITS);
+			atomic_int64_add(&total_available_pages, (limit-base-IO_GAP_SIZE) >> PAGE_BITS);
+
+			init_list.end = IO_GAP_START;
+		}
 	}
 
 	// determine allocated memory, we use 2MB pages to map the kernel
@@ -363,11 +430,29 @@ int memory_init(void)
 				}
 			}
 		}
+	} else {
+		// add region after the pci gap
+		if (limit > IO_GAP_START+IO_GAP_SIZE) {
+			free_list_t* last = &init_list;
+
+			last->next = kmalloc(sizeof(free_list_t));
+			if (BUILTIN_EXPECT(!last->next, 0))
+				goto oom;
+
+			last->next->prev = last;
+			last = last->next;
+			last->next = NULL;
+			last->start = IO_GAP_START+IO_GAP_SIZE;
+			last->end = limit;
+
+			LOG_INFO("Add region 0x%zx - 0x%zx\n", last->start, last->end);
+		}
 	}
 
 	// Ok, we are now able to use our memory management => update tss
 	tss_init(0);
 
+#if 0
 	if (host_logical_addr) {
 		LOG_INFO("Host has its guest logical address at %p\n", host_logical_addr);
 		size_t phyaddr = get_pages(IB_POOL_SIZE >> PAGE_BITS);
@@ -378,6 +463,7 @@ int memory_init(void)
 			LOG_INFO("Map IB pool at 0x%zx\n", ib_pool_addr);
 		}
 	}
+#endif
 
 	return ret;
 

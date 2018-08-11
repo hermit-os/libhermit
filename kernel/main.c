@@ -86,7 +86,7 @@ static const int sobufsize = 131072;
  * maintaining a value, rather their address is their value.
  */
 extern const void kernel_start;
-extern const void hbss_start;
+extern const void tdata_end;
 extern const void tls_start;
 extern const void tls_end;
 extern const void __bss_start;
@@ -113,14 +113,15 @@ extern void signal_init();
 
 static int hermit_init(void)
 {
-	uint32_t i;
+	clock_init();
+
 	size_t sz = (size_t) &percore_end0 - (size_t) &percore_start;
 
 	// initialize .kbss sections
-	memset((void*)&hbss_start, 0x00, (size_t) &__bss_start - (size_t) &hbss_start);
+	memset((void*)&tdata_end, 0x00, (size_t) &__bss_start - (size_t) &tdata_end);
 
 	// initialize .percore section => copy first section to all other sections
-	for(i=1; i<MAX_CORES; i++)
+	for(uint32_t i=1; i<MAX_CORES; i++)
 		memcpy((char*) &percore_start + i*sz, (char*) &percore_start, sz);
 
 	koutput_init();
@@ -325,7 +326,6 @@ static int initd(void* arg)
 	int magic = 0;
 	struct sockaddr_in6 server, client;
 	task_t* curr_task = per_core(current_task);
-	size_t heap = HEAP_START;
 	int argc, envc;
 	char** argv = NULL;
 	char **environ = NULL;
@@ -345,8 +345,8 @@ static int initd(void* arg)
 	}
 
 	curr_task->heap->flags = VMA_HEAP|VMA_USER;
-	curr_task->heap->start = PAGE_CEIL(heap);
-	curr_task->heap->end = PAGE_CEIL(heap);
+	curr_task->heap->start = HEAP_START;
+	curr_task->heap->end = HEAP_START;
 
 	// region is already reserved for the heap, we have to change the
 	// property of the first page
@@ -386,13 +386,13 @@ static int initd(void* arg)
 		for(i=0; i<uhyve_cmdsize.envc-1; i++)
 			uhyve_cmdval_phys.envp[i] = (char*) virt_to_phys((size_t) uhyve_cmdval.envp[i]);
 		// the last element is always NULL
-		uhyve_cmdval_phys.envp[uhyve_cmdsize.envc-1] = NULL;
+		uhyve_cmdval.envp[uhyve_cmdsize.envc-1] = NULL;
 		uhyve_cmdval_phys.envp = (char**) virt_to_phys((size_t) uhyve_cmdval_phys.envp);
 
 		uhyve_send(UHYVE_PORT_CMDVAL,
 				(unsigned)virt_to_phys((size_t)&uhyve_cmdval_phys));
 
-		LOG_INFO("Boot time: %d ms\n", (get_clock_tick() * 1000) / TIMER_FREQ);
+		LOG_INFO("Boot time: %d ms\n", get_uptime());
 		libc_start(uhyve_cmdsize.argc, uhyve_cmdval.argv, uhyve_cmdval.envp);
 
 		for(i=0; i<uhyve_cmdsize.argc; i++)
@@ -652,8 +652,8 @@ int hermit_main(void)
 	LOG_INFO("This is Hermit %s, build on %s\n", PACKAGE_VERSION, __DATE__);
 	//LOG_INFO("Isle %d of %d possible isles\n", isle, possible_isles);
 	LOG_INFO("Kernel starts at %p and ends at %p\n", &kernel_start, (size_t)&kernel_start + image_size);
-	//LOG_INFO("TLS image starts at %p and ends at %p (size 0x%zx)\n", &tls_start, &tls_end, ((size_t) &tls_end) - ((size_t) &tls_start));
-	LOG_INFO("BBS starts at %p and ends at %p\n", &hbss_start, (size_t)&kernel_start + image_size);
+	LOG_INFO("TLS image starts at %p and ends at %p (size 0x%zx)\n", &tls_start, &tls_end, ((size_t) &tls_end) - ((size_t) &tls_start));
+	LOG_INFO("BBS starts at %p and ends at %p\n", &tdata_end, (size_t)&kernel_start + image_size);
 	LOG_INFO("Per core data starts at %p and ends at %p\n", &percore_start, &percore_end);
 	LOG_INFO("Per core size 0x%zx\n", (size_t) &percore_end0 - (size_t) &percore_start);
 	if (get_cpu_frequency() > 0)

@@ -90,6 +90,13 @@ static inline uint32_t get_sctlr(void)
 	return status;
 }
 
+static inline uint64_t get_elr(void)
+{
+	uint64_t ret;
+	asm volatile("mrs %0, elr_el1" : "=r"(ret));
+	return ret;
+}
+
 /** @brief get the current exception level
  *
  * Helper function to get the current exception level
@@ -102,30 +109,16 @@ static inline uint32_t get_current_el(void)
 	return (curr>>2) & 0x3;
 }
 
-/** @brief Get thread local storage
- *
- * Helper function to get the TLS of the current task
- */
-static inline size_t get_tls(void) {
-	uint64_t addr = 0;
-	asm volatile(
-		"mrs %0, tpidr_el0"
-		: "+r"(addr)
-		:
-		: );
+/** @brief Get thread id register */
+static inline size_t get_tpidr(void) {
+	uint64_t addr;
+	asm volatile("mrs %0, tpidr_el0" : "=r"(addr));
 	return addr;
 }
 
-/** @brief Set thread local storage
- *
- * Helper function to set the TLS of the current task
- */
-static inline void set_tls(size_t addr) {
-	asm volatile(
-		"msr tpidr_el0, %0"
-		: "=r"(addr)
-		:
-		: );
+/** @brief Set thread id  register */
+static inline void set_tpidr(size_t addr) {
+	asm volatile("msr tpidr_el0, %0" :: "r"(addr));
 }
 
 /** @brief Read id_aa64mmfr0_el1 register
@@ -188,7 +181,7 @@ static inline void write_mair(size_t val) {
 /** @brief Read ttbr0_el1 register
  * @return ttbr0_el1's value
  */
-static inline size_t read_ttbr0(void) {
+static inline size_t get_ttbr0(void) {
         size_t val;
         asm volatile("mrs %0, ttbr0_el1" : "=r"(val) :: "memory");
         return val;
@@ -197,14 +190,14 @@ static inline size_t read_ttbr0(void) {
 /** @brief Write a value into ttbr0_el1 register
  * @param val The value you want to write into ttbr0_el1
  */
-static inline void write_ttbr0(size_t val) {
+static inline void set_ttbr0(size_t val) {
 	asm volatile("msr ttbr0_el1, %0" :: "r"(val) : "memory");
 }
 
 /** @brief Read ttbr1_el1 register
  * @return ttbr1_el1's value
  */
-static inline size_t read_ttbr1(void) {
+static inline size_t get_ttbr1(void) {
         size_t val;
         asm volatile("mrs %0, ttbr1_el1" : "=r"(val) :: "memory");
         return val;
@@ -213,7 +206,7 @@ static inline size_t read_ttbr1(void) {
 /** @brief Write a value into ttbr1_el1 register
  * @param val The value you want to write into ttbr1_el1
  */
-static inline void write_ttbr1(size_t val) {
+static inline void set_ttbr1(size_t val) {
 	asm volatile("msr ttbr1_el1, %0" :: "r"(val) : "memory");
 }
 
@@ -239,6 +232,27 @@ static inline uint64_t get_cntpct(void)
 {
 	uint64_t value;
 	asm volatile("mrs %0, cntpct_el0" : "=r" (value) :: "memory");
+	return value;
+}
+
+static inline uint64_t get_mpidr(void)
+{
+	uint64_t value;
+	asm volatile("mrs %0, mpidr_el1" : "=r"(value) :: "memory");
+	return value;
+}
+
+static inline uint64_t get_cpuactlr(void)
+{
+	uint64_t value;
+	asm volatile("mrs %0, s3_1_c15_c2_0" : "=r"(value) :: "memory");
+	return value;
+}
+
+static inline uint64_t get_cpuectlr(void)
+{
+	uint64_t value;
+	asm volatile("mrs %0, s3_1_c15_c2_1" : "=r"(value) :: "memory");
 	return value;
 }
 
@@ -422,7 +436,7 @@ void udelay(uint32_t usecs);
 /// Finalize the GIC initialization
 int irq_post_init(void);
 
-// Sets up the system clock
+/// Sets up the system clock
 int timer_calibration(void);
 
 extern atomic_int32_t cpu_online;

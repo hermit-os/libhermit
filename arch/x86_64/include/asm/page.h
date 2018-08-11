@@ -44,37 +44,25 @@
 /// Page offset bits
 #define PAGE_BITS		12
 #define PAGE_2M_BITS		21
+#define HUGE_PAGE_BITS		21
+
 /// The size of a single page in bytes
-#define PAGE_SIZE		( 1L << PAGE_BITS)
+#define PAGE_SIZE		(1UL << PAGE_BITS)
+#define PAGE_2M_SIZE		(1UL << PAGE_2M_BITS)
+#define HUGE_PAGE_SIZE		(1UL << HUGE_PAGE_BITS)
 /// Mask the page address without page map flags and XD flag
-#if 0
-#define PAGE_MASK		((~0UL) << PAGE_BITS)
-#define PAGE_2M_MASK		(~0UL) << PAGE_2M_BITS)
-#else
 #define PAGE_MASK		(((~0UL) << PAGE_BITS) & ~PG_XD)
 #define PAGE_2M_MASK		(((~0UL) << PAGE_2M_BITS) & ~PG_XD)
-#endif
+#define HUGE_PAGE_MASK		(((~0UL) << HUGE_PAGE_BITS) & ~PG_XD)
 
-#if 0
-/// Total operand width in bits
-#define BITS			32
-/// Physical address width (we dont support PAE)
-#define PHYS_BITS		BITS
-/// Linear/virtual address width
-#define VIRT_BITS		BITS
-/// Page map bits
-#define PAGE_MAP_BITS	10
-/// Number of page map indirections
-#define PAGE_LEVELS		2
-#else
 /// Total operand width in bits
 #define BITS			64
-/// Physical address width (maximum value)
+/// Physical address width (we dont support PAE)
 #define PHYS_BITS		52
 /// Linear/virtual address width
 #define VIRT_BITS		48
 /// Page map bits
-#define PAGE_MAP_BITS	9
+#define PAGE_MAP_BITS		9
 /// Number of page map indirections
 #define PAGE_LEVELS		4
 
@@ -89,14 +77,9 @@ static inline size_t sign_extend(ssize_t addr, int bits)
 	int shift = BITS - bits;
 	return (addr << shift) >> shift; // sign bit gets copied during arithmetic right shift
 }
-#endif
 
 /// Make address canonical
-#if 0
-#define CANONICAL(addr)		(addr) // only for 32 bit paging
-#else
 #define CANONICAL(addr)		sign_extend(addr, VIRT_BITS)
-#endif
 
 /// The number of entries in a page map table
 #define PAGE_MAP_ENTRIES	       (1L << PAGE_MAP_BITS)
@@ -107,28 +90,32 @@ static inline size_t sign_extend(ssize_t addr, int bits)
 #define PAGE_FLOOR(addr)	( (addr)                  & PAGE_MASK)
 
 /// Align to next 2M boundary
-#define PAGE_2M_CEIL(addr)	(((addr) + (1L << 21) - 1) & ((~0L) << 21))
+#define PAGE_2M_CEIL(addr)	(((addr) + (1L << 21) - 1) & ((~0UL) << PAGE_2M_BITS))
 /// Align to next 2M boundary
-#define PAGE_2M_FLOOR(addr)	( (addr)                   & ((~0L) << 21))
+#define HUGE_PAGE_CEIL(addr)	(((addr) + HUGE_PAGE_SIZE - 1) & ((~0UL) << HUGE_PAGE_BITS))
+/// Align to next 2M boundary
+#define PAGE_2M_FLOOR(addr)	( (addr)                   & ((~0UL) << PAGE_2M_BITS))
+/// Align to nex huge page boundary
+#define HUGE_PAGE_FLOOR(addr)	( (addr)                  & ((~0UL) << HUGE_PAGE_BITS))
 /// Align end of the kernel
 #define KERNEL_END_CEIL(addr)   (PAGE_2M_CEIL((addr)))
 
 /// Page is present
-#define PG_PRESENT		(1 << 0)
+#define PG_PRESENT		(1ULL << 0)
 /// Page is read- and writable
-#define PG_RW			(1 << 1)
+#define PG_RW			(1ULL << 1)
 /// Page is addressable from userspace
-#define PG_USER			(1 << 2)
+#define PG_USER			(1ULL << 2)
 /// Page write through is activated
-#define PG_PWT			(1 << 3)
+#define PG_PWT			(1ULL << 3)
 /// Page cache is disabled
-#define PG_PCD			(1 << 4)
+#define PG_PCD			(1ULL << 4)
 /// Page was recently accessed (set by CPU)
-#define PG_ACCESSED		(1 << 5)
+#define PG_ACCESSED		(1ULL << 5)
 /// Page is dirty due to recent write-access (set by CPU)
-#define PG_DIRTY		(1 << 6)
-/// Huge page: 4MB (or 2MB, 1GB)
-#define PG_PSE			(1 << 7)
+#define PG_DIRTY		(1ULL << 6)
+/// Huge page: 4KB (or 2MB, 1GB)
+#define PG_PSE			(1ULL << 7)
 /// Page attribute table
 #define PG_PAT			PG_PSE
 #if 1
@@ -139,15 +126,15 @@ static inline size_t sign_extend(ssize_t addr, int bits)
  */
 #define PG_GLOBAL		0
 #else
-#define PG_GLOBAL		(1 << 8)
+#define PG_GLOBAL		(1ULL << 8)
 #endif
 /// This table is a self-reference and should skipped by page_map_copy()
-#define PG_SELF			(1 << 9)
+#define PG_SELF			(1ULL << 9)
 
 /// Disable execution for this page
-#define PG_XD			(1L << 63)
+#define PG_XD			(1ULL << 63)
 
-#define PG_NX			(has_nx() ? PG_XD : 0)
+#define PG_NX			(has_nx() ? PG_XD : 0ULL)
 
 /** @brief Converts a virtual address to a physical
  *

@@ -41,11 +41,6 @@ MSR_KERNEL_GS_BASE equ 0xc0000102
 ; We use a special name to map this section at the begin of our kernel
 ; =>  Multiboot expects its magic number at the beginning of the kernel.
 SECTION .mboot
-global _start
-_start:
-    jmp start64
-
-align 4
     global base
     global limit
     global cpu_freq
@@ -76,6 +71,7 @@ align 4
     global hcgateway
     global hcmask
     global host_logical_addr
+    magic db "hermit  "
     base dq 0
     limit dq 0
     cpu_freq dd 0
@@ -125,7 +121,13 @@ boot_pgt:
 
 SECTION .ktext
 align 4
-start64:
+global _start
+_start:
+    ; do we run in ring 0?
+    mov eax, cs
+    cmp eax, 0x8
+    jne Llinux_main
+
     ; reset registers to kill any stale realmode selectors
     mov eax, 0x10
     mov ds, eax
@@ -247,6 +249,20 @@ Lsmp_main:
     call smp_start
     jmp $
 %endif
+
+Llinux_main:
+    ; we are running as linux program => exit program
+    mov rax, 4   ; __NR_write
+    mov rbx, 2   ; stderr
+    mov rcx, err_msg
+    mov rdx, err_len
+    int 0x80
+
+    mov rax, 1   ; __NR_exit
+    mov rbx, 0   ; first argument
+    int 0x80
+
+    jmp $
 
 ALIGN 64
 global gdt_flush
@@ -738,6 +754,10 @@ align 4096
 stack_bottom:
     TIMES KERNEL_STACK_SIZE DB 0xcd
 stack_top:
+
+proxy_name db "proxy", 0
+err_msg db "HermitCore isn't running in ring 0!", 10, 13, "Please use HermitCore's proxy to start applications!", 10, 13, 0
+err_len equ $ - err_msg
 
 ; add some hints to the ELF file
 SECTION .note.GNU-stack noalloc noexec nowrite progbits

@@ -49,6 +49,7 @@
 /* Note that linker symbols are not variables, they have no memory
  * allocated for maintaining a value, rather their address is their value. */
 extern const void kernel_start;
+extern const void __bss_start;
 
 /** Single-address space operating system => one lock for all tasks */
 static spinlock_irqsave_t page_lock = SPINLOCK_IRQSAVE_INIT;
@@ -65,6 +66,8 @@ static uint8_t expect_zeroed_pages = 0;
 
 size_t virt_to_phys(size_t addr)
 {
+	task_t* task = per_core(current_task);
+
 	if ((addr > (size_t) &kernel_start) &&
 	    (addr <= PAGE_2M_CEIL((size_t) &kernel_start + image_size)))
 	{
@@ -74,7 +77,13 @@ size_t virt_to_phys(size_t addr)
 		size_t phy   = entry &  PAGE_2M_MASK;	// physical page frame number
 
 		return phy | off;
+	} else if ((task->heap) && (addr >= task->heap->start) && (addr < task->heap->end)) {
+		size_t vpn   = addr >> (HUGE_PAGE_BITS); // virtual page number
+		size_t entry = (HUGE_PAGE_SIZE == PAGE_2M_SIZE) ? self[1][vpn] : self[2][vpn];	// page table entry
+		size_t off   = addr  & ~HUGE_PAGE_MASK;	// offset within page
+		size_t phy   = entry &  HUGE_PAGE_MASK;	// physical page frame number
 
+		return phy | off;
 	} else {
 		size_t vpn   = addr >> PAGE_BITS;	// virtual page number
 		size_t entry = self[0][vpn];		// page table entry
@@ -101,15 +110,34 @@ int page_set_flags(size_t viraddr, uint32_t npages, int flags)
 
 int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8_t do_ipi)
 {
-	int lvl, ret = -ENOMEM;
-	long vpn = viraddr >> PAGE_BITS;
-	long first[PAGE_LEVELS], last[PAGE_LEVELS];
+	ssize_t vpn = viraddr >> PAGE_BITS;
+	ssize_t first[PAGE_LEVELS] = {[0 ... PAGE_LEVELS-1] = 0};
+	ssize_t last[PAGE_LEVELS] = {[0 ... PAGE_LEVELS-1] = 0};
+	size_t page_size = PAGE_SIZE;
+	size_t page_bits = PAGE_BITS;
+	int32_t offset = 0;
+	int ret = -ENOMEM;
 	int8_t send_ipi = 0;
 
-	//kprintf("Map %d pages at 0x%zx\n", npages, viraddr);
+	//kprintf("Map %d pages at 0x%zx (0x%zx)\n", npages, viraddr, phyaddr);
+
+	if ((HUGE_PAGE_SIZE != PAGE_SIZE) && !(viraddr & (HUGE_PAGE_SIZE-1))
+	   && !(phyaddr & (HUGE_PAGE_SIZE-1))
+	   && (npages == HUGE_PAGE_SIZE/PAGE_SIZE)) {
+		LOG_DEBUG("Map huge page...\n");
+
+		npages = 1;
+		page_size = HUGE_PAGE_SIZE;
+		page_bits = HUGE_PAGE_BITS;
+
+		if (HUGE_PAGE_SIZE == PAGE_2M_SIZE)
+			offset = 1;
+		else // => 1GB pages
+			offset = 2;
+	}
 
 	/* Calculate index boundaries for page map traversal */
-	for (lvl=0; lvl<PAGE_LEVELS; lvl++) {
+	for (int32_t lvl=offset; lvl<PAGE_LEVELS; lvl++) {
 		first[lvl] = (vpn         ) >> (lvl * PAGE_MAP_BITS);
 		last[lvl]  = (vpn+npages-1) >> (lvl * PAGE_MAP_BITS);
 	}
@@ -118,9 +146,9 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8
 
 	/* Start iterating through the entries
 	 * beginning at the root table (PGD or PML4) */
-	for (lvl=PAGE_LEVELS-1; lvl>=0; lvl--) {
+	for (int32_t lvl=PAGE_LEVELS-1; lvl>=offset; lvl--) {
 		for (vpn=first[lvl]; vpn<=last[lvl]; vpn++) {
-			if (lvl) { /* PML4, PDPT, PGD */
+			if (lvl != offset) { /* PML4, PDPT, PGD */
 				if (!(self[lvl][vpn] & PG_PRESENT)) {
 					/* There's no table available which covers the region.
 					 * Therefore we need to create a new empty table. */
@@ -129,17 +157,12 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8
 						goto out;
 
 					/* Reference the new table within its parent */
-#if 0
-					self[lvl][vpn] = paddr | bits | PG_PRESENT | PG_USER | PG_RW | PG_ACCESSED | PG_DIRTY;
-#else
 					self[lvl][vpn] = (paddr | bits | PG_PRESENT | PG_USER | PG_RW | PG_ACCESSED | PG_DIRTY) & ~PG_XD;
-#endif
 
 					/* Fill new table with zeros */
 					memset(&self[lvl-1][vpn<<PAGE_MAP_BITS], 0, PAGE_SIZE);
 				}
-			}
-			else { /* PGT */
+			} else { /* last level page table */
 				int8_t flush = 0;
 
 				/* do we have to flush the TLB? */
@@ -150,13 +173,14 @@ int __page_map(size_t viraddr, size_t phyaddr, size_t npages, size_t bits, uint8
 
 				self[lvl][vpn] = phyaddr | bits | PG_PRESENT | PG_ACCESSED | PG_DIRTY;
 
-				if (flush)
-					/* There's already a page mapped at this address.
-					 * We have to flush a single TLB entry. */
-					tlb_flush_one_page(vpn << PAGE_BITS, 0);
+				// Do we map a huge page?
+				if (offset)
+					self[lvl][vpn] = self[lvl][vpn] | PG_PSE;
 
-				phyaddr += PAGE_SIZE;
-				//viraddr += PAGE_SIZE;
+				if (flush)
+					tlb_flush_one_page(vpn << page_bits, 0);
+
+				phyaddr += page_size;
 			}
 		}
 	}
@@ -182,8 +206,8 @@ int page_unmap(size_t viraddr, size_t npages)
 
 	/* Start iterating through the entries.
 	 * Only the PGT entries are removed. Tables remain allocated. */
-	size_t vpn, start = viraddr>>PAGE_BITS;
-	for (vpn=start; vpn<start+npages; vpn++) {
+	size_t start = viraddr>>PAGE_BITS;
+	for (size_t vpn=viraddr>>PAGE_BITS; vpn<start+npages; vpn++) {
 		self[0][vpn] = 0;
 		tlb_flush_one_page(vpn << PAGE_BITS, 0);
 	}
@@ -204,15 +228,16 @@ void page_fault_handler(struct state *s)
 	int check_pagetables(size_t vaddr)
 	{
 		int lvl;
-		long vpn = vaddr >> PAGE_BITS;
-		long index[PAGE_LEVELS];
+		int start = (HUGE_PAGE_SIZE == PAGE_2M_SIZE) ? 1 : 2;
+		ssize_t vpn = vaddr >> PAGE_BITS;
+		ssize_t index[PAGE_LEVELS];
 
 		/* Calculate index boundaries for page map traversal */
-		for (lvl=0; lvl<PAGE_LEVELS; lvl++)
+		for (lvl=start; lvl<PAGE_LEVELS; lvl++)
 			index[lvl] = vpn >> (lvl * PAGE_MAP_BITS);
 
 		/* do we have already a valid entry in the page tables */
-		for (lvl=PAGE_LEVELS-1; lvl>=0; lvl--) {
+		for (lvl=PAGE_LEVELS-1; lvl>=start; lvl--) {
 			vpn = index[lvl];
 
 			if (!(self[lvl][vpn] & PG_PRESENT))
@@ -224,7 +249,8 @@ void page_fault_handler(struct state *s)
 
 	spinlock_irqsave_lock(&page_lock);
 
-	if ((task->heap) && (viraddr >= task->heap->start) && (viraddr < task->heap->end)) {
+	if (((task->heap) && (viraddr >= task->heap->start) && (viraddr < task->heap->end))
+	   || ((viraddr >= (size_t) &__bss_start) && (viraddr < (size_t) &kernel_start + image_size))) {
 		size_t flags;
 		int ret;
 
@@ -232,15 +258,15 @@ void page_fault_handler(struct state *s)
 		 * do we have a valid page table entry? => flush TLB and return
 		 */
 		if (check_pagetables(viraddr)) {
-			//tlb_flush_one_page(viraddr);
+			//tlb_flush_one_page(viraddr, 0);
 			spinlock_irqsave_unlock(&page_lock);
 			return;
 		}
 
 		 // on demand userspace heap mapping
-		viraddr &= PAGE_MASK;
+		viraddr &= HUGE_PAGE_MASK;
 
-		size_t phyaddr = expect_zeroed_pages ? get_zeroed_page() : get_page();
+		size_t phyaddr = expect_zeroed_pages ? get_zeroed_huge_page() : get_huge_page();
 		if (BUILTIN_EXPECT(!phyaddr, 0)) {
 			LOG_ERROR("out of memory: task = %u\n", task->id);
 			goto default_handler;
@@ -249,7 +275,7 @@ void page_fault_handler(struct state *s)
 		flags = PG_USER|PG_RW;
 		if (has_nx()) // set no execution flag to protect the heap
 			flags |= PG_XD;
-		ret = __page_map(viraddr, phyaddr, 1, flags, 0);
+		ret = __page_map(viraddr, phyaddr, HUGE_PAGE_SIZE/PAGE_SIZE, flags, 0);
 
 		if (BUILTIN_EXPECT(ret, 0)) {
 			LOG_ERROR("map_region: could not map %#lx to %#lx, task = %u\n", phyaddr, viraddr, task->id);
@@ -279,7 +305,7 @@ default_handler:
 	LOG_ERROR("rax %#lx, rbx %#lx, rcx %#lx, rdx %#lx, rbp, %#lx, rsp %#lx rdi %#lx, rsi %#lx, r8 %#lx, r9 %#lx, r10 %#lx, r11 %#lx, r12 %#lx, r13 %#lx, r14 %#lx, r15 %#lx\n",
 		s->rax, s->rbx, s->rcx, s->rdx, s->rbp, s->rsp, s->rdi, s->rsi, s->r8, s->r9, s->r10, s->r11, s->r12, s->r13, s->r14, s->r15);
 	if (task->heap)
-		LOG_ERROR("Heap 0x%llx - 0x%llx\n", task->heap->start, task->heap->end);
+		LOG_ERROR("Heap 0x%zx - 0x%zx\n", task->heap->start, task->heap->end);
 
 	// clear cr2 to signalize that the pagefault is solved by the pagefault handler
 	write_cr2(0);

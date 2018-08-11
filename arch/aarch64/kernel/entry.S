@@ -104,6 +104,7 @@ cpu_online: .dword 0
 possible_cpus: .dword 0
 .global current_boot_id
 current_boot_id: .dword 0
+.global isle
 isle: .dword -1
 .global possible_isles
 possible_isles: .dword 1
@@ -126,6 +127,23 @@ host_logical_addr: .quad 0
 .global uart_mmio
 uart_mmio: .dword 0
 
+.global l0_pgtable
+.align 12
+l0_pgtable:
+    .quad l1_pgtable + PT_PT
+    .space 510*8, 0
+    .quad l0_pgtable + PT_PT + PT_SELF
+l1_pgtable:
+    .quad l2_pgtable + PT_PT
+    .space 511*8, 0
+l2_pgtable:
+    .quad l3_pgtable + PT_PT
+    .space 511*8, 0
+l3_pgtable:
+    .quad 0x00000000 + PT_MEM_CD // map II ports
+    .quad 0x09000000 + PT_MEM_CD // map QEMU's uart port
+    .space 510*8, 0
+
 start64:
   //mrs x0, s3_1_c15_c3_0 // Read EL1 Configuration Base Address Register
 
@@ -135,6 +153,11 @@ start64:
   /* store x5=dtb */
   /*adrp    x1, dtb
   str     x5, [x1, #:lo12:dtb]*/
+
+  /* reset thread id registers */
+  mov x0, #0
+  msr tpidr_el0, x0
+  msr tpidr_el1, x0
 
   /*
    * Disable the MMU. We may have entered the kernel with it on and
@@ -168,6 +191,12 @@ start64:
   /* Set exception table */
   ldr x0, =vector_table
   msr vbar_el1, x0
+
+  /* Enable hardware coherency between cores */
+  /*mrs x0, S3_1_c15_c2_1	// read EL1 CPU Extended Control Register
+  orr x0, x0, #(1 << 6)	// set the SMPEN bit
+  msr S3_1_c15_c2_1, x0	// write EL1 CPU Extended Control Register
+  isb*/
 
   /* Turning on MMU */
   dsb sy
@@ -290,7 +319,10 @@ _setup_pgtable:
     cmp     x0, 0
     b.ne    4f
 
-    ldr     x0, =kernel_end
+    ldr     x0, =kernel_start
+    ldr     x1, =image_size
+    ldr     x1, [x1]
+    add     x0, x0, x1
     /* align to a 16KByte boundary */
     add     x0, x0, 0x10000
     mov     x1, ~0xFFFF
@@ -374,7 +406,9 @@ ldr     \xreg, [sp], #8
      stp x5, x6, [sp, #-16]!
      stp x3, x4, [sp, #-16]!
      stp x1, x2, [sp, #-16]!
-     str x0, [sp, #-16]!
+
+     mrs x22, tpidr_el0
+     stp x22, x0, [sp, #-16]!
 
      mrs x22, elr_el1
      mrs x23, spsr_el1
@@ -386,7 +420,9 @@ ldr     \xreg, [sp], #8
      msr elr_el1, x22
      msr spsr_el1, x23
 
-     ldr x0, [sp], #16
+     ldp x22, x0, [sp], #16
+     msr tpidr_el0, x22
+
      ldp x1, x2, [sp], #16
      ldp x3, x4, [sp], #16
      ldp x5, x6, [sp], #16
@@ -553,21 +589,3 @@ END(vector_table)
 boot_stack: .skip KERNEL_STACK_SIZE
 .global boot_ist
 boot_ist: .skip KERNEL_STACK_SIZE
-
-
-.global l0_pgtable
-.align 12
-l0_pgtable:
-    .quad l1_pgtable + PT_PT
-    .space 510*8, 0
-    .quad l0_pgtable + PT_PT + PT_SELF
-l1_pgtable:
-    .quad l2_pgtable + PT_PT
-    .space 511*8, 0
-l2_pgtable:
-    .quad l3_pgtable + PT_PT
-    .space 511*8, 0
-l3_pgtable:
-    .quad 0x00000000 + PT_MEM_CD // map II ports
-    .quad 0x09000000 + PT_MEM_CD // map QEMU's uart port
-    .space 510*8, 0

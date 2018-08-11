@@ -44,10 +44,14 @@
 /// Page offset bits
 #define PAGE_BITS		12
 #define PAGE_2M_BITS		21
+#define HUGE_PAGE_BITS		12
 /// The size of a single page in bytes
 #define PAGE_SIZE		( 1L << PAGE_BITS)
+#define PAGE_2M_SIZE		( 1L << PAGE_2M_BITS)
+#define HUGE_PAGE_SIZE		( 1L << HUGE_PAGE_BITS)
 #define PAGE_MASK		((~0L) << PAGE_BITS)
 #define PAGE_2M_MASK		((~0L) << PAGE_2M_BITS)
+#define HUGE_PAGE_MASK		((~0L) << HUGE_PAGE_BITS)
 
 /// Total operand width in bits
 #define BITS			64
@@ -72,8 +76,12 @@
 #define PAGE_2M_CEIL(addr)	(((addr) + (1L << 21) - 1) & ((~0L) << 21))
 /// Align to 2M boundary
 #define PAGE_2M_FLOOR(addr)	( (addr)                   & ((~0L) << 21))
+/// Align to next huge boundary
+#define PAGE_HUGE_CEIL(addr)	(((addr) + HUGE_PAGE_MASK - 1) & HUGE_PAGE_MASK)
+/// Align to huge page boundary
+#define PAGE_HUGE_FLOOR(addr)	( (addr)                  & HUGE_PAGE_MASK)
 // Align the kernel end
-#define KERNEL_END_CEIL(addr)	(((addr) + (16L << 10)) & ~0xFFFF)
+#define KERNEL_END_CEIL(addr)	(((addr) + (16L << 10) - 1) & ~0x3FFFL)
 
 /// Page is present
 #define PG_PRESENT		(1UL << 0)
@@ -180,11 +188,14 @@ int page_set_flags(size_t viraddr, uint32_t npages, int flags);
 
 /** @brief Handler to map on demand pages for the heap
  *
+ * * @param viraddr Virtual address, which triggers the page fault
+ * * @param pc Instruction pointer, where the handler is triggered
+ *
  * @return
  * - 0 on success
  * - -EINVAL (-22) on failure.
  */
-int page_fault_handler(size_t viraddr);
+int page_fault_handler(size_t viraddr, size_t pc);
 
 /** @brief Flush Translation Lookaside Buffer
  */
@@ -239,5 +250,9 @@ static inline void tlb_flush_range(size_t start, size_t end)
 	asm volatile ("dsb ish" ::: "memory");
 	asm volatile ("isb" ::: "memory");
 }
+
+/** @brief Print the current page table tree
+ */
+void page_dump(void);
 
 #endif

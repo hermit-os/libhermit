@@ -125,28 +125,13 @@ static inline uint8_t dehex(char c)
 
 static err_t uhyve_netif_output(struct netif* netif, struct pbuf* p)
 {
-	uhyve_netif_t* uhyve_netif = netif->state;
-	uint8_t transmitid = uhyve_netif->tx_queue % TX_BUF_NUM;
 	uint32_t i;
 	struct pbuf *q;
-
-	if(BUILTIN_EXPECT((uhyve_netif->tx_queue - uhyve_netif->tx_complete) > (TX_BUF_NUM - 1), 0)) {
-		LOG_ERROR("uhyve_netif_output: too many packets at once\n");
-		return ERR_IF;
-	}
 
 	if(BUILTIN_EXPECT(p->tot_len > 1792, 0)) {
 		LOG_ERROR("uhyve_netif_output: packet (%i bytes) is longer than 1792 bytes\n", p->tot_len);
 		return ERR_IF;
 	}
-
-	if(uhyve_netif->tx_inuse[transmitid] == 1) {
-		LOG_ERROR("uhyve_netif_output: %i already inuse\n", transmitid);
-		return ERR_IF;
-	}
-
-	uhyve_netif->tx_queue++;
-	uhyve_netif->tx_inuse[transmitid] = 1;
 
 #if ETH_PAD_SIZE
 	pbuf_header(p, -ETH_PAD_SIZE); /*drop padding word */
@@ -157,21 +142,16 @@ static err_t uhyve_netif_output(struct netif* netif, struct pbuf* p)
 	 * This list MUST consist of a single packet ONLY
 	 */
 	for (q = p, i = 0; q != 0; q = q->next) {
-		memcpy(uhyve_netif->tx_buf[transmitid] + i, q->payload, q->len);
+		// send the packet
+		uhyve_net_write_sync(q->payload, q->len);
 		i += q->len;
 	}
-	// send the packet
-	uhyve_net_write_sync(uhyve_netif->tx_buf[transmitid], p->tot_len);
 
 #if ETH_PAD_SIZE
 	pbuf_header(p, ETH_PAD_SIZE); /* reclaim the padding word */
 #endif
 
 	LINK_STATS_INC(link.xmit);
-
-	uhyve_netif->tx_complete++;
-	uhyve_netif->tx_inuse[transmitid] = 0;
-//	LOG_INFO("Transmit OK | queue = %i, complete = %i \n", uhyve_netif->tx_queue, uhyve_netif->tx_complete);
 
 	return ERR_OK;
 }
@@ -259,18 +239,6 @@ err_t uhyve_netif_init (struct netif* netif)
 	}
 	memset(uhyve_netif->rx_buf, 0x00, RX_BUF_LEN + 16);
 
-	uhyve_netif->tx_buf[0] = page_alloc(TX_BUF_NUM * TX_BUF_LEN, VMA_READ|VMA_WRITE|VMA_CACHEABLE);
-	if (!(uhyve_netif->tx_buf[0])) {
-		LOG_ERROR("uhyve_netif_init: out of memory\n");
-		page_free(uhyve_netif->rx_buf, RX_BUF_LEN + 16);
-		kfree(uhyve_netif);
-		return ERR_MEM;
-	}
-	memset(uhyve_netif->tx_buf[0], 0x00, TX_BUF_NUM * TX_BUF_LEN);
-	for (int i = 1; i < TX_BUF_NUM; i++) {
-		uhyve_netif->tx_buf[i] = uhyve_netif->tx_buf[0] + i*TX_BUF_LEN;
-	}
-
 	netif->state = uhyve_netif;
 	mynetif = netif;
 
@@ -306,7 +274,7 @@ err_t uhyve_netif_init (struct netif* netif)
 	netif->output = etharp_output;
 	netif->linkoutput = uhyve_netif_output;
 	/* maximum transfer unit */
-	netif->mtu = 1500;
+	netif->mtu = 32768;
 	/* broadcast capability */
 	netif->flags |= NETIF_FLAG_BROADCAST | NETIF_FLAG_ETHARP | NETIF_FLAG_IGMP | NETIF_FLAG_LINK_UP | NETIF_FLAG_MLD6;
 
@@ -318,6 +286,9 @@ err_t uhyve_netif_init (struct netif* netif)
 
 	LOG_INFO("uhyve_netif_init: OK\n");
 	uhyve_net_init_ok = 1;
+
+	/* check if we already receive an interrupt */
+	uhyve_netif_poll();
 
 	return ERR_OK;
 }

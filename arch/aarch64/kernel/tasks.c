@@ -32,11 +32,6 @@
 #include <hermit/logging.h>
 #include <hermit/string.h>
 
-#define TLS_ALIGNBITS		5
-#define TLS_ALIGNSIZE		(1L << TLS_ALIGNBITS)
-#define TSL_ALIGNMASK		((~0L) << TLS_ALIGNBITS)
-#define TLS_FLOOR(addr)		((((size_t)addr) + TLS_ALIGNSIZE - 1) & TSL_ALIGNMASK)
-
 extern int smp_main(void);
 
 /*
@@ -45,12 +40,24 @@ extern int smp_main(void);
  */
 extern const void tls_start;
 extern const void tls_end;
+extern const void tdata_end;
 
 extern atomic_int32_t cpu_online;
 extern atomic_int32_t current_boot_id;
 
-static char tls[16][DEFAULT_STACK_SIZE];
-static int id = 0;
+typedef union dtv
+{
+	size_t counter;
+	struct {
+		void *val;
+		uint8_t is_static;
+	} pointer;
+} dtv_t;
+
+typedef struct {
+	dtv_t *dtv;	/* dtv */
+	void *privat;	/* private */
+} thread_block_t;
 
 static int init_tls(void)
 {
@@ -58,31 +65,33 @@ static int init_tls(void)
 
 	// do we have a thread local storage?
 	if (((size_t) &tls_end - (size_t) &tls_start) > 0) {
-		char* tls_addr = NULL;
-		size_t tpidr_el0;
+		size_t tdata_size = (size_t) &tdata_end - (size_t) &tls_start;
 
 		curr_task->tls_addr = (size_t) &tls_start;
 		curr_task->tls_size = (size_t) &tls_end - (size_t) &tls_start;
 
-		//tls_addr = kmalloc(curr_task->tls_size + TLS_ALIGNSIZE + sizeof(size_t));
-		tls_addr = tls[id];
-		id++;
-		if (BUILTIN_EXPECT(!tls_addr, 0)) {
+		thread_block_t* tcb = (thread_block_t*) kmalloc(curr_task->tls_size+sizeof(thread_block_t));
+		if (BUILTIN_EXPECT(!tcb, 0)) {
 			LOG_ERROR("load_task: heap is missing!\n");
 			return -ENOMEM;
 		}
 
-		memset(tls_addr, 0x00, TLS_ALIGNSIZE);
-		memcpy((void*) TLS_FLOOR(tls_addr), (void*) curr_task->tls_addr, curr_task->tls_size);
-		tpidr_el0 = (size_t) TLS_FLOOR(tls_addr) + curr_task->tls_size;
-		*((size_t*)tpidr_el0) = tpidr_el0;
+		memset((void*) tcb, 0x00, curr_task->tls_size+sizeof(thread_block_t));
+		tcb->dtv = (dtv_t*) &tcb[1];
+		memcpy((char*) tcb->dtv, (void*) curr_task->tls_addr, tdata_size);
 
-		// set tpidr_el0 register to the TLS segment
-		set_tls(tpidr_el0);
-		//LOG_INFO("TLS of task %d on core %d starts at 0x%zx (size 0x%zx)\n", curr_task->id, CORE_ID, TLS_FLOOR(tls_addr), curr_task->tls_size);
-	} else set_tls(0); // no TLS => clear tpidr_el0 register
+		set_tpidr((size_t) tcb);
+		LOG_INFO("TLS of task %d on core %d starts at 0x%zx (tls size 0x%zx)\n", curr_task->id, CORE_ID, get_tpidr(), curr_task->tls_size);
+	} else set_tpidr(0); // no TLS => clear tpidr_el0 register
 
 	return 0;
+}
+
+void destroy_tls(void)
+{
+	size_t tpidr = get_tpidr();
+	if (tpidr)
+		kfree((void*)tpidr);
 }
 
 static int thread_entry(void* arg, size_t ep)
@@ -177,7 +186,11 @@ int smp_start(void)
 
 	LOG_INFO("Try to initialize processor (local id %d)\n", core_id);
 
+	cpu_detection();
+
 	atomic_int32_inc(&cpu_online);
+
+	irq_enable();
 
 	return smp_main();
 }
@@ -213,11 +226,3 @@ const int32_t is_uhyve(void)
 {
 	return (uhyve != 0);
 }
-
-#if 0
-extern uint32_t single_kernel;
-const int32_t is_single_kernel(void)
-{
-	return (single_kernel != 0);
-}
-#endif

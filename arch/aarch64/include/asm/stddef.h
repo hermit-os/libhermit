@@ -40,9 +40,20 @@
 extern "C" {
 #endif
 
-#define per_core(var) (var)
+#define per_core(var) ({ \
+	typeof(var)* ptr = 0; \
+	asm volatile("mrs %0, tpidr_el1\n\t" \
+		     "add %0, %0, %1" : "+r"(ptr) \
+		     : "r"(&var) : "memory"); \
+	*ptr; })
 
-#define set_per_core(var, value) (var = value)
+
+#define set_per_core(var, value) ({ \
+	typeof(var)* ptr = 0; \
+	asm volatile("mrs %0, tpidr_el1\n\t" \
+		     "add %0, %0, %1" : "+r"(ptr) \
+		     : "r"(&var) : "memory"); \
+	*ptr = value; })
 
 #define KERNEL_SPACE (1ULL << 30)
 
@@ -84,7 +95,7 @@ typedef wchar_t wint_t;
 struct state {
 	uint64_t elr_el1;
 	uint64_t spsr_el1;
-	uint64_t res;
+	uint64_t tpidr_el0;
 	uint64_t x0;
 	uint64_t x1;
 	uint64_t x2;
@@ -126,7 +137,7 @@ const int32_t is_uhyve(void);
 static inline const int32_t is_single_kernel(void) { return 1; }
 static inline const char* get_cmdline(void) { return 0; }
 static inline int init_rcce(void) { return 0; }
-static inline void print_cpu_status(int isle) {}
+void print_cpu_status(int isle);
 
 #ifdef __cplusplus
 }

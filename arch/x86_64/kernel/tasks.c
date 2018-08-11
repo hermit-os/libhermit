@@ -40,6 +40,7 @@
 #include <asm/multiboot.h>
 #include <asm/irqflags.h>
 
+#define TLS_OFFSET		8
 #define TLS_ALIGNBITS		5
 #define TLS_ALIGNSIZE		(1L << TLS_ALIGNBITS)
 #define TSL_ALIGNMASK		((~0L) << TLS_ALIGNBITS)
@@ -85,6 +86,18 @@ static int init_tls(void)
 	} else set_tls(0); // no TLS => clear fs register
 
 	return 0;
+}
+
+void destroy_tls(void)
+{
+	task_t* curr_task = per_core(current_task);
+
+	// do we need to release the TLS?
+	void* tls_addr = (void*)get_tls();
+	if (tls_addr) {
+		//LOG_INFO("Release TLS at %p\n", (char*)tls_addr - curr_task->tls_size);
+		kfree((char*)tls_addr - curr_task->tls_size - TLS_OFFSET);
+	}
 }
 
 static int thread_entry(void* arg, size_t ep)

@@ -51,7 +51,9 @@ typedef struct free_list {
  * maintaining a value, rather their address is their value.
  */
 extern const void kernel_start;
-extern const void kernel_end;
+
+// defined in entry.S
+extern size_t image_size;
 
 static spinlock_t list_lock = SPINLOCK_INIT;
 
@@ -94,7 +96,7 @@ size_t get_pages(size_t npages)
 		curr = curr->next;
 	}
 out:
-	LOG_DEBUG("get_pages: ret 0%llx, curr->start 0x%llx, curr->end 0x%llx\n", ret, curr->start, curr->end);
+	LOG_DEBUG("get_pages: ret 0x%llx, npages %zd, curr->start 0x%llx, curr->end 0x%llx\n", ret, npages, curr->start, curr->end);
 
 	spinlock_unlock(&list_lock);
 
@@ -245,7 +247,6 @@ void page_free(void* viraddr, size_t sz)
 
 int memory_init(void)
 {
-	size_t image_sz = (size_t) &kernel_end - (size_t) &kernel_start;
 	int ret = 0;
 
 	// enable paging and map Multiboot modules etc.
@@ -255,22 +256,22 @@ int memory_init(void)
 		return ret;
 	}
 
-	LOG_INFO("memory_init: base 0x%zx, image_size 0x%zx, limit 0x%zx\n", base, image_sz, limit);
+	LOG_INFO("memory_init: base 0x%zx, image_size 0x%zx, limit 0x%zx\n", base, image_size, limit);
 
 	// determine available memory
 	atomic_int64_add(&total_pages, (limit-base) >> PAGE_BITS);
 	atomic_int64_add(&total_available_pages, (limit-base) >> PAGE_BITS);
 
 	//initialize free list
-	init_list.start = PAGE_FLOOR((size_t) &kernel_end + (16+511)*PAGE_SIZE);
+	init_list.start = PAGE_FLOOR((size_t) &kernel_start + image_size + (16+511)*PAGE_SIZE);
 	if (limit < GICD_BASE)
 		init_list.end = limit;
 	else
 		init_list.end = GICD_BASE;
 
-	// determine allocated memory, we use 2MB pages to map the kernel
-	atomic_int64_add(&total_allocated_pages, PAGE_FLOOR((size_t) &kernel_end + 511*PAGE_SIZE) >> PAGE_BITS);
-	atomic_int64_sub(&total_available_pages, PAGE_FLOOR((size_t) &kernel_end + 511*PAGE_SIZE) >> PAGE_BITS);
+	// determine allocated memory
+	atomic_int64_add(&total_allocated_pages, PAGE_FLOOR((size_t) &kernel_start + image_size + 511*PAGE_SIZE) >> PAGE_BITS);
+	atomic_int64_sub(&total_available_pages, PAGE_FLOOR((size_t) &kernel_start + image_size + 511*PAGE_SIZE) >> PAGE_BITS);
 
 	LOG_INFO("free list starts at 0x%zx, limit 0x%zx\n", init_list.start, init_list.end);
 
