@@ -41,6 +41,11 @@ MSR_KERNEL_GS_BASE equ 0xc0000102
 ; We use a special name to map this section at the begin of our kernel
 ; =>  Multiboot expects its magic number at the beginning of the kernel.
 SECTION .mboot
+global _start
+_start:
+    jmp start64
+
+align 4
     global base
     global limit
     global cpu_freq
@@ -71,7 +76,6 @@ SECTION .mboot
     global hcgateway
     global hcmask
     global host_logical_addr
-    magic db "hermit  "
     base dq 0
     limit dq 0
     cpu_freq dd 0
@@ -121,8 +125,7 @@ boot_pgt:
 
 SECTION .ktext
 align 4
-global _start
-_start:
+start64:
     ; do we run in ring 0?
     mov eax, cs
     cmp eax, 0x8
