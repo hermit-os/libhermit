@@ -53,7 +53,7 @@ toolchain, which can be installed as follows:
 ```bash
 $ echo "deb [trusted=yes] https://dl.bintray.com/hermitcore/ubuntu bionic main" | sudo tee -a /etc/apt/sources.list
 $ sudo apt-get -qq update
-$ sudo apt-get install binutils-hermit newlib-hermit pte-hermit gcc-hermit libhermit
+$ sudo apt-get install binutils-hermit newlib-hermit pte-hermit gcc-hermit libomp-hermit libhermit
 ```
 
 For non-Debian based systems, a docker image with the complete toolchain is provided and can be installed as follows:
