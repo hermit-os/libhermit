@@ -50,12 +50,12 @@ checkinstall -R -y --exclude=build --pkggroup=main --maintainer=stefan@eonerc.rw
 #cmake -DTOOLCHAIN_BIN_DIR=/opt/hermit/bin -DCMAKE_INSTALL_PREFIX=/opt/hermit ..
 #make -j1 package
 
-exit 0
-
 cd ..
 mkdir -p tmp
-dpkg-deb -R build/libhermit-0.2.9-all.deb tmp
+dpkg-deb -R build/libhermit-0.2.9.deb tmp
 rm -rf build/*.deb build/_CPack_Packages
+
+exit 0
 
 fi
 
