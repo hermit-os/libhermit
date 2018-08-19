@@ -52,7 +52,7 @@ checkinstall -D -y --exclude=build --pkggroup=main --maintainer=stefan@eonerc.rw
 
 cd ..
 mkdir -p tmp
-dpkg-deb -R build/libhermit-0.2.9.deb tmp
+dpkg-deb -R build/libhermit_0.2.9-1_amd64.deb tmp
 rm -rf build/*.deb build/_CPack_Packages
 
 exit 0
