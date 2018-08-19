@@ -1,7 +1,7 @@
 {
     "package": {
         "name": "libhermit",
-	"repo": "ubuntu",
+        "repo": "REPLACE_REPO",
         "subject": "hermitcore",
         "website_url": "http://www.hermitcore.org",
         "issue_tracker_url": "https://github.com/RWTH-OS/HermitCore/issues",
@@ -23,7 +23,7 @@
     {
       "includePattern": "../(libhermit[^/]*.deb$)", "uploadPattern": "$1",
       "matrixParams": {
-        "deb_distribution": "bionic",
+        "deb_distribution": "REPLACE_OS",
         "deb_component": "main",
         "deb_architecture": "amd64",
 	  "override": 1}
