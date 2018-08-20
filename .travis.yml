@@ -4,7 +4,7 @@ git:
   submodules: true
 env:
   matrix:
-  - OS_TYPE=debian OS_VERSION=9 OS_NAME=stretch
+  #- OS_TYPE=debian OS_VERSION=9 OS_NAME=stretch
   - OS_TYPE=ubuntu OS_VERSION=18.04 OS_NAME=bionic
 services:
 - docker
