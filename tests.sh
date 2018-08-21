@@ -36,27 +36,27 @@ apt-get install -y qemu-system-x86 cmake wget curl gnupg checkinstall gawk dialo
 
 echo "deb [trusted=yes] https://dl.bintray.com/hermitcore/$OS_NAME $OS_VERSION main" | tee -a /etc/apt/sources.list
 apt-get -qq update
-apt-get install -y --allow-unauthenticated -o Dpkg::Options::="--force-overwrite" binutils-hermit newlib-hermit pte-hermit gcc-hermit libomp-hermit
-#apt-get install -y --allow-unauthenticated -o Dpkg::Options::="--force-overwrite" binutils-hermit newlib-hermit pte-hermit gcc-hermit-bootstrap
+#apt-get install -y --allow-unauthenticated -o Dpkg::Options::="--force-overwrite" binutils-hermit newlib-hermit pte-hermit gcc-hermit libomp-hermit
+apt-get install -y --allow-unauthenticated -o Dpkg::Options::="--force-overwrite" binutils-hermit newlib-hermit pte-hermit gcc-hermit-bootstrap
 export PATH=/opt/hermit/bin:$PATH
 
 mkdir -p build
 cd build
 cmake -DTOOLCHAIN_BIN_DIR=/opt/hermit/bin -DCMAKE_INSTALL_PREFIX=/opt/hermit -DBOOTSTRAP=true ..
 make hermit-bootstrap
-#checkinstall -D -y --exclude=build --pkggroup=main --maintainer=stefan@eonerc.rwth-aachen.de --pkgsource=https://hermitcore.org --pkgname=libhermit --pkgversion=0.2.9 --pkglicense=BSD make hermit-bootstrap-install
-make hermit-bootstrap-install
-rm -rf *
-cmake -DTOOLCHAIN_BIN_DIR=/opt/hermit/bin -DCMAKE_INSTALL_PREFIX=/opt/hermit ..
-make -j1 package
+checkinstall -D -y --exclude=build --pkggroup=main --maintainer=stefan@eonerc.rwth-aachen.de --pkgsource=https://hermitcore.org --pkgname=libhermit --pkgversion=0.2.9 --pkglicense=BSD make hermit-bootstrap-install
+#make hermit-bootstrap-install
+#rm -rf *
+#cmake -DTOOLCHAIN_BIN_DIR=/opt/hermit/bin -DCMAKE_INSTALL_PREFIX=/opt/hermit ..
+#make -j1 package
 
 cd ..
 mkdir -p tmp
-dpkg-deb -R build/libhermit-0.2.9-all.deb tmp
-#dpkg-deb -R build/libhermit_0.2.9-1_amd64.deb tmp
+#dpkg-deb -R build/libhermit-0.2.9-all.deb tmp
+dpkg-deb -R build/libhermit_0.2.9-1_amd64.deb tmp
 rm -rf build/*.deb build/_CPack_Packages
 
-#exit 0
+exit 0
 
 fi
 
