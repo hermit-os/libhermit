@@ -74,6 +74,8 @@ extern size_t image_size;
 #define UHYVE_PORT_NETREAD		0x680
 #define UHYVE_PORT_NETSTAT		0x700
 
+#define UHYVE_PORT_ALLOCLIST 		0x720
+
 /* Ports and data structures for uhyve command line arguments and envp
  * forwarding */
 #define UHYVE_PORT_CMDSIZE		0x740

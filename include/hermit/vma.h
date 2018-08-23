@@ -37,6 +37,7 @@
 #define __VMA_H__
 
 #include <hermit/stddef.h>
+#include <hermit/memory.h>
 #include <asm/page.h>
 
 #ifdef __cplusplus

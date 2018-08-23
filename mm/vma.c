@@ -32,7 +32,10 @@
 #include <hermit/spinlock.h>
 #include <hermit/errno.h>
 #include <hermit/logging.h>
+#include <asm/io.h>
+#include <asm/irq.h>
 
+#define UHYVE_IRQ_MIGRATION 12
 /*
  * Note that linker symbols are not variables, they have no memory allocated for
  * maintaining a value, rather their address is their value.
@@ -48,6 +51,28 @@ extern const void kernel_start;
 static vma_t vma_boot = { VMA_MIN, VMA_MIN, VMA_HEAP };
 static vma_t* vma_list = &vma_boot;
 spinlock_irqsave_t hermit_mm_lock = SPINLOCK_IRQSAVE_INIT;
+
+static void uhyve_irq_migration_handler(struct state* s)
+{
+	static uint32_t generate_mapping = 1;
+	static void *alloc_list = NULL;
+	if (generate_mapping) {
+		LOG_INFO("Got a migration request!\n");
+
+		alloc_list = generate_alloc_list();
+		outportl(UHYVE_PORT_ALLOCLIST, (unsigned)virt_to_phys((size_t)alloc_list));
+
+		/* during the next interrupt we'll free the data structur */
+		generate_mapping = 0;
+	} else {
+		LOG_INFO("Free alloc_list!\n");
+		if (alloc_list) {
+			free_list_rev(alloc_list);
+		}
+
+		generate_mapping = 1;
+	}
+}
 
 int vma_init(void)
 {
@@ -68,7 +93,11 @@ int vma_init(void)
 	ret = vma_add(HEAP_START, HEAP_START+HEAP_SIZE, VMA_NO_ACCESS);
 	if (BUILTIN_EXPECT(ret, 0))
 		goto out;
-	LOG_INFO("Reserve space for the heap: 0x%llx - 0x%llx\n", HEAP_START, HEAP_START+HEAP_SIZE-1); 
+	LOG_INFO("Reserve space for the heap: 0x%llx - 0x%llx\n", HEAP_START, HEAP_START+HEAP_SIZE-1);
+
+	// install IRQ handler for the migration interface
+	LOG_INFO("migration channel uses irq %d\n", UHYVE_IRQ_MIGRATION);
+	irq_install_handler(32+UHYVE_IRQ_MIGRATION, uhyve_irq_migration_handler);
 
 	// we might move the architecture specific VMA regions to a
 	// seperate function vma_arch_init()
