@@ -47,8 +47,10 @@ the HermitCore kernel and applications you need:
 
 ### HermitCore cross-toolchain
 
-We provide prebuilt packages (currently Ubuntu 18.04 only) of the HermitCore
+We provide prebuilt packages for Ubuntu 18.04 and Debian 9 of the HermitCore
 toolchain, which can be installed as follows:
+
+**Ubuntu 18.04**
 
 ```bash
 $ echo "deb [trusted=yes] https://dl.bintray.com/hermitcore/ubuntu bionic main" | sudo tee -a /etc/apt/sources.list
@@ -56,7 +58,14 @@ $ sudo apt-get -qq update
 $ sudo apt-get install binutils-hermit newlib-hermit pte-hermit gcc-hermit libomp-hermit libhermit
 ```
 
-For non-Debian based systems, a docker image with the complete toolchain is provided and can be installed as follows:
+**Debian 9**
+
+```bash
+$ echo "deb [trusted=yes] https://dl.bintray.com/hermitcore/debian stretch main" | sudo tee -a /etc/apt/sources.list
+$ sudo apt-get -qq update
+$ sudo apt-get install binutils-hermit newlib-hermit pte-hermit gcc-hermit libomp-hermit libhermit
+
+For unsupported systems, a docker image with the complete toolchain is provided and can be installed as follows:
 
 ```bash
 $ docker pull rwthos/hermitcore
