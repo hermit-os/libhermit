@@ -36,8 +36,8 @@ apt-get install -y qemu-system-x86 cmake wget curl gnupg checkinstall gawk dialo
 
 echo "deb [trusted=yes] https://dl.bintray.com/hermitcore/$OS_NAME $OS_VERSION main" | tee -a /etc/apt/sources.list
 apt-get -qq update
-#apt-get install -y --allow-unauthenticated -o Dpkg::Options::="--force-overwrite" binutils-hermit newlib-hermit pte-hermit gcc-hermit libomp-hermit
-apt-get install -y --allow-unauthenticated -o Dpkg::Options::="--force-overwrite" binutils-hermit newlib-hermit pte-hermit gcc-hermit-bootstrap
+apt-get install -y --allow-unauthenticated -o Dpkg::Options::="--force-overwrite" binutils-hermit newlib-hermit pte-hermit gcc-hermit libomp-hermit
+#apt-get install -y --allow-unauthenticated -o Dpkg::Options::="--force-overwrite" binutils-hermit newlib-hermit pte-hermit gcc-hermit-bootstrap
 export PATH=/opt/hermit/bin:$PATH
 
 mkdir -p build
