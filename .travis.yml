@@ -5,7 +5,7 @@ git:
 env:
   matrix:
   - OS_TYPE=debian OS_VERSION=9 OS_NAME=stretch
-  #- OS_TYPE=ubuntu OS_VERSION=18.04 OS_NAME=bionic
+  - OS_TYPE=ubuntu OS_VERSION=18.04 OS_NAME=bionic
 services:
 - docker
 addons:
@@ -33,12 +33,12 @@ deploy:
   key:
     secure: fg8+5owyDFPt3H/+Xk8jGHtEBasz1C2K0i+z92f/JnjTyLCrrKn+6DX7VRgcEl4ketTWLex7JduJLl4/7Ftug8qN0NuMwx0OxDCrwzvkoVwbl2DYX8von9ceuuV57p4e+uG35bPjU7E1KblkL+7ERqn9hsp5NbVdb4ueoSl9LedDdfzwcz8iA8JmzpbJ5RwQqg4kmdvuRVEUZMbQeHq4KB3kTznsma3BUeApVSaRQ8BpSaHED0tzFWKUTdjq7GvjBMF6WNpVIsc7Usky78UUyjaGbfMyT/7i9RctC3rAXr2XZryxDrJstAnHo6trqraf/3E40a7r0LhF9y7HWdmlfG99qhT3Vii3/pHeRIDp5O6xpIF8o/QkbYaFTwcvefRCjRQ8YYREqYvYnXOsKge/VaoUx48pTn6fOPzEzvlbyTkJ6Wp7knhx4qzR5JB8yTbIjoozggrkayvkYVfdMZjXvY/2T8TcNbPG0+0+EVkUcNrNMy9ksAH4RgR+eVQ4oI/sg5ldnVpp74jhSSDgAHBKCZQ01tIYMMEIyZm7qhAAdXnjCeV6D78a8/brUN+TSRNGYILx4vTiY3GMLEHsDGH4VEGawef0CtQasBrt5Cc0a/3KDNwuBy8rlbxLxbv+JCCn9vMm+UYQ6sTexsih76V07OHmQliu0xjQgBG5maFaV74=
 
-after_deploy:
-  - docker login -u $DOCKER_USER -p $DOCKER_PASS
-  - export REPO=rwthos/hermitcore
-  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
-  - cd ${TRAVIS_BUILD_DIR}/docker
-  - docker build -f Dockerfile -t $REPO .
-  - docker tag $REPO $REPO:$TAG
-  - docker tag $REPO $REPO:travis-$TRAVIS_BUILD_NUMBER
-  - docker push $REPO
+#after_deploy:
+#  - docker login -u $DOCKER_USER -p $DOCKER_PASS
+#  - export REPO=rwthos/hermitcore
+#  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
+#  - cd ${TRAVIS_BUILD_DIR}/docker
+#  - docker build -f Dockerfile -t $REPO .
+#  - docker tag $REPO $REPO:$TAG
+#  - docker tag $REPO $REPO:travis-$TRAVIS_BUILD_NUMBER
+#  - docker push $REPO
