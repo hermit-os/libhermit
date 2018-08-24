@@ -64,6 +64,7 @@ $ sudo apt-get install binutils-hermit newlib-hermit pte-hermit gcc-hermit libom
 $ echo "deb [trusted=yes] https://dl.bintray.com/hermitcore/debian stretch main" | sudo tee -a /etc/apt/sources.list
 $ sudo apt-get -qq update
 $ sudo apt-get install binutils-hermit newlib-hermit pte-hermit gcc-hermit libomp-hermit libhermit
+```
 
 For unsupported systems, a docker image with the complete toolchain is provided and can be installed as follows:
 
