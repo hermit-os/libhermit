@@ -39,6 +39,13 @@
 /** @brief Initialize the memory subsystem */
 int memory_init(void);
 
+
+/** @brief Returns a list of allocated memory regions */
+void *generate_alloc_list(void);
+
+/** @brief Frees a free_list_t in reveser order */
+void free_list_rev(void *list);
+
 /** @brief Request physical page frames */
 size_t get_pages(size_t npages);
 

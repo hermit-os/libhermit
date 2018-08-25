@@ -297,3 +297,9 @@ int memory_init(void)
 oom:
 	return ret;
 }
+
+void *generate_alloc_list(void)
+{
+	//TODO: return mapped memory regions
+	return NULL;
+}

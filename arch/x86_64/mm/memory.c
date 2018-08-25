@@ -42,6 +42,7 @@
 
 #define IO_GAP_SIZE		(768ULL << 20)
 #define IO_GAP_START		((1ULL << 32) - IO_GAP_SIZE)
+#define IO_GAP_END		(IO_GAP_START + IO_GAP_SIZE)
 
 extern uint64_t base;
 extern uint64_t limit;
@@ -470,4 +471,106 @@ int memory_init(void)
 oom:
 	LOG_ERROR("BUG: Failed to init mm!\n");
 	while(1) {HALT; }
+}
+
+/* this function generates a list of allocated memory regions */
+void *generate_alloc_list(void)
+{
+	free_list_t *alloc_list_last = NULL;
+	free_list_t *alloc_list = NULL;
+	free_list_t *cur = free_start;
+	free_list_t *next = cur->next;
+	size_t alloc_list_length = 0;
+
+	/* allocation prior to first free region */
+	alloc_list = alloc_list_last = (free_list_t *)kmalloc(sizeof(free_list_t));
+	alloc_list->start = base;
+	alloc_list->end = cur->start;
+	alloc_list->next = alloc_list->prev = NULL;
+	alloc_list_length++;
+
+	while (next) {
+		/* create new alloc element */
+		free_list_t *new_alloc_elem = (free_list_t *)kmalloc(sizeof(free_list_t));
+		new_alloc_elem->start = cur->end;
+		new_alloc_elem->end = next->start;
+
+		/* append to the list (front) */
+		new_alloc_elem->next = alloc_list;
+		new_alloc_elem->prev = NULL;
+		alloc_list->prev = new_alloc_elem;
+		alloc_list = new_alloc_elem;
+
+		cur = cur->next;
+		next = cur->next;
+		alloc_list_length++;
+	}
+
+	/* allocation behind last free region */
+	if (limit != cur->end) {
+		/* create new alloc element */
+		free_list_t *new_alloc_elem = (free_list_t *)kmalloc(sizeof(free_list_t));
+		new_alloc_elem->start = cur->end;
+		new_alloc_elem->end = limit - cur->end;
+
+		/* append to the list (front) */
+		new_alloc_elem->next = alloc_list;
+		new_alloc_elem->prev = NULL;
+		alloc_list->prev = new_alloc_elem;
+		alloc_list = new_alloc_elem;
+		alloc_list_length++;
+	}
+
+	/* check if we included the IO_GAP */
+	for (cur=alloc_list_last; cur != NULL; cur=cur->prev) {
+		if (cur->start == IO_GAP_START && cur->end == IO_GAP_END) {
+			/* remove the element */
+			if (cur->prev)
+				cur->prev->next = cur->next;
+			if (cur->next)
+				cur->next->prev = cur->prev;
+			kfree(cur);
+			alloc_list_length--;
+			break;
+		} else if (cur->end == IO_GAP_END) {
+			/* shrink element */
+			cur->end -= IO_GAP_SIZE;
+			break;
+		} else if (cur->start == IO_GAP_START) {
+			/* shrink element */
+			cur->start += IO_GAP_SIZE;
+			break;
+		} else if ((cur->start < IO_GAP_START) &&
+			   (cur->end > IO_GAP_END)) {
+			/* splice element */
+			free_list_t *new_elem = (free_list_t *)kmalloc(sizeof(free_list_t));
+			new_elem->start = IO_GAP_END;
+			new_elem->end = cur->end;
+			cur->end = IO_GAP_START;
+
+			/* append to list */
+			new_elem->prev = cur->prev;
+			new_elem->next = cur;
+			cur->prev = new_elem;
+			alloc_list_length++;
+			break;
+		}
+	}
+
+	LOG_INFO("generate_alloc_list(): SUCCESS!\n");
+	return (void*)alloc_list_last;
+}
+
+void free_list_rev(void *list)
+{
+	free_list_t *alloc_list = (free_list_t *)list;
+
+	/* iterate list in reverse order and free elements */
+	free_list_t *cur = alloc_list;
+	free_list_t *helper = NULL;
+	while (cur) {
+		helper = cur;
+		cur = cur->prev;
+		kfree(helper);
+	}
 }
