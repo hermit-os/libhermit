@@ -134,6 +134,11 @@ out:
 	return ret;
 }
 
+free_list_t *get_free_list(void)
+{
+	return free_start;
+}
+
 size_t get_pages(size_t npages)
 {
 	return __get_pages(npages, PAGE_SIZE);
