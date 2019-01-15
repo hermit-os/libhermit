@@ -310,6 +310,10 @@ size_t** irq_handler(struct state *s)
 	// Check if timers have expired that would unblock tasks
 	check_workqueues_in_irqhandler((int) s->int_no);
 
+	if (s->int_no >= 32) {
+		apic_eoi(s->int_no);
+	}
+
 	if ((s->int_no == 32) || (s->int_no == 123)) {
 		// a timer interrupt may have caused unblocking of tasks
 		ret = scheduler();
@@ -317,8 +321,6 @@ size_t** irq_handler(struct state *s)
 		// there's a ready task with higher priority
 		ret = scheduler();
 	}
-
-	apic_eoi(s->int_no);
 
 #ifdef MEASURE_IRQ
 	if (go) {
