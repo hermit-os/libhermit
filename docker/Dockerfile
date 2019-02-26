@@ -14,7 +14,7 @@ RUN echo "deb [trusted=yes] https://dl.bintray.com/hermitcore/ubuntu bionic main
 RUN apt-get -qq update
 
 # Install required packets from ubuntu repository
-RUN apt-get install -y --allow-unauthenticated binutils-hermit newlib-hermit pte-hermit gcc-hermit libhermit
+RUN apt-get install -y --allow-unauthenticated binutils-hermit newlib-hermit pte-hermit gcc-hermit libhermit libomp-hermit
 
 ENV PATH="/opt/hermit/bin:${PATH}"
 ENV EDITOR=vim
