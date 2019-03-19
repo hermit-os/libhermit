@@ -330,7 +330,7 @@ After a reboot of the system, register the HermitCore loader at your system with
 following command:
 
 ```bash
-$ sudo -c sh 'echo ":hermit:M:7:\\x42::/opt/hermit/bin/proxy:" > /proc/sys/fs/binfmt_misc/register'
+$ sudo -c sh 'echo ":hermit:M:7:\\xff::/opt/hermit/bin/proxy:" > /proc/sys/fs/binfmt_misc/register'
 ```
 
 The IP device between HermitCore and Linux currently does not support IPv6.
