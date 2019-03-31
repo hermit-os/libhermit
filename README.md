@@ -116,7 +116,7 @@ HTTP request sent, awaiting response... 200 OK
 Length: 30681434 (29M) [application/x-gzip]
 Saving to: ‘cmake-3.7.2-Linux-x86_64.tar.gz’
 
-cmake-3.7.2-Linux-x86_64.tar.gz         100%[===================>]  29,26M  3,74MB/s    in 12s     
+cmake-3.7.2-Linux-x86_64.tar.gz         100%[===================>]  29,26M  3,74MB/s    in 12s
 
 2017-03-28 16:13:50 (2,48 MB/s) - ‘cmake-3.7.2-Linux-x86_64.tar.gz’ saved [30681434/30681434]
 
@@ -159,22 +159,27 @@ $ make install
 
 **Note:** If you use the cross compiler outside of this repository, the compiler uses per default the library operating systems located by the toolchain (e.g. `/opt/hermit/x86_64-hermit/lib/libhermit.a`).
 
-## Proxy
+## Starting Applications with the Proxy tool
 
-Part of HermitCore is a small helper tool, which is called *proxy*.
-This tool helps to start HermitCore applications within a virtual machine or bare-metal on a NUMA node.
-In principle it is a bridge to the Linux system.
-If the proxy is register as loader to the Linux system, HermitCore applications can be started like common Linux applications.
-The proxy can be registered with following command.
+HermitCore applications are currently started with a small helper tool called `proxy`.
+This tool is sets up a virtual machine or bare-metal on a NUMA node and bridges certain functionality from the application to the Linux host.
+
+To start a HermitCore application, hand the executable to the proxy:
+```bash
+/opt/hermit/bin/proxy myHermiCoreApplication
+```
+
+*Optional:* The proxy can be registered as loader for HermitCore _elf_ files to the Linux system via [binfmt_misc](https://en.wikipedia.org/wiki/Binfmt_misc), so that HermitCore applications can be started like common Linux applications.
 
 ```bash
 $ sudo -c sh 'echo ":hermit:M:7:\\xff::/opt/hermit/bin/proxy:" > /proc/sys/fs/binfmt_misc/register'
 $ # dirct call of a HermitCore application
 $ /opt/hermit/x86_64-hermit/extra/tests/hello
+Hello World!!!
 ```
 
-Otherwise the proxy must be started directly and get the path to HermitCore application as argument.
-Afterwards, the proxy start the HermitCore applications within a VM ore bare-metal on a NUMA node.
+The proxy starts the HermitCore applications within a VM.
+The application host (QEMU, Uhyve or bare-metal on a NUMA node as multi-kernel) can be set via the environment variable `$HERMIT_ISLE`.
 
 ```bash
 $ # using QEMU
