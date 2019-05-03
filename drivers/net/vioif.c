@@ -365,7 +365,7 @@ err_t vioif_init(struct netif* netif)
 	uint32_t required = (1UL << VIRTIO_NET_F_MAC) | (1UL << VIRTIO_NET_F_STATUS);
 
 	if ((features & required) != required) {
-		LOG_ERROR("Host isn't able to fulfill HermireCore's requirements\n");
+		LOG_ERROR("Host isn't able to fulfill HermitCore's requirements\n");
 		outportb(vioif->iobase + VIRTIO_PCI_STATUS, VIRTIO_CONFIG_S_FAILED);
 		kfree(vioif);
 		return ERR_ARG;
@@ -373,11 +373,11 @@ err_t vioif_init(struct netif* netif)
 
 	required = features;
 	required &= ~(1UL << VIRTIO_NET_F_CTRL_VQ);
-    required &= ~(1UL << VIRTIO_NET_F_GUEST_TSO4);
-    required &= ~(1UL << VIRTIO_NET_F_GUEST_TSO6);
-    required &= ~(1UL << VIRTIO_NET_F_GUEST_UFO);
-    required &= ~(1UL << VIRTIO_RING_F_EVENT_IDX);
-    required &= ~(1UL << VIRTIO_NET_F_MRG_RXBUF);
+	required &= ~(1UL << VIRTIO_NET_F_GUEST_TSO4);
+	required &= ~(1UL << VIRTIO_NET_F_GUEST_TSO6);
+	required &= ~(1UL << VIRTIO_NET_F_GUEST_UFO);
+	required &= ~(1UL << VIRTIO_RING_F_EVENT_IDX);
+	required &= ~(1UL << VIRTIO_NET_F_MRG_RXBUF);
 	required &= ~(1UL << VIRTIO_NET_F_MQ);
 
 	LOG_INFO("wanted guest features 0x%x\n", required);
