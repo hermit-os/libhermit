@@ -5,7 +5,7 @@ variables:
 stages:
   - prepare
   - build
-  #- test
+  - test
 
 # Stage: prepare
 ##############################################################################
@@ -39,4 +39,18 @@ build:
 
 # Stage: test
 ##############################################################################
-
+test:
+  stage: test
+  script:
+    - cd build
+    - export TDIR=./local_prefix/opt/hermit/x86_64-hermit/extra
+    - export FILES="$TDIR/tests/hello
+    - export PROXY=./local_prefix/opt/hermit/bin/proxy
+    - for f in $FILES; do echo "check $f..."; HERMIT_ISLE=qemu HERMIT_CPUS=1 HERMIT_KVM=0 HERMIT_VERBOSE=1 timeout --kill-after=5m 5m $PROXY $f || exit 1; done
+  image: ${IMAGE}
+  tags:
+    - docker
+  only:
+    - merge_requests
+  dependencies:
+    - build
