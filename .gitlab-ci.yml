@@ -42,6 +42,7 @@ build:
 test:
   stage: test
   script:
+    - lscpu
     - cd build
     - export TDIR=./local_prefix/opt/hermit/x86_64-hermit/extra
     - export FILES="$TDIR/tests/hello $TDIR/tests/hellof $TDIR/tests/hello++ $TDIR/tests/thr_hello $TDIR/tests/pi $TDIR/benchmarks/stream $TDIR/benchmarks/basic $TDIR/tests/signals $TDIR/tests/test-malloc $TDIR/tests/test-malloc-mt $TDIR/tests/argv_envp"
