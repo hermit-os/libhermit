@@ -1,0 +1,41 @@
+variables:
+  IMAGE: ubuntu:with-hermitcore
+
+stages:
+  - prepare
+  - build
+  #- test
+
+# Stage: prepare
+##############################################################################
+
+docker:
+  stage: prepare
+  script:
+    - docker build -t ${IMAGE} .
+  tags:
+    - shell
+    - linux
+
+# Stage: build
+##############################################################################
+
+build:
+  stage: build
+  script:
+    - mkdir -p build
+    - cd build
+    - cmake -DTOOLCHAIN_BIN_DIR=/opt/hermit/bin -DCMAKE_INSTALL_PREFIX=/opt/hermit ..
+    - make
+  image: ${IMAGE}
+  tags:
+    - docker
+  artifacts:
+    untracked: true
+    expire_in: 1 week
+    paths:
+      - ./
+
+# Stage: test
+##############################################################################
+
