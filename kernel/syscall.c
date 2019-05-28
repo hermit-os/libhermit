@@ -282,7 +282,13 @@ ssize_t sys_write(int fd, const char* buf, size_t len)
 	}
 
 	if (fd > 2)
-		i = socket_recv(s, &i, sizeof(i));
+	{
+		int temp = socket_recv(s, &i, sizeof(i));
+		if (temp < 0)
+		{
+			return (ssize_t) temp;
+		}
+	}
 
 	spinlock_irqsave_unlock(&lwip_lock);
 
