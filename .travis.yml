@@ -19,7 +19,7 @@ script:
   -c "cd /work; ./tests.sh ${OS_TYPE} ${OS_NAME}"
 before_deploy:
 - cd ${TRAVIS_BUILD_DIR}
-- dpkg-deb -b tmp libhermit-0.2.9-all.deb
+- dpkg-deb -b tmp libhermit-0.2.10-all.deb
 - sed -i "s/REPLACE_REPO/$OS_TYPE/" .bintray_descriptor.json
 - sed -i "s/REPLACE_OS/$OS_NAME/" .bintray_descriptor.json
 deploy:
