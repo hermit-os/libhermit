@@ -583,7 +583,7 @@ err_t mmnif_init(struct netif *netif)
 	}
 	LOG_INFO("mmnif_init() : size of mm_rx_buffer_t : %d\n", sizeof(mm_rx_buffer_t));
 
-	if (BUILTIN_EXPECT(!header_phy_start_address || !header_phy_start_address || !phy_isle_locks, 0))
+	if (BUILTIN_EXPECT(!header_phy_start_address || !phy_isle_locks, 0))
 	{
 		LOG_ERROR("mmnif init(): invalid heap or header address\n");
 		goto out;

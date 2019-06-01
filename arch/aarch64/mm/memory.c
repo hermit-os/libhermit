@@ -64,6 +64,11 @@ atomic_int64_t total_pages = ATOMIC_INIT(0);
 atomic_int64_t total_allocated_pages = ATOMIC_INIT(0);
 atomic_int64_t total_available_pages = ATOMIC_INIT(0);
 
+free_list_t *get_free_list(void)
+{
+	return free_start;
+}
+
 size_t get_pages(size_t npages)
 {
 	size_t i, ret = 0;

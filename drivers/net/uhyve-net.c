@@ -58,7 +58,7 @@
 
 #include "uhyve-net.h"
 
-#define UHYVE_IRQ	11
+#define UHYVE_IRQ_NET	11
 
 static int8_t uhyve_net_init_ok = 0;
 static struct netif* mynetif = NULL;
@@ -257,8 +257,8 @@ err_t uhyve_netif_init (struct netif* netif)
 	LWIP_DEBUGF(NETIF_DEBUG, ("\n"));
 	uhyve_netif->ethaddr = (struct eth_addr *)netif->hwaddr;
 
-	LOG_INFO("uhye_netif uses irq %d\n", UHYVE_IRQ);
-	irq_install_handler(32+UHYVE_IRQ, uhyve_irqhandler);
+	LOG_INFO("uhye_netif uses irq %d\n", UHYVE_IRQ_NET);
+	irq_install_handler(32+UHYVE_IRQ_NET, uhyve_irqhandler);
 
 	/*
 	 * Initialize the snmp variables and counters inside the struct netif.

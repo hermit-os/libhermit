@@ -310,7 +310,6 @@ default_handler:
 	// clear cr2 to signalize that the pagefault is solved by the pagefault handler
 	write_cr2(0);
 
-	apic_eoi(s->int_no);
 	//do_abort();
 	sys_exit(-EFAULT);
 }

@@ -36,11 +36,16 @@
 #ifndef __MEMORY_H__
 #define __MEMORY_H__
 
+typedef struct free_list free_list_t;
+
 /** @brief Initialize the memory subsystem */
 int memory_init(void);
 
 /** @brief Request physical page frames */
 size_t get_pages(size_t npages);
+
+/** @brief Returns a pointer to the free_list */
+free_list_t *get_free_list(void);
 
 /** @brief Get a single page
  *
