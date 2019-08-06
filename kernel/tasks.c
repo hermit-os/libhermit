@@ -367,7 +367,7 @@ void NORETURN do_exit(int arg)
 	task_t* curr_task = per_core(current_task);
 	const uint32_t core_id = CORE_ID;
 
-	LOG_INFO("Terminate task: %u, return value %d\n", curr_task->id, arg);
+	LOG_DEBUG("Terminate task: %u, return value %d\n", curr_task->id, arg);
 
 	uint8_t flags = irq_nested_disable();
 
@@ -614,7 +614,7 @@ int create_task(tid_t* id, entry_point_t ep, void* arg, uint8_t prio, uint32_t c
 	}
 
 	if (!ret)
-		LOG_INFO("start new task %d on core %d with stack address %p\n", i, core_id, stack);
+		LOG_DEBUG("start new task %d on core %d with stack address %p\n", i, core_id, stack);
 
 out:
 	spinlock_irqsave_unlock(&table_lock);
@@ -761,7 +761,7 @@ int set_timer(uint64_t deadline)
 
 		ret = 0;
 	} else {
-		LOG_INFO("Task is already blocked. No timer will be set!\n");
+		LOG_DEBUG("Task is already blocked. No timer will be set!\n");
 	}
 
 	irq_nested_enable(flags);

@@ -82,7 +82,7 @@ static int init_tls(void)
 
 		// set fs register to the TLS segment
 		set_tls(fs);
-		LOG_INFO("TLS of task %d on core %d starts at 0x%zx (size 0x%zx)\n", curr_task->id, CORE_ID, TLS_FLOOR(tls_addr), curr_task->tls_size);
+		LOG_DEBUG("TLS of task %d on core %d starts at 0x%zx (size 0x%zx)\n", curr_task->id, CORE_ID, TLS_FLOOR(tls_addr), curr_task->tls_size);
 	} else set_tls(0); // no TLS => clear fs register
 
 	return 0;
@@ -157,8 +157,8 @@ int create_default_frame(task_t* task, entry_point_t ep, void* arg, uint32_t cor
 	if (BUILTIN_EXPECT(!task->stack, 0))
 		return -EINVAL;
 
-	LOG_INFO("Task %d uses memory region [%p - %p] as stack\n", task->id, task->stack, (char*) task->stack + DEFAULT_STACK_SIZE - 1);
-	LOG_INFO("Task %d uses memory region [%p - %p] as IST1\n", task->id, task->ist_addr, (char*) task->ist_addr + KERNEL_STACK_SIZE - 1);
+	LOG_DEBUG("Task %d uses memory region [%p - %p] as stack\n", task->id, task->stack, (char*) task->stack + DEFAULT_STACK_SIZE - 1);
+	LOG_DEBUG("Task %d uses memory region [%p - %p] as IST1\n", task->id, task->ist_addr, (char*) task->ist_addr + KERNEL_STACK_SIZE - 1);
 
 	memset(task->stack, 0xCD, DEFAULT_STACK_SIZE);
 
