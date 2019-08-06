@@ -5,7 +5,8 @@ project(hermit_benchmarks C)
 
 if("${TARGET_ARCH}" STREQUAL "x86_64-hermit")
 add_executable(basic basic.c)
-target_link_libraries(basic pthread)
+target_compile_options(basic PRIVATE -pthread)
+target_link_libraries(basic -pthread)
 
 add_executable(hg hg.c hist.c rdtsc.c run.c init.c opt.c report.c setup.c)
 

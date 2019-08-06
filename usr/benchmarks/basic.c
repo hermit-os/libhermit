@@ -2,27 +2,10 @@
  * Copyright (c) 2016, Stefan Lankes, RWTH Aachen University
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *    * Redistributions of source code must retain the above copyright
- *      notice, this list of conditions and the following disclaimer.
- *    * Redistributions in binary form must reproduce the above copyright
- *      notice, this list of conditions and the following disclaimer in the
- *      documentation and/or other materials provided with the distribution.
- *    * Neither the name of the University nor the names of its contributors
- *      may be used to endorse or promote products derived from this
- *      software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
+ * http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
+ * http://opensource.org/licenses/MIT>, at your option. This file may not be
+ * copied, modified, or distributed except according to those terms.
  */
 
 #ifndef __hermit__
@@ -35,6 +18,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sched.h>
+#include <pthread.h>
 #ifndef __hermit__
 #include <sys/syscall.h>
 
@@ -51,7 +35,7 @@ static inline long mygetpid(void)
 int sched_yield(void);
 #endif
 
-#define N		10000
+#define N		10000000
 #define M		(256+1)
 #define BUFFSZ		(1ULL*1024ULL*1024ULL)
 
@@ -61,7 +45,7 @@ static char* buff[M];
 inline static unsigned long long rdtsc(void)
 {
 	unsigned long lo, hi;
-	asm volatile ("rdtsc" : "=a"(lo), "=d"(hi) :: "memory");
+	asm volatile ("lfence; rdtsc; lfence" : "=a"(lo), "=d"(hi) :: "memory");
 	return ((unsigned long long) hi << 32ULL | (unsigned long long) lo);
 }
 #else
@@ -70,18 +54,24 @@ inline static unsigned long long rdtsc(void)
 	unsigned int lo, hi;
 	unsigned int id;
 
-	asm volatile ("rdtscp" : "=a"(lo), "=c"(id), "=d"(hi));
+	asm volatile ("rdtscp; lfence" : "=a"(lo), "=c"(id), "=d"(hi));
 
 	return ((unsigned long long)hi << 32ULL | (unsigned long long)lo);
 }
 #endif
 
+static void* thread_func(void* arg)
+{
+	return rdtsc();
+}
+
 int main(int argc, char** argv)
 {
 	long i, j, ret;
-	unsigned long long start, end;
+	unsigned long long sum, start, end;
 	const char str[] = "H";
 	size_t len = strlen(str);
+	pthread_t thr_handle;
 
 	printf("Determine systems performance\n");
 	printf("=============================\n");
@@ -108,6 +98,19 @@ int main(int argc, char** argv)
 
 	printf("Average time for sched_yield: %lld cycles\n", (end - start) / N);
 
+	sum = 0;
+	for(i=0; i<10000; i++) {
+		start = rdtsc();
+		pthread_create(&thr_handle, NULL, thread_func, NULL);
+		sched_yield();
+		pthread_join(thr_handle, &start);
+		sum += rdtsc() - start;
+
+	}
+
+	printf("Average time to create a thread: %lld cycles\n", sum / 10000);
+
+#if 0
 	// cache warm-up
 	buff[0] = (char*) malloc(BUFFSZ);
 
@@ -129,6 +132,7 @@ int main(int argc, char** argv)
 	end = rdtsc();
 
 	printf("Average time for the first page access: %lld cycles\n", (end - start) / ((M-1)*BUFFSZ/4096));
+#endif
 
 #if 0
 	write(2, (const void *)str, len);
