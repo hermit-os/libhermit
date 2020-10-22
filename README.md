@@ -44,7 +44,7 @@ the HermitCore kernel and applications you need:
  * Netwide Assember (NASM)
  * recent host compiler such as GCC
  * HermitCore cross-toolchain, i.e. Binutils, GCC, newlib, pthreads
- * Python
+ * Python3
 
 ### HermitCore cross-toolchain
 
@@ -125,7 +125,6 @@ cmake-3.7.2-Linux-x86_64.tar.gz         100%[===================>]  29,26M  3,74
 -- Local CMake v3.7.2 installed to cmake/cmake-3.7.2-Linux-x86_64
 -- Next time you source this script, no download will be necessary
 ```
-##### NOTE:-If you do not have Python installed, it will give an error. To avoid this, run this command *"sudo apt-get install python"* or *"sudo apt-get install python3"* as per your requirement. ALso, after this , even cmake can give some error. You can avoid it by running this command "sudo snap install cmake". Hope this will run for all perfectly :) 
 
 So before you build HermitCore you have to source the `local-cmake.sh` script
 everytime you open a new terminal.
