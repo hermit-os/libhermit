@@ -15,7 +15,7 @@ DIR="$(basename ${ARCHIVE} .tar.gz)"
 relpath() {
 	# workaround because Ubuntu seems to use an ancient realpath version
 	# https://stackoverflow.com/questions/2564634/convert-absolute-path-into-relative-path-given-a-current-directory-using-bash#comment12808306_7305217
-	python -c "import os.path; print(os.path.relpath('${2:-$PWD}','$1'))";
+	python3 -c "import os.path; print(os.path.relpath('${2:-$PWD}','$1'))";
 }
 
 HERMIT_TOP="$(git rev-parse --show-toplevel)"
