@@ -447,3 +447,7 @@ The connection to the system monitor is automatically set to `HERMIT_PORT+1`, i.
 ## Credits
 
 HermitCore's Emoji is provided free by [EmojiOne](https://www.gfxmag.com/crab-emoji-vector-icon/).
+
+[![Stargazers repo roster for @hermitcore/libhermit](https://reporoster.com/stars/hermitcore/libhermit)](https://github.com/hermitcore/libhermit/stargazers)
+
+[![Forkers repo roster for @hermitcore/libhermit](https://reporoster.com/forks/hermitcore/libhermit)](https://github.com/hermitcore/libhermit/network/members)
