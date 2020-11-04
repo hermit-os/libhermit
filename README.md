@@ -453,5 +453,3 @@ HermitCore's Emoji is provided free by [EmojiOne](https://www.gfxmag.com/crab-em
 <a href="https://github.com/hermitcore/libhermit/graphs/contributors">
   <img src="https://contributors-img.web.app/image?repo=hermitcore/libhermit" />
 </a>
-
-Made with [contributors-img](https://contributors-img.web.app).
