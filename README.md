@@ -163,7 +163,7 @@ $ make install
 ## Starting Applications with the Proxy tool
 
 HermitCore applications are currently started with a small helper tool called `proxy`.
-This tool is sets up a virtual machine or bare-metal on a NUMA node and bridges certain functionality from the application to the Linux host.
+This tool sets up a virtual machine or bare-metal on a NUMA node and bridges certain functionality from the application to the Linux host.
 
 To start a HermitCore application, hand the executable to the proxy:
 ```bash
@@ -447,3 +447,9 @@ The connection to the system monitor is automatically set to `HERMIT_PORT+1`, i.
 ## Credits
 
 HermitCore's Emoji is provided free by [EmojiOne](https://www.gfxmag.com/crab-emoji-vector-icon/).
+
+## Contributors
+
+<a href="https://github.com/hermitcore/libhermit/graphs/contributors">
+  <img src="https://contributors-img.web.app/image?repo=hermitcore/libhermit" />
+</a>
