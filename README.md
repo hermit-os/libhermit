@@ -451,3 +451,9 @@ HermitCore's Emoji is provided free by [EmojiOne](https://www.gfxmag.com/crab-em
 [![Stargazers repo roster for @hermitcore/libhermit](https://reporoster.com/stars/hermitcore/libhermit)](https://github.com/hermitcore/libhermit/graphs/contributors)
 
 [![Forkers repo roster for @hermitcore/libhermit](https://reporoster.com/forks/hermitcore/libhermit)](https://github.com/hermitcore/libhermit/graphs/contributors)
+
+<a href="https://github.com/hermitcore/libhermit/graphs/contributors">
+  <img src="https://contributors-img.web.app/image?repo=hermitcore/libhermit" />
+</a>
+
+Made with [contributors-img](https://contributors-img.web.app).
