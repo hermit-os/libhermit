@@ -251,7 +251,7 @@ and enable the network support:
 $ HERMIT_ISLE=uhyve HERMIT_IP="10.0.5.3" HERMIT_GATEWAY="10.0.5.1" HERMIT_MASk="255.255.255.0" HERMIT_NETIF=tap100 bin/proxy x86_64-hermit/extra/tests/hello
 ```
 
-If `qemu` is used as hyervisor, the virtual machine emulates an RTL8139 ethernet interface and opens at least one TCP/IP ports.
+If `qemu` is used as hypervisor, the virtual machine emulates an RTL8139 ethernet interface and opens at least one TCP/IP ports.
 It is used for the communication between HermitCore application and its proxy.
 With the environment variable `HERMIT_PORT`, the default port (18766) can be changed for the communication.
 
