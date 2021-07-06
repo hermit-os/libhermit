@@ -1,6 +1,13 @@
 <img width="100" align="right" src="img/hermitcore_logo.png" />
 
 
+
+## DEPRECATION NOTICE:
+
+
+**We have shifted our efforts from this project to the [rusty-hermit](https://github.com/hermitcore/rusty-hermit) project, which is also a unikernel but rewritten in Rust.
+This project will not receive any active contributions from the maintainers and only limited responses/help in GitHub issues.**
+
 # HermitCore - A lightweight unikernel for a scalable and predictable runtime behavior
 
 [![Build Status](https://travis-ci.org/hermitcore/libhermit.svg?branch=master)](https://travis-ci.org/hermitcore/libhermit)
